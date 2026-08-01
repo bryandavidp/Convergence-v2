@@ -48,6 +48,10 @@ function connectedEmulator() {
   if (!serial.startsWith('emulator-')) {
     throw new Error('Este smoke borra/reinstala datos de prueba y solo admite emuladores.');
   }
+  const qemu = adbRun(['-s', serial, 'shell', 'getprop', 'ro.kernel.qemu']);
+  if (qemu !== '1') {
+    throw new Error('El destino ADB no confirma que sea un emulador QEMU.');
+  }
   return serial;
 }
 
@@ -85,13 +89,29 @@ class CdpClient {
       if (message.error) rejectMessage(new Error(message.error.message));
       else resolveMessage(message.result);
     });
+    this.socket.addEventListener('close', () => {
+      this.rejectPending('La conexión CDP se cerró durante una evaluación.');
+    });
+    this.socket.addEventListener('error', () => {
+      this.rejectPending('La conexión CDP encontró un error.');
+    });
     await new Promise((resolveOpen, rejectOpen) => {
       this.socket.addEventListener('open', resolveOpen, { once: true });
       this.socket.addEventListener('error', () => rejectOpen(new Error('No se pudo abrir CDP.')), { once: true });
     });
   }
 
+  rejectPending(message) {
+    for (const { rejectMessage } of this.pending.values()) {
+      rejectMessage(new Error(message));
+    }
+    this.pending.clear();
+  }
+
   call(method, params = {}) {
+    if (this.socket?.readyState !== WebSocket.OPEN) {
+      return Promise.reject(new Error('La conexión CDP no está abierta.'));
+    }
     const id = this.nextId++;
     return new Promise((resolveMessage, rejectMessage) => {
       this.pending.set(id, { resolveMessage, rejectMessage });
@@ -141,7 +161,7 @@ async function attach(serial) {
 }
 
 const serial = connectedEmulator();
-let airplaneModeEnabled = false;
+let airplaneModeChanged = false;
 let client;
 
 try {
@@ -151,8 +171,13 @@ try {
   adbRun(['-s', serial, 'shell', 'pm', 'clear', appId]);
   adbRun(['-s', serial, 'logcat', '-c']);
 
-  adbRun(['-s', serial, 'shell', 'cmd', 'connectivity', 'airplane-mode', 'enable']);
-  airplaneModeEnabled = true;
+  const airplaneMode = adbRun([
+    '-s', serial, 'shell', 'cmd', 'connectivity', 'airplane-mode',
+  ]);
+  if (!/enabled/i.test(airplaneMode)) {
+    adbRun(['-s', serial, 'shell', 'cmd', 'connectivity', 'airplane-mode', 'enable']);
+    airplaneModeChanged = true;
+  }
   adbRun(['-s', serial, 'shell', 'am', 'force-stop', appId]);
   const launch = adbRun([
     '-s', serial, 'shell', 'am', 'start', '-W', '-n', `${appId}/.MainActivity`,
@@ -246,7 +271,7 @@ try {
 } finally {
   client?.close();
   adbRun(['-s', serial, 'forward', '--remove', `tcp:${devtoolsPort}`], { allowFailure: true });
-  if (airplaneModeEnabled) {
+  if (airplaneModeChanged) {
     adbRun(['-s', serial, 'shell', 'cmd', 'connectivity', 'airplane-mode', 'disable'], { allowFailure: true });
   }
 }
