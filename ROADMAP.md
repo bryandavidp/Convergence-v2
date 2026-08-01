@@ -23,7 +23,7 @@ menor riesgo funcional.
 |---|---|---:|---|
 | 0. Aislamiento y baseline | Completada | 1–2 días | Repo independiente y 343/343 tests |
 | 1. Toolchain reproducible | Gate local verde; falta CI | 2–4 días | Node 22, lockfile y `npm run validate` verde |
-| 2. Shell nativo inicial | Android automatizado verde; falta paridad manual/iOS | 3–5 días | PWA + Android instalado + proyecto iOS generado |
+| 2. Shell nativo inicial | Primer APK debug verificado; falta paridad manual/iOS | 3–5 días | PWA + Android instalado + proyecto iOS generado |
 | 3. Capa de plataforma y storage | Hardening automatizado verde; falta matriz manual | 1–2 semanas | mismo perfil sobre web/Preferences, migración reversible |
 | 4. Núcleo determinista y RunSave v2 | Iniciada | 2–4 semanas | reglas puras, estado RNG y replays reproducibles |
 | 5. Firebase local, Auth y progreso | Importación/perfil local E2E; faltan UI, App Check y cloud | 2–3 semanas | emuladores, cuenta y sincronización offline segura |
@@ -44,7 +44,9 @@ vertical local ya validada, completar el modelo de perfil más allá de `cv_meta
 y preparar App Check en modo monitor antes del primer despliegue de Functions.
 Auth anónima funciona local/cloud-dev, Web/Android están registrados y
 Firestore aplica el ruleset cerrado. El cliente productivo continúa intacto.
-En paralelo siguen la matriz Android y la preparación de iOS desde macOS.
+La primera APK funcional está validada únicamente como debug sobre un AVD API
+36: todavía no es una beta ni una release de tienda. En paralelo siguen la
+matriz Android y la preparación de iOS desde macOS.
 
 ## Fase 0 — Aislamiento y baseline
 
@@ -83,7 +85,7 @@ pruebas sin depender de paquetes globales.
 
 ## Fase 2 — Shell nativo inicial
 
-Estado: **Android automatizado verde; paridad manual e iOS pendientes**
+Estado: **primer APK debug verificado; paridad manual e iOS pendientes**
 
 - [x] Confirmar `Convergence` y `com.deploy21.convergence` como identidad.
 - [x] Generar `apps/client/android` con Capacitor.

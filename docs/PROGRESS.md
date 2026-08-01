@@ -587,3 +587,56 @@ cloud permanece totalmente cerrada.
   despliegue/verificación TTL, App Check en monitor y controles de abuso más allá
   de la cuota por UID anónimo.
 - Continuar RunSave/core determinista, matriz Android e iOS desde macOS/Xcode.
+
+## 2026-08-01 — Baseline Git y primera APK Android debug reproducida
+
+### Completado
+
+- Todo el estado previo del proyecto se fijó en el commit raíz `ec5d704`
+  (`feat: establish Convergence v2 baseline and local profile migration`).
+- El APK se reprodujo desde el commit fuente `78a622c`. Ese commit mantiene
+  `minSdk 24` moviendo `windowLightNavigationBar` a recursos `values-v27` y
+  endurece el smoke con confirmación QEMU, errores CDP explícitos y restauración
+  del estado previo del modo avión.
+- `npm run native:gate` y `npm run native:sync` regeneraron `dist/`, comprobaron
+  `Convergence` / `com.deploy21.convergence` y sincronizaron los nueve plugins
+  Capacitor sin cambios inesperados en el repositorio.
+- Gradle procesó la configuración Firebase Android local registrada para
+  `convergence-d1a35`; `google-services.json` continúa ignorado y no se expone
+  en Git.
+- La APK quedó instalada y abierta en el AVD `Convergence_API_36`, único destino
+  ADB, con `ro.kernel.qemu=1`, Android 16/API 36 y resolución 1080×2400.
+- Se inspeccionó visualmente la pantalla inicial en portrait, sin solapes con
+  las barras del sistema.
+- **No se desplegó ningún servicio cloud en este hito.** Functions,
+  índices/TTL, RTDB Rules, Storage y Hosting conservan el estado anterior.
+
+### Evidencia
+
+- Toolchain: Android Studio, JBR 21.0.11, SDK/API 36, Platform-Tools, Emulator y
+  Command-line Tools — verde con `npm run check:android`.
+- Gradle: `:app:assembleDebug`, `:app:testDebugUnitTest` y `:app:lintDebug` —
+  `BUILD SUCCESSFUL` sin baseline de lint.
+- Instrumentación: `:app:connectedDebugAndroidTest` — **1/1** en el AVD API 36.
+- `apksigner` verificó APK Signature Scheme v2 con certificado Android Debug;
+  `aapt` confirmó paquete `com.deploy21.convergence`, versión 1.0 (1),
+  `minSdk 24`, `targetSdk 36` y actividad lanzable correcta.
+- Smoke ADB/CDP: cold start **5.330 ms**, offline, runtime nativo, portrait, sin
+  Service Worker/cachés PWA, sin FATAL/ANR y checkpoint `cv_meta`/`cv_run`
+  recuperado tras process death.
+- Artefacto: `artifacts/android/Convergence-v2-0.1.0-debug.apk`,
+  **102.190.011 bytes**, SHA-256
+  `47F25E4BA27FC3BA78F64C208FC8932891713A9B7CD46D76E867EA2546A1ACB8`.
+- Las huellas de APK registradas en entradas anteriores son evidencia histórica;
+  la huella indicada justo arriba es la entrega vigente de este baseline.
+
+### Alcance y pendientes
+
+- La entrega es debug-signed e instalable para desarrollo; no es AAB, beta ni
+  release de Play Store.
+- Empaqueta el juego estable actual y el bridge nativo. La importación de perfil
+  sigue aislada en `dist-profile-emulator`; cloud, rankings, salas y
+  multijugador no están activos en esta APK.
+- Faltan la matriz manual completa y un dispositivo Android físico, optimizar
+  los aproximadamente 97 MiB de assets, configurar firma release y generar iOS
+  en macOS/Xcode.

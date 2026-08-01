@@ -31,6 +31,10 @@ plataformas nativas viven aquí.
   categoría game y orientación vertical.
 - El APK debug compila con JDK 21/SDK 36; unit test, lint, test instrumentado y
   arranque en emulador Android 16/API 36 están verdes.
+- La entrega Android vigente se reproduce desde el commit `78a622c` y se copia
+  como `artifacts/android/Convergence-v2-0.1.0-debug.apk`; su tamaño es
+  102.190.011 bytes y su SHA-256 es
+  `47F25E4BA27FC3BA78F64C208FC8932891713A9B7CD46D76E867EA2546A1ACB8`.
 - iOS aún no se ha generado; requiere la fase de trabajo en macOS/Xcode.
 - La Emulator Suite completa, reglas, callables y E2E de Auth/perfil pasan
   localmente. Faltan la UI visible de importación, App Check cloud y desplegar
@@ -154,6 +158,43 @@ el cambio del lockfile.
 Si una terminal abierta antes de instalar Node sigue mostrando otra versión,
 cerrarla y abrir una nueva antes de ejecutar comandos. `npm run check:node`
 ofrece un diagnóstico rápido.
+
+## Generar e instalar la APK debug
+
+Desde la raíz del proyecto, con JDK 21 y SDK 36 disponibles:
+
+```powershell
+npm run check:android
+npm run native:sync
+
+Push-Location apps/client/android
+.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+# Solo con un Android Emulator arrancado y sin dispositivos físicos conectados:
+.\gradlew.bat :app:connectedDebugAndroidTest
+Pop-Location
+
+# Sustituir el serial por el que muestre `adb devices`.
+$env:CONVERGENCE_ANDROID_DEVICE = 'emulator-5554'
+npm run native:smoke:android
+
+New-Item -ItemType Directory -Force artifacts\android
+Copy-Item apps\client\android\app\build\outputs\apk\debug\app-debug.apk `
+  artifacts\android\Convergence-v2-0.1.0-debug.apk
+```
+
+El smoke reinstala y limpia los datos de Convergence, por lo que comprueba por
+serial y por `ro.kernel.qemu` que el destino sea un emulador. El APK se puede
+instalar y abrir con:
+
+```powershell
+adb install -r artifacts\android\Convergence-v2-0.1.0-debug.apk
+adb shell am start -W -n com.deploy21.convergence/.MainActivity
+```
+
+Es una APK con firma **debug** para desarrollo, no una release de Play Store ni
+un AAB. Empaqueta el `dist/` estable con la jugabilidad actual y el bridge
+nativo; no incluye `dist-profile-emulator`, Functions cloud, rankings, salas o
+multijugador.
 
 ## Iniciar el proyecto
 

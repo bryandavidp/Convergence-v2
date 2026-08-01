@@ -46,6 +46,9 @@ apps/client/android/**/key.properties
 apps/client/android/**/keystore.properties
 apps/client/android/**/signing.properties
 
+# Artefactos locales de entrega
+artifacts/
+
 # Outputs iOS (se versionará el proyecto, no sus builds)
 apps/client/ios/App/Pods/
 apps/client/ios/App/DerivedData/

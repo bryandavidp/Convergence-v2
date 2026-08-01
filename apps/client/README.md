@@ -373,11 +373,34 @@ test instrumentado pasan en `Convergence_API_36`; el APK también se instala,
 abre en portrait y no produce excepciones fatales nativas. Los assets y config
 generados por `cap sync` siguen ignorados y se regeneran desde `dist/`.
 
-Gate Gradle reproducible desde `android/`:
+### APK debug reproducible
+
+Primero hay que sincronizar desde la raíz para que Capacitor empaquete
+exclusivamente el `dist/` estable:
 
 ```powershell
-./gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-./gradlew.bat :app:connectedDebugAndroidTest
+npm run native:sync
+Push-Location apps/client/android
+.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+Pop-Location
+```
+
+La salida instalable queda en:
+
+```text
+apps/client/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Es una APK con firma debug, no una release de Play Store. Incluye el gameplay
+legacy probado, el runtime Capacitor y el bridge nativo; no incluye el carril
+`dist-profile-emulator`, Functions cloud, rankings, salas o multijugador.
+
+Gate instrumentado con un AVD arrancado y sin dispositivos físicos conectados:
+
+```powershell
+Push-Location apps/client/android
+.\gradlew.bat :app:connectedDebugAndroidTest
+Pop-Location
 ```
 
 Con el AVD API 36 arrancado, el smoke de runtime reinstala y limpia únicamente
@@ -388,7 +411,17 @@ relaunch recuperando `cv_meta`/`cv_run` desde Preferences:
 npm run native:smoke:android
 ```
 
-El script rechaza dispositivos físicos para no borrar datos reales.
+El script borra y reinstala los datos de Convergence en el destino. Rechaza
+dispositivos físicos tanto por el serial `emulator-*` como mediante
+`ro.kernel.qemu`, restaura el estado previo del modo avión y elimina su forward
+CDP al terminar.
+
+Instalación y arranque manuales, que conservan datos compatibles existentes:
+
+```powershell
+adb install -r apps/client/android/app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -W -n com.deploy21.convergence/.MainActivity
+```
 
 ### Ciclo habitual
 
