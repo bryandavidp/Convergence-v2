@@ -1,0 +1,449 @@
+{
+  "version": "4.1",
+  "generator": {
+    "script": "build_board_theme_v4_assets.py",
+    "pillow": "12.3.0",
+    "method": "faithful V3 pixel partition; no procedural redrawing"
+  },
+  "geometry": {
+    "frameCanvas": [
+      1024,
+      1024
+    ],
+    "decorCanvas": [
+      1024,
+      1024
+    ],
+    "sourceRing": 48,
+    "frameRing": 24,
+    "referenceBoardCssPixels": 364.19,
+    "referenceJointCssPixels": 3.8,
+    "referenceFrameCssPixels": 389.79,
+    "innerRadiusByTheme": {
+      "classic": 34,
+      "madera": 31,
+      "hielo": 31,
+      "lava": 31,
+      "cristal": 28,
+      "magico": 34,
+      "futurista": 26,
+      "dorado": 31,
+      "bosque": 34,
+      "cosmico": 34,
+      "jardin": 36
+    },
+    "outerRadiusByTheme": {
+      "classic": 58,
+      "madera": 55,
+      "hielo": 55,
+      "lava": 55,
+      "cristal": 52,
+      "magico": 58,
+      "futurista": 50,
+      "dorado": 55,
+      "bosque": 58,
+      "cosmico": 58,
+      "jardin": 60
+    }
+  },
+  "themes": {
+    "classic": {
+      "classification": "structural-enamel",
+      "hasDecor": true,
+      "sourceV3Sha256": "0e40fef6ce5450307f1a23e10dc63e49a5d49f6953009147e479dc61f9df7085",
+      "sourceRing": 48,
+      "targetRing": 24,
+      "cellRadiusCss": 9,
+      "assetInnerRadius": 34,
+      "assetOuterRadius": 58,
+      "semanticZones": [],
+      "semanticMaskBounds": null,
+      "decorAlphaBounds": [
+        0,
+        0,
+        1024,
+        1024
+      ],
+      "separation": "whole-authored-pixel",
+      "decorTransform": "identity-square-no-axis-stretch",
+      "frameBaseV4Sha256": "d46ccc754e2c512d4275636ea66d6b8ba2d4f0b5f2178705b9a487caff7b641c",
+      "decorV4Sha256": "67e4e5d9243e95988fe1234e7b9133aacf9e919c5f67cea194329be97efd89bf"
+    },
+    "madera": {
+      "classification": "wood-rail-and-corner-foliage",
+      "hasDecor": true,
+      "sourceV3Sha256": "8414b93a5373890da039e23e8a0da361c0365dd77995da12b0454cea799cb8e2",
+      "sourceRing": 48,
+      "targetRing": 24,
+      "cellRadiusCss": 8,
+      "assetInnerRadius": 31,
+      "assetOuterRadius": 55,
+      "semanticZones": [
+        [
+          0,
+          0,
+          118,
+          118
+        ],
+        [
+          906,
+          0,
+          1024,
+          118
+        ],
+        [
+          0,
+          906,
+          118,
+          1024
+        ],
+        [
+          906,
+          906,
+          1024,
+          1024
+        ]
+      ],
+      "semanticMaskBounds": [
+        0,
+        0,
+        1024,
+        1024
+      ],
+      "decorAlphaBounds": [
+        0,
+        0,
+        1024,
+        1024
+      ],
+      "separation": "whole-authored-pixel",
+      "decorTransform": "identity-square-no-axis-stretch",
+      "frameBaseV4Sha256": "49f67da631bd7e168070f5a6bbca0e408def07fbfa5e2f2d7eed0523f34c6b03",
+      "decorV4Sha256": "a58036fa6e52ee63db9ebcce6e7a4fce348a17c1c84d6da5a8e12c3f17651e9b"
+    },
+    "hielo": {
+      "classification": "ice-rail-and-corner-crystals",
+      "hasDecor": true,
+      "sourceV3Sha256": "a067e9ac80d1caf51c63a305de21cb03664d556ece13dbaf0174f6911b51f585",
+      "sourceRing": 48,
+      "targetRing": 24,
+      "cellRadiusCss": 8,
+      "assetInnerRadius": 31,
+      "assetOuterRadius": 55,
+      "semanticZones": [
+        [
+          0,
+          0,
+          112,
+          192
+        ],
+        [
+          912,
+          0,
+          1024,
+          192
+        ],
+        [
+          0,
+          832,
+          112,
+          1024
+        ],
+        [
+          912,
+          832,
+          1024,
+          1024
+        ]
+      ],
+      "semanticMaskBounds": [
+        0,
+        0,
+        1024,
+        1024
+      ],
+      "decorAlphaBounds": [
+        0,
+        0,
+        1024,
+        1024
+      ],
+      "separation": "whole-authored-pixel",
+      "decorTransform": "identity-square-no-axis-stretch",
+      "frameBaseV4Sha256": "42a9d409a28e5adc682ad47fe24a6da1a8c3a5727ec6a337c8cfc95a225e979c",
+      "decorV4Sha256": "542f0ff8bff78ea60ec57027a44deca9ba37cffedbfcc0b44779684d26b19cda"
+    },
+    "lava": {
+      "classification": "structural-basalt",
+      "hasDecor": true,
+      "sourceV3Sha256": "7c81c98c5c7edd4bbdcc77af840769c8d0aad336aa8b7183e1cbcd539ce8c09b",
+      "sourceRing": 48,
+      "targetRing": 24,
+      "cellRadiusCss": 8,
+      "assetInnerRadius": 31,
+      "assetOuterRadius": 55,
+      "semanticZones": [],
+      "semanticMaskBounds": null,
+      "decorAlphaBounds": [
+        0,
+        1,
+        1024,
+        1024
+      ],
+      "separation": "whole-authored-pixel",
+      "decorTransform": "identity-square-no-axis-stretch",
+      "frameBaseV4Sha256": "955bec589acf57cee741f540f7f70670b412fc18d39a9aafdcc983146425a77a",
+      "decorV4Sha256": "25f45cc14d164dffa2719de21100a67b7ad023134e5158c1ee4ee3cc4268918b"
+    },
+    "cristal": {
+      "classification": "crystal-rail-and-exterior-spikes",
+      "hasDecor": true,
+      "sourceV3Sha256": "efc187de181a30e89afe4bc67997462a9e5f869a476d30a7274717f3d0c34e3e",
+      "sourceRing": 48,
+      "targetRing": 24,
+      "cellRadiusCss": 7,
+      "assetInnerRadius": 28,
+      "assetOuterRadius": 52,
+      "semanticZones": [
+        [
+          0,
+          0,
+          88,
+          286
+        ],
+        [
+          936,
+          0,
+          1024,
+          286
+        ],
+        [
+          0,
+          738,
+          92,
+          1024
+        ],
+        [
+          932,
+          738,
+          1024,
+          1024
+        ]
+      ],
+      "semanticMaskBounds": [
+        0,
+        0,
+        1024,
+        1024
+      ],
+      "decorAlphaBounds": [
+        0,
+        0,
+        1024,
+        1024
+      ],
+      "separation": "whole-authored-pixel",
+      "decorTransform": "identity-square-no-axis-stretch",
+      "frameBaseV4Sha256": "fc7f40cae4539154d8e967f2222e45247d4e472bd4c2b1698a8e9d4cb6cac280",
+      "decorV4Sha256": "796f4eb9fc91e8c0610beb3a2c77ab2d07df9f067f03c768d7a4476f3e4f3f25"
+    },
+    "magico": {
+      "classification": "arcane-rail-and-cardinal-finials",
+      "hasDecor": true,
+      "sourceV3Sha256": "8ba4cf80f92ebd2b8ef2d3487f242c79380960e4158999f30688decb9cf2ba01",
+      "sourceRing": 48,
+      "targetRing": 24,
+      "cellRadiusCss": 9,
+      "assetInnerRadius": 34,
+      "assetOuterRadius": 58,
+      "semanticZones": [
+        [
+          414,
+          0,
+          610,
+          90
+        ],
+        [
+          414,
+          934,
+          610,
+          1024
+        ],
+        [
+          0,
+          386,
+          92,
+          638
+        ],
+        [
+          932,
+          386,
+          1024,
+          638
+        ]
+      ],
+      "semanticMaskBounds": [
+        0,
+        0,
+        1024,
+        1024
+      ],
+      "decorAlphaBounds": [
+        0,
+        0,
+        1024,
+        1024
+      ],
+      "separation": "whole-authored-pixel",
+      "decorTransform": "identity-square-no-axis-stretch",
+      "frameBaseV4Sha256": "c0dcfc90854cd06a71abff232109d542ed8c9418e5c84651bd509bcb380aabe0",
+      "decorV4Sha256": "24d8af6ac9c975d0fa8f9439f7506c658ee40a1c2cd550042c6c0a2de35ae0a5"
+    },
+    "futurista": {
+      "classification": "structural-chassis",
+      "hasDecor": true,
+      "sourceV3Sha256": "02e3343668950369fff2c94ac0530c6a709ca7175d4212d5e1f729a7d5ae6e90",
+      "sourceRing": 48,
+      "targetRing": 24,
+      "cellRadiusCss": 6,
+      "assetInnerRadius": 26,
+      "assetOuterRadius": 50,
+      "semanticZones": [],
+      "semanticMaskBounds": null,
+      "decorAlphaBounds": [
+        0,
+        0,
+        1024,
+        1024
+      ],
+      "separation": "whole-authored-pixel",
+      "decorTransform": "identity-square-no-axis-stretch",
+      "frameBaseV4Sha256": "2a4bc86847dd0ea2a8c94b532f9442ba84a95081466e10f25b90c0bbe5c360a9",
+      "decorV4Sha256": "cbb1966bccd5f5053fff5be9b7973bc10c20b5206cf6af364f05da9c88d6bb5d"
+    },
+    "dorado": {
+      "classification": "structural-gold-moulding",
+      "hasDecor": true,
+      "sourceV3Sha256": "dcec67e46ee42e7fd4b338457c10b07a6e72994cb604620ae02947d8ac33fadb",
+      "sourceRing": 48,
+      "targetRing": 24,
+      "cellRadiusCss": 8,
+      "assetInnerRadius": 31,
+      "assetOuterRadius": 55,
+      "semanticZones": [],
+      "semanticMaskBounds": null,
+      "decorAlphaBounds": [
+        0,
+        0,
+        1024,
+        1024
+      ],
+      "separation": "whole-authored-pixel",
+      "decorTransform": "identity-square-no-axis-stretch",
+      "frameBaseV4Sha256": "4f07630d04db0298f66bfe962b09133f984f081f49ad94aef4d8fb3b5909cc70",
+      "decorV4Sha256": "9cd749fedc24aff90a694bea8f0b28fc92922834fe8c31066ec7400c15cf65ee"
+    },
+    "bosque": {
+      "classification": "structural-moss-blocks",
+      "hasDecor": true,
+      "sourceV3Sha256": "329d2291791a60ce44e980eb4e02d0b3697e68fdb905b26b411ef900bea9dfab",
+      "sourceRing": 48,
+      "targetRing": 24,
+      "cellRadiusCss": 9,
+      "assetInnerRadius": 34,
+      "assetOuterRadius": 58,
+      "semanticZones": [],
+      "semanticMaskBounds": null,
+      "decorAlphaBounds": [
+        2,
+        5,
+        1024,
+        1024
+      ],
+      "separation": "whole-authored-pixel",
+      "decorTransform": "identity-square-no-axis-stretch",
+      "frameBaseV4Sha256": "d2cc346ce2cecf1710ab23a08d13c2452ec04b7572f84930669b2c203d62cc83",
+      "decorV4Sha256": "bff190180e42fc320915cd8fef395471827d85ffe76879248ce69785c4c34756"
+    },
+    "cosmico": {
+      "classification": "portal-rail-and-planets",
+      "hasDecor": true,
+      "sourceV3Sha256": "7776fe9058b54fd978c05fd6e39692cfaa198bbe0add29eb3ec4a510af43d772",
+      "sourceRing": 48,
+      "targetRing": 24,
+      "cellRadiusCss": 9,
+      "assetInnerRadius": 34,
+      "assetOuterRadius": 58,
+      "semanticZones": [
+        [
+          0,
+          0,
+          112,
+          196
+        ],
+        [
+          912,
+          0,
+          1024,
+          196
+        ],
+        [
+          922,
+          300,
+          1024,
+          642
+        ],
+        [
+          0,
+          674,
+          126,
+          944
+        ],
+        [
+          918,
+          790,
+          1024,
+          1024
+        ]
+      ],
+      "semanticMaskBounds": [
+        0,
+        0,
+        1024,
+        1024
+      ],
+      "decorAlphaBounds": [
+        0,
+        0,
+        1024,
+        1024
+      ],
+      "separation": "whole-authored-pixel",
+      "decorTransform": "identity-square-no-axis-stretch",
+      "frameBaseV4Sha256": "28169af19a6c2a373b1007392d80538589163c83be4a39f752d869ba06c93212",
+      "decorV4Sha256": "b4574daba0a19f13490e2a21892ef302b1e71f0d6407a3f9fbf40b86365f519c"
+    },
+    "jardin": {
+      "classification": "authored-garden-frame",
+      "hasDecor": true,
+      "sourceV3Sha256": "38d7922673071b68b66c838caae9e38f18676b55539c1542201fd17cf999097c",
+      "sourceRing": 48,
+      "targetRing": 24,
+      "cellRadiusCss": 10,
+      "assetInnerRadius": 36,
+      "assetOuterRadius": 60,
+      "semanticZones": [],
+      "semanticMaskBounds": null,
+      "decorAlphaBounds": [
+        1,
+        0,
+        1022,
+        1024
+      ],
+      "separation": "whole-authored-pixel",
+      "decorTransform": "identity-square-no-axis-stretch",
+      "frameBaseV4Sha256": "cc508b364c13d7f71b2a883cb571edb4c1344f6a685ee7f46826345d1dbf8171",
+      "decorV4Sha256": "c0f5c514069061cc935c2bc638c3c583955798cae43f6a39898a8ff15a9c9454"
+    }
+  }
+}

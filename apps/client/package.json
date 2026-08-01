@@ -1,0 +1,52 @@
+{
+  "name": "@convergence/client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cliente PWA y shell nativo Capacitor de Convergence.",
+  "scripts": {
+    "dev": "node scripts/serve-static.mjs web --port 4173",
+    "build": "node scripts/build-static.mjs",
+    "build:auth-emulator": "node scripts/build-auth-emulator.mjs",
+    "build:profile-emulator": "node scripts/build-profile-emulator.mjs",
+    "build:cloud-dev": "npm run build && node scripts/build-cloud-dev.mjs",
+    "preview": "node scripts/serve-static.mjs dist --port 4174",
+    "preview:auth-emulator": "node scripts/serve-static.mjs dist-emulator --port 4175",
+    "preview:cloud-dev": "node scripts/serve-static.mjs dist-cloud-dev --port 4176",
+    "preview:profile-emulator": "node scripts/serve-static.mjs dist-profile-emulator --port 4177",
+    "smoke": "node scripts/smoke-static.mjs",
+    "smoke:cloud-auth": "node scripts/smoke-cloud-auth.mjs convergence-d1a35",
+    "typecheck": "tsc6 --noEmit -p tsconfig.json",
+    "test:legacy": "node --test --test-concurrency=8 \"web/tests/*.test.js\"",
+    "test:platform": "node --test --test-concurrency=1 \"test/*.test.mjs\"",
+    "test:auth-emulator-build": "node --test test/auth-emulator-config.test.mjs test/auth-emulator-build.test.mjs",
+    "test:profile-emulator-build": "node --test test/profile-emulator-config.test.mjs test/profile-emulator-build.test.mjs",
+    "test:cloud-dev-build": "node --test test/cloud-dev-build.test.mjs",
+    "native:doctor": "cap doctor",
+    "native:gate": "node scripts/check-native-config.mjs",
+    "native:add:android": "cap add android",
+    "native:add:ios": "cap add ios",
+    "native:sync": "npm run build && cap sync",
+    "android": "npm run native:sync && cap open android",
+    "ios": "npm run native:sync && cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/app": "8.1.1",
+    "@capacitor/core": "8.4.2",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/local-notifications": "8.2.1",
+    "@capacitor/network": "8.0.1",
+    "@capacitor/preferences": "8.0.1",
+    "@capacitor/push-notifications": "8.1.2",
+    "@capacitor/share": "8.0.1",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.3",
+    "@convergence/contracts": "0.1.0",
+    "firebase": "12.17.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "8.4.2",
+    "@capacitor/cli": "8.4.2",
+    "@capacitor/ios": "8.4.2",
+    "esbuild": "0.28.1"
+  }
+}

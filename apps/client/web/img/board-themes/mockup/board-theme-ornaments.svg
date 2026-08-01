@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <linearGradient id="rock-blue" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#7898d7"/>
+      <stop offset="1" stop-color="#1d315c"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#f1a75b"/>
+      <stop offset=".5" stop-color="#9a5126"/>
+      <stop offset="1" stop-color="#3d1c0d"/>
+    </linearGradient>
+    <linearGradient id="ice" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#f2fdff"/>
+      <stop offset=".45" stop-color="#69d9ff"/>
+      <stop offset="1" stop-color="#2671c7"/>
+    </linearGradient>
+    <linearGradient id="magma" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ffdf5a"/>
+      <stop offset=".42" stop-color="#ff6b20"/>
+      <stop offset="1" stop-color="#8f160e"/>
+    </linearGradient>
+    <linearGradient id="crystal" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#f7d9ff"/>
+      <stop offset=".45" stop-color="#b85dff"/>
+      <stop offset="1" stop-color="#56209e"/>
+    </linearGradient>
+    <linearGradient id="arcane" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#65f5ff"/>
+      <stop offset=".5" stop-color="#9b6dff"/>
+      <stop offset="1" stop-color="#f271ff"/>
+    </linearGradient>
+    <linearGradient id="future" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#7dfff4"/>
+      <stop offset=".52" stop-color="#18dcea"/>
+      <stop offset="1" stop-color="#246cff"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#fff4a8"/>
+      <stop offset=".42" stop-color="#ffd13b"/>
+      <stop offset="1" stop-color="#a96108"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#d8ff79"/>
+      <stop offset=".5" stop-color="#58c95f"/>
+      <stop offset="1" stop-color="#17713d"/>
+    </linearGradient>
+    <linearGradient id="cosmic" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#75efff"/>
+      <stop offset=".48" stop-color="#9874ff"/>
+      <stop offset="1" stop-color="#f06dff"/>
+    </linearGradient>
+    <filter id="soft-glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <symbol id="classic" viewBox="0 0 512 512">
+    <g opacity=".95" stroke="#13213f" stroke-width="4">
+      <path fill="url(#rock-blue)" d="M2 445 21 407l36-13 31 24 11 49-26 38H8Z"/>
+      <path fill="url(#rock-blue)" d="m52 474 25-29 40 3 22 27-11 35H63Z"/>
+      <path fill="#2d8956" d="M0 370c33 9 43 25 50 58-24-11-39-23-50-43Z"/>
+      <path fill="#42bf72" d="M35 367c29 15 35 36 25 64-19-18-28-34-25-64Z"/>
+    </g>
+    <g fill="#82ecff" filter="url(#soft-glow)"><path d="m465 22 7 17 18 7-18 7-7 18-7-18-18-7 18-7Z"/><circle cx="423" cy="72" r="4"/></g>
+  </symbol>
+
+  <symbol id="madera" viewBox="0 0 512 512">
+    <g stroke="#4a220d" stroke-width="5" stroke-linejoin="round">
+      <path fill="url(#wood)" d="M0 462c54-24 81-50 114-105l25 13c-23 67-57 105-110 142H0Z"/>
+      <path fill="url(#wood)" d="M512 48c-53 22-85 48-117 101l-24-14c21-61 56-101 112-135h29Z"/>
+    </g>
+    <g fill="url(#leaf)" stroke="#21522c" stroke-width="3">
+      <path d="M72 402c-29-27-22-52 15-63 12 35 5 52-15 63Z"/>
+      <path d="M113 372c-8-38 11-54 48-45-8 36-22 49-48 45Z"/>
+      <path d="M420 96c-6-37 13-52 48-42-10 34-24 46-48 42Z"/>
+    </g>
+    <g fill="none" stroke="#ffd28a" stroke-width="3" opacity=".7"><path d="M15 479c42-22 78-58 103-105"/><path d="M494 21c-43 20-75 49-100 91"/></g>
+  </symbol>
+
+  <symbol id="hielo" viewBox="0 0 512 512">
+    <g fill="url(#ice)" stroke="#d8f8ff" stroke-width="4" stroke-linejoin="round" filter="url(#soft-glow)">
+      <path d="m0 428 34-56 18 42 31-66 29 97-35 67H0Z"/>
+      <path d="m512 68-35 55-18-40-35 72-25-98 37-57h76Z"/>
+      <path d="m434 488 18-40 19 22 17-48 24 63v27h-77Z"/>
+    </g>
+    <g fill="none" stroke="#e9fdff" stroke-width="5" stroke-linecap="round" opacity=".95">
+      <path d="M52 24v60M25 39l54 31M79 39 25 70"/><path d="M52 24 42 37m10-13 10 13M25 39l18 1m-18-1 8 16M79 39l-18 1m18-1-8 16"/>
+    </g>
+  </symbol>
+
+  <symbol id="lava" viewBox="0 0 512 512">
+    <g fill="#25100d" stroke="#571b13" stroke-width="5">
+      <path d="M0 418 35 385l45 9 23 38 34 26-18 54H0Z"/>
+      <path d="m512 91-31 26-45-8-27-35-29-31 22-43h110Z"/>
+    </g>
+    <g fill="none" stroke="url(#magma)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" filter="url(#soft-glow)">
+      <path d="m2 463 41-15 10-33 32 31 39 8"/><path d="m507 45-40 15-12 32-30-29-35-9"/>
+    </g>
+    <g fill="#ffcf45" filter="url(#soft-glow)"><circle cx="103" cy="395" r="5"/><circle cx="382" cy="108" r="4"/><circle cx="420" cy="32" r="3"/></g>
+  </symbol>
+
+  <symbol id="cristal" viewBox="0 0 512 512">
+    <g fill="url(#crystal)" stroke="#e5c2ff" stroke-width="4" stroke-linejoin="round" filter="url(#soft-glow)">
+      <path d="m419 512 15-92 33-47 20 58 25-17v98Z"/>
+      <path d="m376 512 12-62 31-45 20 63 24 44Z"/>
+      <path d="M0 0h69L53 54 27 91 0 72Z"/>
+      <path d="m36 0 34 12 26 44-47-2Z"/>
+    </g>
+    <g fill="#fff" opacity=".75"><path d="m454 403 5 13 14 5-14 5-5 14-5-14-14-5 14-5Z"/><path d="m68 59 4 10 10 4-10 4-4 10-4-10-10-4 10-4Z"/></g>
+  </symbol>
+
+  <symbol id="magico" viewBox="0 0 512 512">
+    <g fill="none" stroke="url(#arcane)" stroke-width="4" opacity=".85" filter="url(#soft-glow)">
+      <circle cx="55" cy="55" r="38"/><circle cx="55" cy="55" r="24"/><path d="m55 18 11 25 27 3-20 18 6 27-24-14-24 14 6-27-20-18 27-3Z"/>
+      <path d="M414 459c16-27 37-44 66-54M437 491c10-33 28-57 57-74"/>
+    </g>
+    <g fill="url(#arcane)" filter="url(#soft-glow)"><path d="m449 442 8 20 21 8-21 8-8 21-8-21-21-8 21-8Z"/><circle cx="401" cy="478" r="5"/><circle cx="107" cy="35" r="4"/></g>
+  </symbol>
+
+  <symbol id="futurista" viewBox="0 0 512 512">
+    <g fill="none" stroke="url(#future)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" filter="url(#soft-glow)">
+      <path d="M0 61h52l25 25h63M31 0v33l36 36M0 104h38l22 22"/>
+      <path d="M512 451h-53l-24-25h-64M480 512v-34l-35-35M512 407h-39l-21-21"/>
+    </g>
+    <g fill="#092e3d" stroke="#63fff4" stroke-width="4"><circle cx="140" cy="86" r="9"/><circle cx="60" cy="126" r="7"/><circle cx="371" cy="426" r="9"/><circle cx="452" cy="386" r="7"/></g>
+    <g fill="#72fff3"><rect x="13" y="13" width="18" height="18" rx="4"/><rect x="481" y="481" width="18" height="18" rx="4"/></g>
+  </symbol>
+
+  <symbol id="dorado" viewBox="0 0 512 512">
+    <g fill="none" stroke="url(#gold)" stroke-width="12" stroke-linecap="square" stroke-linejoin="miter" filter="url(#soft-glow)">
+      <path d="M5 105V5h100M25 105V25h80M407 507h100V407M487 407v80h-80"/>
+    </g>
+    <g fill="url(#gold)" stroke="#8f5709" stroke-width="3"><path d="m92 35 14 21-14 21-14-21Z"/><path d="m420 435 14 21-14 21-14-21Z"/></g>
+    <g fill="#5eeaff" stroke="#e6ffff" stroke-width="2"><path d="m34 94 13 13-13 13-13-13Z"/></g>
+    <g fill="#ff5d82" stroke="#ffd4df" stroke-width="2"><path d="m478 392 13 13-13 13-13-13Z"/></g>
+  </symbol>
+
+  <symbol id="bosque" viewBox="0 0 512 512">
+    <g fill="none" stroke="#2c8d4c" stroke-width="9" stroke-linecap="round"><path d="M0 431c55-17 85-48 105-105M512 78c-53 18-84 48-103 104"/></g>
+    <g fill="url(#leaf)" stroke="#175830" stroke-width="3">
+      <path d="M18 414c11-35 32-43 62-25-17 29-35 37-62 25Z"/><path d="M55 376c-4-37 15-52 50-39-12 33-28 44-50 39Z"/>
+      <path d="M494 95c-12 34-33 43-63 24 18-28 36-36 63-24Z"/><path d="M456 134c3 37-16 51-50 38 12-32 28-44 50-38Z"/>
+    </g>
+    <g fill="#ff9ed0" stroke="#ffe0f0" stroke-width="2"><circle cx="91" cy="427" r="7"/><circle cx="78" cy="440" r="7"/><circle cx="104" cy="440" r="7"/><circle cx="91" cy="453" r="7"/><circle cx="91" cy="440" r="6" fill="#ffd451"/></g>
+  </symbol>
+
+  <symbol id="cosmico" viewBox="0 0 512 512">
+    <g filter="url(#soft-glow)">
+      <circle cx="59" cy="61" r="34" fill="url(#cosmic)" stroke="#cbf8ff" stroke-width="3"/>
+      <ellipse cx="59" cy="61" rx="55" ry="15" fill="none" stroke="#8beeff" stroke-width="5" transform="rotate(-18 59 61)"/>
+      <circle cx="461" cy="462" r="24" fill="#5f4ed6" stroke="#bdadff" stroke-width="3"/>
+    </g>
+    <g fill="#fff" filter="url(#soft-glow)"><path d="m446 40 7 17 18 7-18 7-7 18-7-18-18-7 18-7Z"/><path d="m398 96 4 10 10 4-10 4-4 10-4-10-10-4 10-4Z"/><circle cx="103" cy="116" r="4"/><circle cx="428" cy="438" r="3"/></g>
+  </symbol>
+
+  <symbol id="jardin" viewBox="0 0 512 512">
+    <g fill="none" stroke="#78a95c" stroke-width="12" stroke-linecap="round"><path d="M0 476c42-9 78-35 111-84M512 36c-43 9-80 35-113 84"/></g>
+    <g fill="#8dd770" stroke="#336f3a" stroke-width="3"><ellipse cx="50" cy="438" rx="28" ry="13" transform="rotate(-28 50 438)"/><ellipse cx="85" cy="407" rx="27" ry="12" transform="rotate(-45 85 407)"/><ellipse cx="462" cy="73" rx="28" ry="13" transform="rotate(-28 462 73)"/></g>
+    <g fill="#ffb7d5" stroke="#fff0f7" stroke-width="2" filter="url(#soft-glow)"><path d="M118 454c18-13 35 5 18 23-20 0-27-10-18-23Z"/><path d="M402 59c18-13 35 5 18 23-20 0-27-10-18-23Z"/><path d="M466 119c13-10 26 4 13 17-15 0-20-7-13-17Z"/></g>
+    <g fill="url(#rock-blue)" stroke="#26383f" stroke-width="3"><ellipse cx="32" cy="492" rx="34" ry="17"/><ellipse cx="76" cy="488" rx="29" ry="15"/></g>
+  </symbol>
+</svg>

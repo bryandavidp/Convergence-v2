@@ -1,0 +1,1457 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07132e">
+  <title>Convergence · Mockup interactivo de temas de tablero</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #040919;
+      --panel: #0b1531;
+      --panel-2: #111f43;
+      --line: rgba(145, 175, 255, .22);
+      --text: #f4f7ff;
+      --muted: #aebada;
+      --cyan: #28ddff;
+      --gold: #ffd84d;
+      --good: #4ce38c;
+      --bad: #ff6178;
+      font-family: Inter, ui-rounded, "SF Pro Rounded", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 16% 8%, rgba(38, 119, 255, .18), transparent 25rem),
+        radial-gradient(circle at 92% 18%, rgba(141, 75, 255, .16), transparent 31rem),
+        linear-gradient(160deg, #071127, var(--page) 58%, #02050f);
+      overflow-x: hidden;
+    }
+
+    button { font: inherit; }
+
+    .page-stars,
+    .page-stars::before,
+    .page-stars::after {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      content: "";
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,.48) 0 1px, transparent 1.4px),
+        radial-gradient(circle, rgba(74,218,255,.42) 0 1px, transparent 1.5px);
+      background-position: 7px 11px, 42px 31px;
+      background-size: 61px 61px, 89px 89px;
+      opacity: .19;
+    }
+
+    .page-stars::before { transform: rotate(18deg) scale(1.15); opacity: .11; }
+    .page-stars::after { transform: rotate(-12deg) scale(1.25); opacity: .08; }
+
+    .mockup-shell {
+      position: relative;
+      z-index: 1;
+      width: min(1240px, calc(100% - 32px));
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 28px 0 36px;
+      display: grid;
+      grid-template-columns: 390px minmax(0, 1fr);
+      gap: 30px;
+      align-items: start;
+    }
+
+    .device-stage { position: sticky; top: 22px; }
+
+    .device-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 4px 10px;
+      color: var(--muted);
+      font-size: .74rem;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .geometry-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 9px;
+      color: #b7ffd1;
+      background: rgba(30, 112, 67, .38);
+      border: 1px solid rgba(76, 227, 140, .35);
+      border-radius: 999px;
+      font-size: .66rem;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .geometry-pill::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--good);
+      box-shadow: 0 0 10px var(--good);
+      content: "";
+    }
+
+    .device {
+      position: relative;
+      width: 390px;
+      height: 844px;
+      overflow: hidden;
+      border: 1px solid rgba(147, 180, 255, .36);
+      border-radius: 34px;
+      background-color: #050a19;
+      background-image:
+        linear-gradient(180deg, rgba(0, 3, 14, .03), rgba(0, 3, 14, .12)),
+        var(--theme-game-background-image, none),
+        radial-gradient(circle at 74% 5%, rgba(0, 208, 255, .15), transparent 24%),
+        radial-gradient(circle at 18% 70%, rgba(94, 63, 255, .13), transparent 35%),
+        linear-gradient(160deg, #101f4b, #07132e 48%, #050a19);
+      background-position: center, center, center, center, center;
+      background-size: cover, cover, cover, cover, cover;
+      background-repeat: no-repeat;
+      box-shadow:
+        0 34px 90px rgba(0, 0, 0, .62),
+        0 0 0 8px rgba(0, 0, 0, .2),
+        inset 0 0 52px rgba(28, 83, 181, .12);
+      isolation: isolate;
+    }
+
+    .device::before {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      content: "";
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,.42) 0 1px, transparent 1.5px),
+        radial-gradient(circle, rgba(66,199,255,.35) 0 1px, transparent 1.7px);
+      background-position: 8px 19px, 33px 46px;
+      background-size: 57px 57px, 87px 87px;
+      opacity: var(--theme-device-overlay-opacity, .27);
+      mask-image: linear-gradient(#000, transparent 93%);
+    }
+
+    .safe-bar {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      width: 76px;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(4, 8, 20, .72);
+      transform: translateX(-50%);
+    }
+
+    .wallet {
+      position: absolute;
+      top: 20px;
+      left: 9px;
+      display: flex;
+      gap: 6px;
+      z-index: 20;
+    }
+
+    .wallet-pill {
+      min-width: 57px;
+      height: 27px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 0 7px;
+      border: 1px solid rgba(134, 165, 255, .28);
+      border-radius: 999px;
+      color: #fff;
+      background: linear-gradient(180deg, rgba(35, 52, 105, .92), rgba(12, 22, 54, .94));
+      box-shadow: inset 0 1px rgba(255,255,255,.12), 0 4px 11px rgba(0,0,0,.28);
+      font-size: .73rem;
+      font-weight: 900;
+    }
+
+    .wallet-pill i {
+      width: 13px;
+      height: 13px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #6a3a00;
+      background: radial-gradient(circle at 34% 30%, #fff4a0, #ffc21c 55%, #b96b00 78%);
+      box-shadow: 0 0 7px rgba(255, 208, 63, .5);
+      font-size: .54rem;
+      font-style: normal;
+    }
+
+    .wallet-pill.gems i {
+      border-radius: 3px;
+      color: transparent;
+      background: linear-gradient(145deg, #ccfaff, #54dcff 45%, #6e70ff);
+      transform: rotate(45deg) scale(.74);
+      box-shadow: 0 0 8px rgba(80, 222, 255, .65);
+    }
+
+    .wallet-plus {
+      width: 14px;
+      height: 14px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.42);
+      border-radius: 50%;
+      color: #fff;
+      font-size: .63rem;
+      line-height: 1;
+    }
+
+    .pause {
+      position: absolute;
+      top: 18px;
+      right: 10px;
+      width: 43px;
+      height: 43px;
+      display: grid;
+      place-items: center;
+      z-index: 20;
+      border: 1px solid rgba(135, 164, 241, .32);
+      border-radius: 50%;
+      color: #fff;
+      background: linear-gradient(180deg, rgba(42, 60, 110, .94), rgba(15, 26, 58, .96));
+      box-shadow: inset 0 1px rgba(255,255,255,.12), 0 5px 14px rgba(0,0,0,.36);
+    }
+
+    .pause::before {
+      width: 14px;
+      height: 18px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #fff 0 5px, transparent 5px 9px, #fff 9px 14px);
+      content: "";
+    }
+
+    .mode-banner {
+      position: absolute;
+      top: 159px;
+      left: 7px;
+      right: 7px;
+      height: 32px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      z-index: 20;
+      border: 1px solid rgba(168, 229, 95, .62);
+      border-radius: 999px;
+      color: #ecffc4;
+      background: linear-gradient(180deg, rgba(29, 65, 55, .86), rgba(12, 37, 39, .9));
+      box-shadow: inset 0 1px rgba(255,255,255,.08), 0 0 15px rgba(126, 222, 78, .08);
+      font-size: .67rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .mode-banner b { font-size: .72rem; text-transform: none; }
+    .mode-banner span:nth-child(2) { text-align: center; }
+
+    .level-chip {
+      position: absolute;
+      top: 205px;
+      left: 8px;
+      z-index: 20;
+      padding: 5px 10px;
+      border: 1px solid rgba(150, 139, 255, .32);
+      border-radius: 999px;
+      color: #c8c4ff;
+      background: rgba(28, 33, 80, .72);
+      font-size: .64rem;
+      font-weight: 900;
+    }
+
+    .score {
+      position: absolute;
+      top: 207px;
+      left: 50%;
+      z-index: 20;
+      color: var(--cyan);
+      font-size: 1.8rem;
+      font-weight: 1000;
+      line-height: 1;
+      text-shadow: 0 0 17px rgba(40, 221, 255, .5);
+      transform: translateX(-50%);
+    }
+
+    .garden-chip {
+      position: absolute;
+      top: 236px;
+      left: 8px;
+      z-index: 20;
+      padding: 4px 8px;
+      border: 1px solid rgba(155, 113, 255, .24);
+      border-radius: 999px;
+      color: #dbcfff;
+      background: rgba(30, 25, 74, .66);
+      font-size: .58rem;
+      font-weight: 900;
+    }
+
+    /* Geometría congelada a partir del tablero real en 390 × 844.
+       Ningún selector data-board redefine top/left/width/height/abertura/gap. */
+    .board-wrap {
+      /* La curva de la abertura nace de la propia tile de esquina. De este
+         modo ninguna casilla queda recortada por un radio mayor y los cuatro
+         centros de curvatura coinciden exactamente. */
+      --board-radius: var(--cell-radius, 9px);
+      --board-frame-band: 8px;
+      --board-grid-inset: calc(var(--board-frame-band) + 1px);
+      --board-frame-joint: clamp(3px, 1vw, 3.8px);
+      --board-frame-thickness: var(--board-grid-inset);
+      --board-frame-expand: calc(var(--board-frame-thickness) + var(--board-frame-joint));
+      --board-shell-radius: calc(var(--board-radius) + var(--board-grid-inset));
+      --board-frame-inner-radius: calc(var(--board-radius) + var(--board-frame-joint));
+      --board-frame-outer-radius: calc(var(--board-frame-inner-radius) + var(--board-frame-thickness));
+      position: absolute;
+      top: 260.52px;
+      left: 3.91px;
+      width: 382.19px;
+      height: 382.19px;
+      padding: 0;
+      overflow: visible;
+      z-index: 10;
+      border: var(--board-grid-inset) solid transparent;
+      border-radius: var(--board-shell-radius);
+      background-color: #081229;
+      background-image: var(--theme-board-surface-image, none), var(--board-frame);
+      background-position: center, center;
+      background-size: cover, cover;
+      background-blend-mode: normal, normal;
+      background-clip: padding-box;
+      box-shadow:
+        0 13px 30px rgba(0,0,0,.56),
+        0 0 28px var(--board-glow),
+        inset 0 1px rgba(255,255,255,.15);
+      contain: layout;
+      isolation: isolate;
+      pointer-events: none;
+    }
+
+    /* El ambiente vive dentro de la abertura y queda recortado por .board. */
+    .board::before {
+      position: absolute;
+      inset: var(--pattern-inset, 0);
+      z-index: 0;
+      pointer-events: none;
+      content: "";
+      opacity: var(--pattern-opacity, .58);
+      background: var(--board-pattern);
+      background-size: var(--pattern-size, 160% 160%);
+      mix-blend-mode: var(--pattern-blend, screen);
+      animation: var(--ambient-animation, ambient-drift 18s ease-in-out infinite);
+      transform-origin: center;
+    }
+
+    /* Marco V4: rail estructural independiente y centro realmente perforado.
+       La abertura y ambos radios se calculan desde el mismo radio del tablero. */
+    .board-wrap::before {
+      position: absolute;
+      inset: calc(0px - var(--board-frame-expand));
+      z-index: 0;
+      box-sizing: border-box;
+      padding: var(--board-frame-thickness);
+      pointer-events: none;
+      border-radius: var(--board-frame-outer-radius);
+      background-color: var(--board-frame);
+      background-image: var(--theme-frame-base-image, none);
+      background-position: center;
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--board-border) 72%, transparent);
+      clip-path: inset(0 round var(--board-frame-outer-radius));
+      -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      mask-composite: exclude;
+      content: "";
+    }
+
+    /* Decoración V4.1: mismo canvas cuadrado que el rail. Cada píxel conserva
+       la proporción V3 1:1; el tablero, situado por encima, oculta cualquier
+       tramo interior y deja visibles únicamente los ornamentos exteriores. */
+    .board-wrap::after {
+      position: absolute;
+      inset: calc(0px - var(--board-frame-expand));
+      z-index: 1;
+      pointer-events: none;
+      background-image: var(--theme-decor-image, none);
+      background-position: center center;
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      content: "";
+    }
+
+    .board {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      grid-template-rows: repeat(8, minmax(0, 1fr));
+      gap: 3.9px;
+      overflow: hidden;
+      border-radius: var(--board-radius);
+      background-color: var(--cell-empty-bg);
+      background-image: var(--theme-board-background-overlay, none), var(--theme-board-background-image, none), var(--theme-board-surface-image, none);
+      background-position: center, center, center;
+      background-size: cover, cover, cover;
+      background-repeat: no-repeat;
+      box-shadow: 0 0 0 var(--board-frame-joint) color-mix(in srgb, #020611 82%, var(--board-border));
+      isolation: isolate;
+      pointer-events: auto;
+    }
+
+    .cell {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      overflow: hidden;
+      border: 1px solid var(--cell-empty-border);
+      border-radius: var(--cell-radius, 9px);
+      color: #fff;
+      background: var(--cell-empty-bg);
+      box-shadow: var(--cell-empty-shadow, inset 0 1px rgba(255,255,255,.04));
+      cursor: pointer;
+      touch-action: manipulation;
+      contain: layout style paint;
+      transition: filter .16s ease, border-color .16s ease;
+      z-index: 1;
+    }
+
+    /* Una imagen full-bleed por tile ocupada; las vacías no pintan este pseudo. */
+    .cell::before {
+      position: absolute;
+      inset: -1px;
+      z-index: 0;
+      pointer-events: none;
+      content: "";
+      background-image: var(--theme-active-tile-image, var(--theme-board-surface-image, var(--cell-surface-image, none)));
+      background-position: var(--theme-tile-background-position, var(--surface-x, 0%) var(--surface-y, 0%));
+      background-size: var(--theme-tile-background-size, 800% 800%);
+      background-repeat: no-repeat;
+      mix-blend-mode: var(--theme-tile-blend, var(--cell-surface-blend, soft-light));
+      opacity: var(--cell-surface-opacity, .52);
+      filter: var(--theme-tile-filter, saturate(1.12) contrast(1.06));
+    }
+
+    .cell:not([data-filled="true"])::before { opacity: 0; }
+
+    .cell[data-filled="true"] {
+      --theme-active-tile-image: var(--theme-tile-variant-1-image, var(--theme-board-surface-image, var(--cell-surface-image, none)));
+      border-color: var(--theme-filled-tile-border, var(--cell-filled-border));
+      background: var(--cell-filled-bg);
+      box-shadow: var(--cell-filled-shadow, inset 0 1px rgba(255,255,255,.16));
+    }
+
+    .cell[data-filled="true"]:nth-child(4n + 2) { --theme-active-tile-image: var(--theme-tile-variant-2-image, var(--theme-tile-variant-1-image, var(--theme-board-surface-image, var(--cell-surface-image, none)))); }
+    .cell[data-filled="true"]:nth-child(4n + 3) { --theme-active-tile-image: var(--theme-tile-variant-3-image, var(--theme-tile-variant-1-image, var(--theme-board-surface-image, var(--cell-surface-image, none)))); }
+    .cell[data-filled="true"]:nth-child(4n) { --theme-active-tile-image: var(--theme-tile-variant-4-image, var(--theme-tile-variant-1-image, var(--theme-board-surface-image, var(--cell-surface-image, none)))); }
+
+    .cell[data-filled="true"]::before { opacity: var(--cell-filled-surface-opacity, .38); }
+
+    body:not(.surface-empty) .cell[data-filled="true"] { z-index: 4; }
+
+    .cell:hover { filter: brightness(1.12); }
+    .cell:not([data-filled="true"]):hover { border-color: var(--board-fx-accent); }
+    .cell:focus-visible { z-index: 5; outline: 3px solid #bff6ff; outline-offset: -3px; }
+
+    .glyph {
+      position: relative;
+      z-index: 2;
+      width: 76%;
+      height: 76%;
+      display: block;
+      filter: drop-shadow(0 2px 3px rgba(0,0,0,.44));
+      transform-origin: center;
+    }
+
+    .glyph svg { display: block; width: 100%; height: 100%; }
+
+    .cell::after {
+      position: absolute;
+      inset: -22%;
+      z-index: 3;
+      pointer-events: none;
+      border-radius: 50%;
+      background: var(--clear-burst);
+      content: "";
+      opacity: 0;
+      mix-blend-mode: screen;
+    }
+
+    .cell.demo-clear .glyph { animation: glyph-demo .52s cubic-bezier(.2,.86,.25,1) both; }
+    .cell.demo-clear::after { animation: burst-demo .52s ease-out both; }
+
+    .surface-empty .glyph { opacity: 0; visibility: hidden; }
+
+    .surface-empty .cell[data-filled="true"] {
+      border-color: var(--cell-empty-border);
+      background: var(--cell-empty-bg);
+      box-shadow: var(--cell-empty-shadow, inset 0 1px rgba(255,255,255,.04));
+    }
+
+    .surface-empty .cell[data-filled="true"]::before { opacity: 0; }
+
+    .occ {
+      position: absolute;
+      top: 650.7px;
+      left: 3.91px;
+      width: 382.19px;
+      height: 16px;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 7px;
+      z-index: 20;
+      color: rgba(255,255,255,.62);
+      font-size: .6rem;
+      font-weight: 900;
+    }
+
+    .occ-track {
+      height: 6px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(0,0,0,.58);
+      box-shadow: inset 0 1px 2px rgba(0,0,0,.55);
+    }
+
+    .occ-track i {
+      display: block;
+      width: 50%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #52e895, var(--board-fx-accent));
+      box-shadow: 0 0 8px var(--board-fx-accent);
+    }
+
+    .theme-drawer {
+      position: absolute;
+      top: 683px;
+      left: 8px;
+      right: 8px;
+      height: 151px;
+      z-index: 30;
+      padding: 9px;
+      border: 1px solid rgba(129, 159, 239, .28);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(19, 34, 74, .94), rgba(7, 15, 37, .97));
+      box-shadow: 0 10px 26px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.08);
+    }
+
+    .drawer-head {
+      height: 35px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .drawer-title { min-width: 0; }
+    .drawer-title b { display: block; overflow: hidden; font-size: .74rem; text-overflow: ellipsis; white-space: nowrap; }
+    .drawer-title small { display: block; color: var(--muted); font-size: .54rem; }
+
+    .visual-only {
+      flex: 0 0 auto;
+      padding: 3px 7px;
+      border: 1px solid rgba(76, 227, 140, .34);
+      border-radius: 999px;
+      color: #a9f7c7;
+      background: rgba(35, 118, 72, .26);
+      font-size: .52rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .phone-selector {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 5px;
+    }
+
+    .phone-theme {
+      min-width: 0;
+      height: 45px;
+      display: grid;
+      place-items: center;
+      gap: 1px;
+      padding: 3px 2px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--muted);
+      background: rgba(255,255,255,.04);
+      cursor: pointer;
+    }
+
+    .phone-theme span { font-size: .95rem; line-height: 1; }
+    .phone-theme small { max-width: 100%; overflow: hidden; font-size: .46rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+    .phone-theme[aria-pressed="true"] { border-color: var(--board-fx-accent); color: #fff; background: color-mix(in srgb, var(--board-fx-accent) 16%, rgba(255,255,255,.04)); box-shadow: 0 0 12px color-mix(in srgb, var(--board-fx-accent) 30%, transparent); }
+
+    .spec-panel {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .hero-card,
+    .catalog-card,
+    .contract-card {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(19, 32, 70, .88), rgba(8, 16, 38, .92));
+      box-shadow: inset 0 1px rgba(255,255,255,.08), 0 18px 50px rgba(0,0,0,.22);
+    }
+
+    .hero-card { padding: 24px; }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--cyan);
+      font-size: .72rem;
+      font-weight: 900;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 760px;
+      margin: 0;
+      font-size: clamp(1.9rem, 4vw, 3.35rem);
+      line-height: .98;
+      letter-spacing: -.045em;
+    }
+
+    .hero-card > p:not(.eyebrow) {
+      max-width: 760px;
+      margin: 13px 0 0;
+      color: var(--muted);
+      font-size: .94rem;
+      line-height: 1.55;
+    }
+
+    .selected-theme {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: end;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .selected-theme h2 { margin: 0; font-size: 1.36rem; }
+    .selected-theme p { margin: 5px 0 0; color: var(--muted); font-size: .84rem; line-height: 1.45; }
+
+    .traits {
+      margin: 10px 0 0;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      list-style: none;
+    }
+
+    .traits li {
+      padding: 5px 8px;
+      border: 1px solid color-mix(in srgb, var(--board-fx-accent) 34%, var(--line));
+      border-radius: 999px;
+      color: #dfe8ff;
+      background: color-mix(in srgb, var(--board-fx-accent) 9%, transparent);
+      font-size: .67rem;
+      font-weight: 800;
+    }
+
+    .selected-actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+
+    .price {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-width: 122px;
+      min-height: 36px;
+      padding: 6px 10px;
+      border: 1px solid rgba(255, 216, 77, .38);
+      border-radius: 12px;
+      color: #ffe77f;
+      background: rgba(119, 82, 8, .22);
+      font-size: .8rem;
+      font-weight: 900;
+    }
+
+    .action-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .action-btn {
+      min-height: 38px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: #fff;
+      background: linear-gradient(180deg, rgba(46, 73, 143, .96), rgba(23, 39, 87, .98));
+      box-shadow: 0 3px 0 rgba(0,0,0,.3);
+      cursor: pointer;
+      font-size: .7rem;
+      font-weight: 900;
+    }
+
+    .action-btn.primary { border-color: color-mix(in srgb, var(--board-fx-accent) 55%, var(--line)); background: linear-gradient(180deg, color-mix(in srgb, var(--board-fx-accent) 56%, #2951a2), color-mix(in srgb, var(--board-fx-accent) 26%, #122451)); }
+    #toggle-surface[aria-pressed="true"] { border-color: rgba(76, 227, 140, .6); color: #c5ffda; background: linear-gradient(180deg, rgba(38, 121, 75, .95), rgba(18, 68, 45, .98)); }
+    .action-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.3); }
+    .action-btn:focus-visible, .theme-card:focus-visible, .phone-theme:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+    .catalog-card { padding: 20px; }
+
+    .panel-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .panel-head h2 { margin: 0; font-size: 1.16rem; }
+    .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: .75rem; }
+    .panel-count { color: var(--cyan); font-size: .75rem; font-weight: 900; }
+
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .theme-card {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 70px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      color: var(--text);
+      background: rgba(255,255,255,.035);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color .16s ease, transform .16s ease, background .16s ease;
+    }
+
+    .theme-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--board-fx-accent) 55%, var(--line)); }
+    .theme-card[aria-pressed="true"] { border-color: var(--board-fx-accent); background: color-mix(in srgb, var(--board-fx-accent) 10%, rgba(255,255,255,.035)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--board-fx-accent) 22%, transparent), 0 0 19px color-mix(in srgb, var(--board-fx-accent) 12%, transparent); }
+
+    .theme-swatch {
+      position: relative;
+      width: 70px;
+      height: 70px;
+      overflow: hidden;
+      border: 1px solid var(--board-border);
+      border-radius: 13px;
+      background-color: #081229;
+      background-image: var(--theme-card-decor-image, none), var(--theme-card-surface-image, none), var(--board-frame);
+      background-position: center, center, center;
+      background-size: 70px 70px, cover, cover;
+      background-repeat: no-repeat;
+      box-shadow: 0 0 12px var(--board-glow);
+    }
+
+    .theme-swatch::before,
+    .theme-swatch::after {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      content: "";
+    }
+
+    .theme-swatch::before {
+      inset: 6px;
+      z-index: 1;
+      border-radius: 8px;
+      background-image:
+        linear-gradient(90deg, transparent calc(100% - 1px), rgba(230,244,255,.24) 0),
+        linear-gradient(0deg, transparent calc(100% - 1px), rgba(230,244,255,.24) 0);
+      background-size: 12.5% 12.5%;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.16);
+    }
+
+    .theme-swatch::after {
+      inset: 6px;
+      z-index: 2;
+      border: 1px solid transparent;
+      border-image-source: var(--theme-card-frame-base-image, none);
+      border-image-slice: 24;
+      border-image-width: 6px;
+      border-image-outset: 6px;
+      border-image-repeat: stretch;
+    }
+
+    .theme-card-copy { min-width: 0; }
+    .theme-card-copy b { display: block; overflow: hidden; font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
+    .theme-card-copy small { display: block; margin-top: 3px; overflow: hidden; color: var(--muted); font-size: .6rem; text-overflow: ellipsis; white-space: nowrap; }
+    .theme-cost { color: #ffe77f; font-size: .62rem; font-weight: 900; white-space: nowrap; }
+
+    .contract-card { padding: 18px 20px; }
+    .contract-card h2 { margin: 0 0 12px; font-size: 1rem; }
+
+    .contract-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .contract-item {
+      min-width: 0;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.03);
+    }
+
+    .contract-item b { display: block; color: #fff; font-size: .73rem; }
+    .contract-item span { display: block; margin-top: 4px; color: var(--muted); font-size: .63rem; line-height: 1.35; }
+    .contract-item.good b { color: #9df4bd; }
+    .contract-item.lock b { color: #ffe77f; }
+
+    /* El mismo contrato de variables se aplica al dispositivo y a las miniaturas. */
+    :is(.device, .theme-card)[data-board="classic"] {
+      --board-frame: linear-gradient(145deg, #0a1534, #163067 50%, #397cff);
+      --board-pattern: radial-gradient(circle, rgba(255,255,255,.45) 0 1px, transparent 1.8px), linear-gradient(135deg, rgba(0,218,255,.22), transparent 47%);
+      --pattern-size: 43px 43px, 160% 160%;
+      --pattern-opacity: .55;
+      --board-border: rgba(103, 159, 255, .82);
+      --board-trim: rgba(164, 205, 255, .42);
+      --board-glow: rgba(49, 117, 255, .42);
+      --cell-empty-bg: linear-gradient(145deg, rgba(12,31,75,.94), rgba(17,43,96,.88));
+      --cell-empty-border: rgba(116, 169, 255, .26);
+      --cell-filled-bg: linear-gradient(145deg, rgba(58,105,205,.96), rgba(28,67,154,.92));
+      --cell-filled-border: rgba(171, 209, 255, .62);
+      --cell-filled-shadow: inset 0 2px rgba(255,255,255,.24), inset 0 -4px rgba(2,17,56,.2);
+      --board-fx-accent: #38dfff;
+      --clear-burst: radial-gradient(circle, rgba(180,247,255,.82) 0 8%, rgba(50,200,255,.42) 32%, transparent 68%);
+      --ambient-animation: ambient-drift 18s ease-in-out infinite;
+    }
+
+    :is(.device, .theme-card)[data-board="madera"] {
+      --board-frame: linear-gradient(145deg, #2a1308, #75401d 48%, #c47737);
+      --board-pattern: repeating-linear-gradient(7deg, rgba(255,223,166,.14) 0 2px, transparent 2px 17px), radial-gradient(ellipse at 30% 20%, rgba(255,209,129,.18), transparent 27%);
+      --pattern-size: 130% 130%, 170% 170%;
+      --pattern-opacity: .82;
+      --pattern-blend: screen;
+      --board-border: rgba(232, 155, 82, .78);
+      --board-trim: rgba(255, 207, 144, .44);
+      --board-glow: rgba(197, 109, 43, .38);
+      --cell-empty-bg: repeating-linear-gradient(8deg, rgba(112,57,24,.96) 0 7px, rgba(78,35,14,.98) 7px 14px);
+      --cell-empty-border: rgba(236, 164, 94, .35);
+      --cell-filled-bg: linear-gradient(145deg, rgba(224,137,57,.98), rgba(126,57,19,.98)), repeating-linear-gradient(8deg, transparent 0 7px, rgba(255,226,164,.18) 7px 9px);
+      --cell-filled-border: rgba(255, 216, 152, .72);
+      --cell-filled-shadow: inset 0 2px rgba(255,245,208,.26), inset 0 -4px rgba(60,22,7,.32);
+      --cell-radius: 8px;
+      --board-fx-accent: #ffb159;
+      --clear-burst: repeating-linear-gradient(90deg, rgba(255,218,151,.72) 0 2px, transparent 2px 7px);
+      --ambient-animation: ambient-slide 22s linear infinite;
+    }
+
+    :is(.device, .theme-card)[data-board="hielo"] {
+      --board-frame: linear-gradient(145deg, #08264b, #1478a8 48%, #c0f8ff);
+      --board-pattern: linear-gradient(135deg, transparent 42%, rgba(240,254,255,.34) 44%, transparent 48%), radial-gradient(circle at 27% 21%, rgba(255,255,255,.62), transparent 18%);
+      --pattern-size: 113% 113%, 170% 170%;
+      --pattern-opacity: .76;
+      --board-border: rgba(197, 248, 255, .9);
+      --board-trim: rgba(233, 254, 255, .56);
+      --board-glow: rgba(88, 223, 255, .48);
+      --cell-empty-bg: linear-gradient(145deg, rgba(17,81,128,.92), rgba(25,120,166,.82));
+      --cell-empty-border: rgba(207, 248, 255, .38);
+      --cell-filled-bg: linear-gradient(145deg, rgba(165,240,255,.94), rgba(57,151,209,.9) 55%, rgba(27,101,166,.96));
+      --cell-filled-border: rgba(237, 255, 255, .88);
+      --cell-filled-shadow: inset 2px 2px rgba(255,255,255,.42), inset -3px -4px rgba(13,80,146,.24);
+      --cell-radius: 8px;
+      --board-fx-accent: #9ff1ff;
+      --clear-burst: conic-gradient(from 12deg, transparent, rgba(239,255,255,.92), transparent 22%, rgba(104,224,255,.7), transparent 48%);
+      --ambient-animation: ambient-pulse 15s ease-in-out infinite;
+    }
+
+    :is(.device, .theme-card)[data-board="lava"] {
+      --board-frame: radial-gradient(circle at 24% 20%, rgba(255,88,35,.72), transparent 18%), linear-gradient(145deg, #160402, #581109 51%, #ef421f);
+      --board-pattern: repeating-linear-gradient(135deg, rgba(255,182,55,.31) 0 3px, transparent 3px 22px), radial-gradient(circle at 73% 69%, rgba(255,218,70,.38), transparent 19%);
+      --pattern-size: 125% 125%, 170% 170%;
+      --pattern-opacity: .75;
+      --board-border: rgba(255, 103, 48, .92);
+      --board-trim: rgba(255, 191, 78, .52);
+      --board-glow: rgba(255, 65, 25, .52);
+      --cell-empty-bg: linear-gradient(145deg, #0b0201, #180503);
+      --cell-empty-border: rgba(255, 99, 43, .25);
+      --cell-filled-bg: radial-gradient(circle at 30% 28%, rgba(255,123,46,.28), transparent 30%), linear-gradient(145deg, #601811, #2b0b08 54%, #150605);
+      --cell-filled-border: rgba(255, 113, 48, .72);
+      --cell-filled-shadow: inset 0 0 11px rgba(255,64,20,.32), inset 0 2px rgba(255,181,83,.16);
+      --cell-radius: 8px;
+      --board-fx-accent: #ff6b28;
+      --clear-burst: radial-gradient(circle, rgba(255,241,109,.96) 0 8%, rgba(255,94,27,.7) 31%, transparent 68%);
+      --ambient-animation: ambient-pulse 10s ease-in-out infinite;
+    }
+
+    :is(.device, .theme-card)[data-board="cristal"] {
+      --board-frame: linear-gradient(145deg, #25104b, #7139ad 49%, #d6a8ff);
+      --board-pattern: linear-gradient(35deg, transparent 35%, rgba(255,255,255,.25) 36%, transparent 44%), linear-gradient(145deg, transparent 42%, rgba(108,224,255,.22) 44%, transparent 51%);
+      --pattern-size: 136% 136%, 160% 160%;
+      --pattern-opacity: .86;
+      --board-border: rgba(218, 171, 255, .9);
+      --board-trim: rgba(240, 220, 255, .52);
+      --board-glow: rgba(187, 89, 255, .49);
+      --cell-empty-bg: conic-gradient(from 35deg at 48% 42%, rgba(82,42,132,.96), rgba(45,20,87,.96), rgba(104,54,155,.94), rgba(45,20,87,.96));
+      --cell-empty-border: rgba(199, 145, 255, .35);
+      --cell-filled-bg: conic-gradient(from 32deg at 45% 38%, #cf8dff, #7b3cbd 28%, #4b2484 58%, #ad62e2 82%, #cf8dff);
+      --cell-filled-border: rgba(239, 218, 255, .82);
+      --cell-filled-shadow: inset 2px 2px rgba(255,255,255,.32), inset -3px -4px rgba(54,18,100,.3);
+      --cell-radius: 7px;
+      --board-fx-accent: #d17cff;
+      --clear-burst: conic-gradient(from 45deg, transparent, rgba(255,255,255,.85), transparent 16%, rgba(197,109,255,.72), transparent 38%, rgba(86,220,255,.56), transparent 63%);
+      --ambient-animation: ambient-prism 17s ease-in-out infinite;
+    }
+
+    :is(.device, .theme-card)[data-board="magico"] {
+      --board-frame: radial-gradient(circle at 50% 12%, rgba(143,75,255,.68), transparent 23%), linear-gradient(145deg, #12072e, #39206f 51%, #7d55f5);
+      --board-pattern: radial-gradient(circle, rgba(255,255,255,.38) 0 1px, transparent 2px), conic-gradient(from 45deg, transparent, rgba(255,87,240,.22), transparent 27%);
+      --pattern-size: 35px 35px, 160% 160%;
+      --pattern-opacity: .82;
+      --board-border: rgba(170, 118, 255, .88);
+      --board-trim: rgba(255, 112, 240, .43);
+      --board-glow: rgba(131, 80, 255, .54);
+      --cell-empty-bg: radial-gradient(circle at 50% 42%, rgba(118,72,222,.18), transparent 58%), linear-gradient(145deg, rgba(27,11,61,.96), rgba(46,21,91,.94));
+      --cell-empty-border: rgba(176, 135, 255, .3);
+      --cell-filled-bg: radial-gradient(circle at 50% 42%, rgba(197,125,255,.34), transparent 55%), linear-gradient(145deg, rgba(92,55,174,.96), rgba(46,23,102,.96));
+      --cell-filled-border: rgba(220, 191, 255, .72);
+      --cell-filled-shadow: inset 0 2px rgba(255,255,255,.19), 0 0 8px rgba(133,80,255,.19);
+      --cell-radius: 9px;
+      --board-fx-accent: #b27cff;
+      --clear-burst: conic-gradient(from 0deg, transparent, rgba(255,103,239,.74), transparent 24%, rgba(128,93,255,.75), transparent 54%, rgba(48,239,220,.55), transparent 80%);
+      --ambient-animation: ambient-runes 30s linear infinite;
+    }
+
+    :is(.device, .theme-card)[data-board="futurista"] {
+      --board-frame: linear-gradient(145deg, #021821, #084653 49%, #1de8d9);
+      --board-pattern: linear-gradient(rgba(35,255,231,.28) 1px, transparent 1px), linear-gradient(90deg, rgba(35,255,231,.28) 1px, transparent 1px);
+      --pattern-size: 30px 30px, 30px 30px;
+      --pattern-opacity: .74;
+      --pattern-inset: -30px;
+      --board-border: rgba(52, 255, 232, .88);
+      --board-trim: rgba(116, 255, 242, .5);
+      --board-glow: rgba(26, 238, 218, .46);
+      --cell-empty-bg: linear-gradient(145deg, rgba(3,31,42,.98), rgba(7,58,70,.96));
+      --cell-empty-border: rgba(31, 239, 220, .31);
+      --cell-filled-bg: linear-gradient(145deg, rgba(17,117,126,.98), rgba(6,59,74,.98));
+      --cell-filled-border: rgba(102, 255, 240, .76);
+      --cell-filled-shadow: inset 0 0 0 1px rgba(54,255,237,.18), inset 0 2px rgba(255,255,255,.15);
+      --cell-radius: 6px;
+      --board-fx-accent: #27f2df;
+      --clear-burst: linear-gradient(90deg, transparent, rgba(109,255,243,.9), transparent), linear-gradient(0deg, transparent, rgba(74,116,255,.58), transparent);
+      --ambient-animation: ambient-scan 9s linear infinite;
+    }
+
+    :is(.device, .theme-card)[data-board="dorado"] {
+      --board-frame: linear-gradient(145deg, #241604, #76500b 48%, #ffd94d);
+      --board-pattern: radial-gradient(circle at 25% 20%, rgba(255,255,255,.55), transparent 12%), repeating-linear-gradient(45deg, rgba(255,238,156,.22) 0 4px, transparent 4px 20px);
+      --pattern-size: 165% 165%, 120% 120%;
+      --pattern-opacity: .76;
+      --board-border: rgba(255, 224, 92, .95);
+      --board-trim: rgba(255, 243, 170, .62);
+      --board-glow: rgba(255, 207, 52, .46);
+      --cell-empty-bg: linear-gradient(145deg, rgba(70,45,6,.96), rgba(42,25,4,.98));
+      --cell-empty-border: rgba(255, 212, 72, .34);
+      --cell-filled-bg: linear-gradient(145deg, #ffe274, #c78416 56%, #7d4908);
+      --cell-filled-border: rgba(255, 245, 176, .88);
+      --cell-filled-shadow: inset 2px 2px rgba(255,255,220,.42), inset -3px -4px rgba(93,50,5,.28);
+      --cell-radius: 8px;
+      --board-fx-accent: #ffdb4e;
+      --clear-burst: radial-gradient(circle, rgba(255,255,222,.98) 0 7%, rgba(255,216,77,.72) 29%, transparent 68%);
+      --ambient-animation: ambient-gold 18s ease-in-out infinite;
+    }
+
+    :is(.device, .theme-card)[data-board="bosque"] {
+      --board-frame: linear-gradient(145deg, #061b0d, #1c5d2c 49%, #7edf70);
+      --board-pattern: radial-gradient(ellipse at 25% 25%, rgba(185,255,147,.34), transparent 21%), radial-gradient(ellipse at 70% 65%, rgba(91,218,98,.34), transparent 23%);
+      --pattern-size: 158% 158%, 170% 170%;
+      --pattern-opacity: .86;
+      --board-border: rgba(124, 227, 112, .88);
+      --board-trim: rgba(181, 247, 161, .46);
+      --board-glow: rgba(82, 210, 96, .4);
+      --cell-empty-bg: radial-gradient(circle at 30% 20%, rgba(110,178,71,.12), transparent 34%), linear-gradient(145deg, rgba(14,57,27,.98), rgba(17,78,34,.96));
+      --cell-empty-border: rgba(130, 226, 120, .29);
+      --cell-filled-bg: radial-gradient(circle at 28% 22%, rgba(180,226,86,.27), transparent 35%), linear-gradient(145deg, rgba(72,139,48,.98), rgba(31,94,41,.98));
+      --cell-filled-border: rgba(184, 243, 157, .67);
+      --cell-filled-shadow: inset 0 2px rgba(239,255,190,.18), inset 0 -4px rgba(8,57,25,.22);
+      --cell-radius: 9px;
+      --board-fx-accent: #73df72;
+      --clear-burst: radial-gradient(ellipse at 45% 35%, rgba(184,247,160,.8), transparent 23%), radial-gradient(ellipse at 65% 62%, rgba(79,211,95,.66), transparent 25%);
+      --ambient-animation: ambient-leaf 20s ease-in-out infinite;
+    }
+
+    :is(.device, .theme-card)[data-board="cosmico"] {
+      --board-frame: radial-gradient(circle at 19% 18%, rgba(0,211,255,.4), transparent 18%), radial-gradient(circle at 79% 72%, rgba(255,94,240,.36), transparent 21%), linear-gradient(145deg, #050622, #251158 54%, #896aff);
+      --board-pattern: radial-gradient(circle, rgba(255,255,255,.78) 0 1px, transparent 1.8px), radial-gradient(circle at 40% 30%, rgba(92,220,255,.25), transparent 28%);
+      --pattern-size: 37px 37px, 160% 160%;
+      --pattern-opacity: .72;
+      --board-border: rgba(167, 116, 255, .92);
+      --board-trim: rgba(82, 223, 255, .43);
+      --board-glow: rgba(124, 89, 255, .58);
+      --cell-empty-bg: radial-gradient(circle at 25% 20%, rgba(83,101,255,.16), transparent 31%), linear-gradient(145deg, rgba(7,9,42,.98), rgba(28,17,79,.97));
+      --cell-empty-border: rgba(159, 115, 255, .34);
+      --cell-filled-bg: radial-gradient(circle at 70% 70%, rgba(232,76,255,.24), transparent 39%), linear-gradient(145deg, rgba(70,49,166,.98), rgba(24,20,92,.98));
+      --cell-filled-border: rgba(203, 184, 255, .75);
+      --cell-filled-shadow: inset 0 2px rgba(255,255,255,.18), 0 0 9px rgba(99,77,255,.2);
+      --cell-radius: 9px;
+      --board-fx-accent: #9a7bff;
+      --clear-burst: radial-gradient(circle, rgba(255,255,255,.98) 0 5%, rgba(76,218,255,.7) 20%, rgba(159,102,255,.5) 44%, transparent 72%);
+      --ambient-animation: ambient-stars 23s linear infinite;
+    }
+
+    :is(.device, .theme-card)[data-board="jardin"] {
+      --board-frame: linear-gradient(145deg, #10240f, #2d5f2c 47%, #86b866);
+      --board-pattern: radial-gradient(circle at 20% 30%, rgba(255,183,213,.32) 0 7%, transparent 8%), radial-gradient(circle at 75% 65%, rgba(178,237,116,.25) 0 9%, transparent 10%), radial-gradient(circle at 55% 15%, rgba(255,215,231,.24) 0 5%, transparent 6%);
+      --pattern-size: 155% 155%, 175% 175%, 148% 148%;
+      --pattern-opacity: .76;
+      --board-border: rgba(169, 230, 111, .84);
+      --board-trim: rgba(255, 188, 218, .48);
+      --board-glow: rgba(120, 198, 87, .4);
+      --cell-empty-bg: radial-gradient(circle at 32% 20%, rgba(148,178,132,.12), transparent 36%), linear-gradient(145deg, rgba(55,63,59,.91), rgba(35,44,41,.94));
+      --cell-empty-border: rgba(166, 198, 151, .28);
+      --cell-filled-bg: radial-gradient(circle at 66% 70%, rgba(255,183,213,.16), transparent 32%), linear-gradient(145deg, rgba(110,124,101,.94), rgba(57,75,61,.96));
+      --cell-filled-border: rgba(205, 226, 181, .58);
+      --cell-filled-shadow: inset 0 2px rgba(255,247,220,.15), inset 0 -4px rgba(20,33,27,.24);
+      --cell-radius: 10px;
+      --board-fx-accent: #b6e876;
+      --clear-burst: radial-gradient(circle at 42% 36%, rgba(255,183,213,.88) 0 10%, transparent 12%), radial-gradient(circle at 63% 58%, rgba(179,238,121,.75) 0 9%, transparent 11%);
+      --ambient-animation: ambient-leaf 25s ease-in-out infinite;
+    }
+
+    @keyframes ambient-drift { 0%,100% { transform: translate3d(-1%, -1%, 0) scale(1.04); } 50% { transform: translate3d(1%, 1%, 0) scale(1.08); } }
+    @keyframes ambient-slide { 0%,100% { transform: translate3d(-1%, 0, 0) scale(1.04); } 50% { transform: translate3d(1%, 0, 0) scale(1.065); } }
+    @keyframes ambient-pulse { 0%,100% { transform: scale(1.04); opacity: .52; } 50% { transform: scale(1.08); opacity: .82; } }
+    @keyframes ambient-prism { 0%,100% { transform: translate3d(-1%, 1%, 0) scale(1.05) rotate(0deg); opacity: .54; } 50% { transform: translate3d(1%, -1%, 0) scale(1.08) rotate(.8deg); opacity: .84; } }
+    @keyframes ambient-runes { from { transform: scale(1.04) rotate(0); } to { transform: scale(1.04) rotate(1turn); } }
+    @keyframes ambient-scan { 0% { transform: translate3d(0, 0, 0); opacity: .45; } 50% { opacity: .78; } 100% { transform: translate3d(30px, 30px, 0); opacity: .45; } }
+    @keyframes ambient-gold { 0%,100% { transform: translate3d(-1%, -1%, 0) scale(1.04); opacity: .52; } 45% { transform: translate3d(1%, 1%, 0) scale(1.08); opacity: .82; } }
+    @keyframes ambient-leaf { 0%,100% { transform: translate3d(-1%, 1%, 0) scale(1.05); } 50% { transform: translate3d(1%, -1%, 0) scale(1.07); } }
+    @keyframes ambient-stars { 0%,100% { transform: translate3d(0, 0, 0) scale(1.04); opacity: .5; } 50% { transform: translate3d(1%, -1%, 0) scale(1.08); opacity: .74; } }
+    @keyframes glyph-demo { 0% { transform: scale(1); opacity: 1; } 45% { transform: scale(1.14) rotate(-6deg); opacity: 1; } 100% { transform: scale(.22) rotate(28deg); opacity: 0; } }
+    @keyframes burst-demo { 0% { opacity: 0; transform: scale(.35); } 35% { opacity: .9; } 100% { opacity: 0; transform: scale(1.72) rotate(35deg); } }
+
+    .reduced-motion .board::before,
+    .reduced-motion .cell,
+    .reduced-motion .theme-card { animation: none !important; transition: none !important; }
+
+    /* Modo de captura: conserva exactamente la geometría interna de 390 × 844 y
+       elimina únicamente el marco documental exterior. */
+    body.embed { min-width: 390px; overflow: hidden; background: #07132e; }
+    body.embed .page-stars,
+    body.embed .device-label,
+    body.embed .spec-panel { display: none; }
+    body.embed .mockup-shell { width: 390px; min-height: 844px; height: 844px; margin: 0; padding: 0; display: block; }
+    body.embed .device-stage { position: static; width: 390px; display: block; overflow: hidden; }
+    body.embed .device { border: 0; border-radius: 0; box-shadow: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+    }
+
+    @media (max-width: 920px) {
+      .mockup-shell { width: min(680px, calc(100% - 24px)); grid-template-columns: 1fr; justify-items: center; }
+      .device-stage { position: static; }
+      .spec-panel { width: 100%; }
+    }
+
+    @media (max-width: 560px) {
+      .mockup-shell { width: 100%; padding-top: 10px; gap: 18px; }
+      .device-label { width: min(390px, calc(100vw - 12px)); }
+      .device-stage { width: 100%; display: grid; justify-items: center; overflow-x: auto; }
+      .device { flex: 0 0 auto; }
+      .spec-panel { padding: 0 10px; }
+      .hero-card, .catalog-card, .contract-card { border-radius: 18px; }
+      .hero-card { padding: 18px; }
+      .selected-theme { grid-template-columns: 1fr; align-items: start; }
+      .selected-actions { align-items: stretch; }
+      .theme-grid { grid-template-columns: 1fr; }
+      .contract-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-stars" aria-hidden="true"></div>
+  <main class="mockup-shell">
+    <section class="device-stage" aria-label="Mockup del tablero actual">
+      <div class="device-label">
+        <span>Viewport real · 390 × 844</span>
+        <span class="geometry-pill" id="geometry-pill">Δ 0.00 px</span>
+      </div>
+      <div class="device" id="device" data-board="classic">
+        <div class="safe-bar" aria-hidden="true"></div>
+        <div class="wallet" aria-label="Recursos de muestra">
+          <span class="wallet-pill"><i>●</i> 500 <span class="wallet-plus">+</span></span>
+          <span class="wallet-pill gems"><i></i> 35 <span class="wallet-plus">+</span></span>
+        </div>
+        <button class="pause" type="button" aria-label="Pausa de muestra"></button>
+        <div class="mode-banner" aria-label="Modo de muestra">
+          <b>⌁ Zen</b><span>Sin fallos ni prisa</span><span>Solo visual</span>
+        </div>
+        <span class="level-chip">Nivel 1</span>
+        <strong class="score">1 250</strong>
+        <span class="garden-chip">🌸 12/50</span>
+
+        <div class="board-wrap" id="board-wrap" data-board="classic">
+          <div class="board" id="board" role="grid" aria-label="Tablero de muestra, ocho por ocho"></div>
+        </div>
+
+        <div class="occ" aria-label="Ocupación de muestra, 50 por ciento">
+          <span>▦ Tablero</span>
+          <span class="occ-track"><i></i></span>
+          <span>50%</span>
+        </div>
+
+        <section class="theme-drawer" aria-label="Selector rápido de diseños">
+          <div class="drawer-head">
+            <div class="drawer-title"><b id="drawer-name">Tablero Clásico</b><small>Cambia fondo, tiles y marco sin mover el tablero</small></div>
+            <span class="visual-only">100% visual</span>
+          </div>
+          <div class="phone-selector" id="phone-selector" role="group" aria-label="Diseños de tablero"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="spec-panel" aria-label="Controles y especificación del mockup">
+      <article class="hero-card">
+        <p class="eyebrow">Convergence · Board Themes 5.0</p>
+        <h1>Fondo, tiles, superficie y marco. Un tema completo.</h1>
+        <p>Cada diseño puede declarar un fondo de partida, un fondo interior estático y cuatro tiles raster independientes, además de su superficie y marco. Clásico y Lava estrenan el contrato V5; los otros nueve conservan un fallback visual compatible hasta su fase artística.</p>
+
+        <div class="selected-theme">
+          <div>
+            <h2 id="selected-name">Tablero Clásico</h2>
+            <p id="selected-description">Starfield navy sobrio, cuatro superficies espaciales y lectura limpia.</p>
+            <ul class="traits" id="selected-traits"></ul>
+          </div>
+          <div class="selected-actions">
+            <div class="price" id="selected-price">Gratis</div>
+            <div class="action-row">
+              <button class="action-btn primary" id="demo-fx" type="button">Probar FX</button>
+              <button class="action-btn" id="toggle-surface" type="button" aria-pressed="false">Superficie vacía</button>
+              <button class="action-btn" id="toggle-motion" type="button" aria-pressed="false">Reducir movimiento</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="catalog-card">
+        <div class="panel-head">
+          <div><h2>Catálogo completo</h2><p>Previews generadas con los mismos assets del tablero.</p></div>
+          <span class="panel-count">11 diseños</span>
+        </div>
+        <div class="theme-grid" id="theme-grid" role="group" aria-label="Catálogo de diseños visuales"></div>
+      </article>
+
+      <article class="contract-card">
+        <h2>Contrato visible del rediseño</h2>
+        <div class="contract-grid">
+          <div class="contract-item good"><b>✓ Cambia</b><span>Fondo de partida, fondo interior estático, cuatro tiles full-bleed, escena, marco, ornamentos y color del FX decorativo.</span></div>
+          <div class="contract-item lock"><b>▣ Se congela</b><span>382.19 × 382.19 px, x 3.91, y 260.52, abertura 364.19 px, grid 8×8 y gap 3.9 px.</span></div>
+          <div class="contract-item"><b>∅ Nunca cambia</b><span>Puntuación, tiempo, spawns, oleadas, probabilidad, portales, combos, inputs o economía.</span></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const params = new URLSearchParams(location.search);
+      if (params.has('embed')) document.body.classList.add('embed');
+      const ASSET_ROOT = '../../../img/board-themes/v2/';
+      const assetPath = (id, file) => `${ASSET_ROOT}${id}/${file}`;
+      const cssUrl = (path) => `url("${path}")`;
+      const THEMES = [
+        { id: 'classic', short: 'Clásico', name: 'Tablero Clásico', icon: '◆', price: 'Gratis', description: 'Cuatro superficies navy de espacio profundo sobre un starfield sobrio y legible.', traits: ['Tiles estelares', 'Starfield base', 'Brillo cian sobrio'] },
+        { id: 'madera', short: 'Madera', name: 'Tablero de Madera', icon: '▥', price: '500 monedas', description: 'Madera tallada cálida con veta visible y detalles naturales.', traits: ['Veta artesanal', 'Hojas de borde', 'Polvo de astilla'] },
+        { id: 'hielo', short: 'Hielo', name: 'Tablero de Hielo', icon: '❄', price: '800 monedas', description: 'Cristal polar translúcido, escarcha y reflejos fríos.', traits: ['Facetas heladas', 'Escarcha suave', 'Fragmentos luminosos'] },
+        { id: 'lava', short: 'Lava', name: 'Tablero de Lava', icon: '♨', price: '1 200 monedas', description: 'Basalto oscuro con juntas de magma y resplandor ardiente.', traits: ['Roca volcánica', 'Grietas de magma', 'Chispa caliente'] },
+        { id: 'cristal', short: 'Cristal', name: 'Tablero de Cristal', icon: '◈', price: '1 500 monedas', description: 'Prismas violetas, vidrio facetado y dispersión de luz.', traits: ['Celdas facetadas', 'Racimos de cristal', 'Burst prismático'] },
+        { id: 'magico', short: 'Mágico', name: 'Tablero Mágico', icon: '✦', price: '2 000 monedas', description: 'Runas lentas, estrellas arcanas y halo encantado.', traits: ['Runas orbitales', 'Brillo arcano', 'Estela violeta'] },
+        { id: 'futurista', short: 'Futuro', name: 'Tablero Futurista', icon: '⌁', price: '2 500 monedas', description: 'Paneles oscuros, circuitos cian y barrido de escáner.', traits: ['Trazas de circuito', 'Nodos neón', 'Scan compositor'] },
+        { id: 'dorado', short: 'Dorado', name: 'Tablero Dorado', icon: '★', price: '3 000 monedas', description: 'Metal pulido, arquitectura de templo y luz cálida.', traits: ['Oro pulido', 'Esquinas ornamentales', 'Chispa premium'] },
+        { id: 'bosque', short: 'Bosque', name: 'Tablero del Bosque', icon: '♣', price: '1 800 monedas', description: 'Musgo, piedra viva, hojas y pequeñas flores.', traits: ['Superficie musgosa', 'Enredaderas', 'Ráfaga vegetal'] },
+        { id: 'cosmico', short: 'Cósmico', name: 'Tablero Cósmico', icon: '◉', price: '2 200 monedas', description: 'Nebulosa profunda, estrellas y pequeños mundos en órbita.', traits: ['Starfield profundo', 'Planetas de borde', 'Implosión estelar'] },
+        { id: 'jardin', short: 'Jardín', name: 'Jardín Zen', icon: '❀', price: '50 flores Zen', description: 'Musgo suave, pétalos y piedras en una composición serena.', traits: ['Pétalos flotantes', 'Bambú y musgo', 'Ritmo contemplativo'] },
+      ];
+
+      const THEME_VISUALS = Object.freeze({
+        classic: Object.freeze({ status: 'ready-v2', gameBackground: 'game-background-v1.webp', boardBackground: 'board-background-v2.webp', boardBackgroundOverlay: 'linear-gradient(rgba(2,12,44,.14),rgba(0,7,28,.22))', tileVariants: Object.freeze(['tile-variant-1-v2.png', 'tile-variant-2-v2.png', 'tile-variant-3-v2.png', 'tile-variant-4-v2.png']) }),
+        madera: Object.freeze({ status: 'fallback-css' }),
+        hielo: Object.freeze({ status: 'fallback-css' }),
+        lava: Object.freeze({ status: 'ready-v2', gameBackground: 'game-background-v1.webp', boardBackground: 'board-background-v2.webp', boardBackgroundOverlay: 'linear-gradient(rgba(58,3,0,.20),rgba(78,5,0,.28))', tileVariants: Object.freeze(['tile-variant-1-v2.png', 'tile-variant-2-v2.png', 'tile-variant-3-v2.png', 'tile-variant-4-v2.png']) }),
+        cristal: Object.freeze({ status: 'fallback-css' }),
+        magico: Object.freeze({ status: 'fallback-css' }),
+        futurista: Object.freeze({ status: 'fallback-css' }),
+        dorado: Object.freeze({ status: 'fallback-css' }),
+        bosque: Object.freeze({ status: 'fallback-css' }),
+        cosmico: Object.freeze({ status: 'fallback-css' }),
+        jardin: Object.freeze({ status: 'fallback-css' }),
+      });
+      const THEME_ASSET_PRELOADS = new Map();
+
+      function resolveThemeVisuals(id) {
+        const visual = THEME_VISUALS[id] || THEME_VISUALS.classic;
+        const ready = visual.status === 'ready-v2';
+        return {
+          status: visual.status,
+          gameBackground: ready ? assetPath(id, visual.gameBackground) : '',
+          boardBackground: ready && visual.boardBackground ? assetPath(id, visual.boardBackground) : '',
+          boardBackgroundOverlay: ready && visual.boardBackground ? visual.boardBackgroundOverlay : 'none',
+          tileVariants: ready ? visual.tileVariants.map((file) => assetPath(id, file)) : [],
+        };
+      }
+
+      function preloadThemeAssets(id) {
+        if (THEME_ASSET_PRELOADS.has(id)) return THEME_ASSET_PRELOADS.get(id);
+        const visual = resolveThemeVisuals(id);
+        const sources = [
+          assetPath(id, 'board-surface-v3.jpg'),
+          assetPath(id, 'cell-surface-v3.jpg'),
+          assetPath(id, 'frame-base-v4.png'),
+          assetPath(id, 'decor-v4.png'),
+          visual.gameBackground,
+          visual.boardBackground,
+          ...visual.tileVariants,
+        ].filter(Boolean);
+        const preload = Promise.allSettled(sources.map((source) => new Promise((resolve, reject) => {
+          const image = new Image();
+          image.decoding = 'async';
+          image.onload = () => resolve(source);
+          image.onerror = () => reject(new Error(`No se pudo cargar ${source}`));
+          image.src = source;
+        }))).then((results) => {
+          if (results.some((result) => result.status === 'rejected')) THEME_ASSET_PRELOADS.delete(id);
+          return results;
+        });
+        THEME_ASSET_PRELOADS.set(id, preload);
+        return preload;
+      }
+
+      const SHAPES = {
+        circle: (color) => `<circle cx="50" cy="50" r="32" fill="${color}" stroke="rgba(0,0,0,.3)" stroke-width="4"/>`,
+        square: (color) => `<rect x="18" y="18" width="64" height="64" rx="12" fill="${color}" stroke="rgba(0,0,0,.3)" stroke-width="4"/>`,
+        triangle: (color) => `<path d="M50 15 86 81H14Z" fill="${color}" stroke="rgba(0,0,0,.3)" stroke-width="4" stroke-linejoin="round"/>`,
+        diamond: (color) => `<path d="m50 12 38 38-38 38-38-38Z" fill="${color}" stroke="rgba(0,0,0,.3)" stroke-width="4" stroke-linejoin="round"/>`,
+        star: (color) => `<path d="m50 12 11 27 29 2-22 19 7 29-25-16-25 16 7-29-22-19 29-2Z" fill="${color}" stroke="rgba(0,0,0,.3)" stroke-width="4" stroke-linejoin="round"/>`,
+        hex: (color) => `<path d="m50 13 34 19v36L50 87 16 68V32Z" fill="${color}" stroke="rgba(0,0,0,.3)" stroke-width="4" stroke-linejoin="round"/>`,
+      };
+      const ICONS = [
+        ['circle', '#ff5b6e'], ['square', '#4b8bff'], ['triangle', '#3ad07f'],
+        ['star', '#ffd23f'], ['diamond', '#a06bff'], ['hex', '#2bd4e6'],
+      ];
+      const FILLED = new Set([1,5,7,8,9,10,11,14,18,19,25,26,27,29,31,32,34,37,39,40,43,45,47,49,50,53,55,56,57,58,60,63]);
+      const board = document.querySelector('#board');
+      const device = document.querySelector('#device');
+      const wrap = document.querySelector('#board-wrap');
+      const grid = document.querySelector('#theme-grid');
+      const phoneSelector = document.querySelector('#phone-selector');
+      const selectedName = document.querySelector('#selected-name');
+      const selectedDescription = document.querySelector('#selected-description');
+      const selectedTraits = document.querySelector('#selected-traits');
+      const selectedPrice = document.querySelector('#selected-price');
+      const drawerName = document.querySelector('#drawer-name');
+      const geometryPill = document.querySelector('#geometry-pill');
+      const toggleSurface = document.querySelector('#toggle-surface');
+      let current = THEMES.some((theme) => theme.id === params.get('theme')) ? params.get('theme') : 'classic';
+      let baseline = null;
+
+      function svgGlyph(shape, color) {
+        return `<span class="glyph" aria-hidden="true"><svg viewBox="0 0 100 100">${SHAPES[shape](color)}</svg></span>`;
+      }
+
+      for (let i = 0; i < 64; i++) {
+        const button = document.createElement('button');
+        const filled = FILLED.has(i);
+        button.type = 'button';
+        button.className = 'cell';
+        button.dataset.filled = String(filled);
+        button.style.setProperty('--surface-x', `${(i % 8) * 100 / 7}%`);
+        button.style.setProperty('--surface-y', `${Math.floor(i / 8) * 100 / 7}%`);
+        button.setAttribute('role', 'gridcell');
+        button.setAttribute('aria-label', `Fila ${Math.floor(i / 8) + 1}, columna ${i % 8 + 1}${filled ? ': figura de muestra' : ': vacía'}`);
+        if (filled) {
+          const icon = ICONS[(i * 5 + Math.floor(i / 8)) % ICONS.length];
+          button.innerHTML = svgGlyph(icon[0], icon[1]);
+        }
+        button.addEventListener('click', () => runFx([button]));
+        board.appendChild(button);
+      }
+
+      function themeCard(theme) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'theme-card';
+        button.dataset.board = theme.id;
+        button.style.setProperty('--theme-card-surface-image', cssUrl(assetPath(theme.id, 'board-surface-v3.jpg')));
+        button.style.setProperty('--theme-card-frame-base-image', cssUrl(assetPath(theme.id, 'frame-base-v4.png')));
+        button.style.setProperty('--theme-card-decor-image', cssUrl(assetPath(theme.id, 'decor-v4.png')));
+        button.setAttribute('aria-label', `Probar ${theme.name}, ${theme.price}`);
+        button.innerHTML = `<span class="theme-swatch" aria-hidden="true"></span><span class="theme-card-copy"><b>${theme.name}</b><small>${theme.traits[0]} · ${theme.traits[1]}</small></span><span class="theme-cost">${theme.price}</span>`;
+        button.addEventListener('click', () => applyTheme(theme.id));
+        return button;
+      }
+
+      function phoneThemeButton(theme) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'phone-theme';
+        button.dataset.themeId = theme.id;
+        button.setAttribute('aria-label', `Probar ${theme.name}`);
+        button.innerHTML = `<span aria-hidden="true">${theme.icon}</span><small>${theme.short}</small>`;
+        button.addEventListener('click', () => applyTheme(theme.id));
+        return button;
+      }
+
+      THEMES.forEach((theme) => {
+        grid.appendChild(themeCard(theme));
+        phoneSelector.appendChild(phoneThemeButton(theme));
+      });
+
+      function geometry() {
+        const rect = wrap.getBoundingClientRect();
+        const host = device.getBoundingClientRect();
+        return { x: rect.x - host.x, y: rect.y - host.y, width: rect.width, height: rect.height };
+      }
+
+      function setBaseline() {
+        baseline = geometry();
+        geometryPill.textContent = 'Δ 0.00 px';
+      }
+
+      function verifyGeometry() {
+        const now = geometry();
+        const delta = Math.max(
+          Math.abs(now.x - baseline.x), Math.abs(now.y - baseline.y),
+          Math.abs(now.width - baseline.width), Math.abs(now.height - baseline.height),
+        );
+        geometryPill.textContent = `Δ ${delta.toFixed(2)} px`;
+        geometryPill.style.color = delta <= .01 ? '#b7ffd1' : '#ffe2a1';
+      }
+
+      function applyTheme(id) {
+        const theme = THEMES.find((item) => item.id === id) || THEMES[0];
+        const visual = resolveThemeVisuals(theme.id);
+        current = theme.id;
+        device.dataset.board = current;
+        device.dataset.boardAssets = visual.status;
+        wrap.dataset.board = current;
+        const surfacePath = assetPath(current, 'board-surface-v3.jpg');
+        wrap.style.setProperty('--theme-board-surface-image', cssUrl(surfacePath));
+        wrap.style.setProperty('--theme-frame-base-image', cssUrl(assetPath(current, 'frame-base-v4.png')));
+        wrap.style.setProperty('--theme-decor-image', cssUrl(assetPath(current, 'decor-v4.png')));
+        wrap.style.setProperty('--cell-surface-image', cssUrl(assetPath(current, 'cell-surface-v3.jpg')));
+        if (visual.gameBackground) {
+          device.style.setProperty('--theme-game-background-image', cssUrl(visual.gameBackground));
+          device.style.setProperty('--theme-device-overlay-opacity', '0');
+        } else {
+          device.style.removeProperty('--theme-game-background-image');
+          device.style.removeProperty('--theme-device-overlay-opacity');
+        }
+        if (visual.boardBackground) {
+          wrap.style.setProperty('--theme-board-background-image', cssUrl(visual.boardBackground));
+          wrap.style.setProperty('--theme-board-background-overlay', visual.boardBackgroundOverlay);
+          wrap.style.setProperty('--ambient-animation', 'none');
+          wrap.style.setProperty('--pattern-opacity', '0');
+        } else {
+          wrap.style.removeProperty('--theme-board-background-image');
+          wrap.style.removeProperty('--theme-board-background-overlay');
+          wrap.style.removeProperty('--ambient-animation');
+          wrap.style.removeProperty('--pattern-opacity');
+        }
+        if (visual.tileVariants.length) {
+          for (let index = 0; index < 4; index += 1) {
+            const property = `--theme-tile-variant-${index + 1}-image`;
+            const source = visual.tileVariants[index];
+            if (source) wrap.style.setProperty(property, cssUrl(source));
+            else wrap.style.removeProperty(property);
+          }
+          wrap.style.setProperty('--theme-tile-background-size', '100% 100%');
+          wrap.style.setProperty('--theme-tile-background-position', 'center');
+          wrap.style.setProperty('--theme-tile-blend', 'normal');
+          wrap.style.setProperty('--theme-tile-filter', 'none');
+          wrap.style.setProperty('--theme-filled-tile-border', 'transparent');
+          wrap.style.setProperty('--cell-surface-opacity', '1');
+          wrap.style.setProperty('--cell-filled-surface-opacity', '1');
+        } else {
+          ['--theme-tile-variant-1-image', '--theme-tile-variant-2-image', '--theme-tile-variant-3-image', '--theme-tile-variant-4-image', '--theme-tile-background-size', '--theme-tile-background-position', '--theme-tile-blend', '--theme-tile-filter', '--theme-filled-tile-border', '--cell-surface-opacity', '--cell-filled-surface-opacity']
+            .forEach((property) => wrap.style.removeProperty(property));
+        }
+        preloadThemeAssets(current);
+        selectedName.textContent = theme.name;
+        selectedDescription.textContent = theme.description;
+        selectedPrice.textContent = theme.price;
+        drawerName.textContent = theme.name;
+        selectedTraits.innerHTML = theme.traits.map((trait) => `<li>${trait}</li>`).join('');
+        document.querySelectorAll('[data-board].theme-card').forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.board === current)));
+        document.querySelectorAll('[data-theme-id]').forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.themeId === current)));
+        requestAnimationFrame(() => {
+          verifyGeometry();
+        });
+      }
+
+      function runFx(cells) {
+        const targets = cells || Array.from(board.querySelectorAll('.cell[data-filled="true"]')).filter((_, index) => index % 7 === 0).slice(0, 4);
+        targets.forEach((cell, index) => {
+          window.setTimeout(() => {
+            cell.classList.remove('demo-clear');
+            void cell.offsetWidth;
+            cell.classList.add('demo-clear');
+            window.setTimeout(() => cell.classList.remove('demo-clear'), 560);
+          }, index * 70);
+        });
+      }
+
+      document.querySelector('#demo-fx').addEventListener('click', () => runFx());
+      toggleSurface.addEventListener('click', () => {
+        const empty = !document.body.classList.contains('surface-empty');
+        document.body.classList.toggle('surface-empty', empty);
+        toggleSurface.setAttribute('aria-pressed', String(empty));
+        toggleSurface.setAttribute('aria-label', empty ? 'Mostrar tablero con figuras' : 'Mostrar superficie vacía');
+      });
+      document.querySelector('#toggle-motion').addEventListener('click', (event) => {
+        const on = !document.body.classList.contains('reduced-motion');
+        document.body.classList.toggle('reduced-motion', on);
+        event.currentTarget.setAttribute('aria-pressed', String(on));
+        event.currentTarget.textContent = on ? 'Activar movimiento' : 'Reducir movimiento';
+      });
+
+      window.addEventListener('resize', () => requestAnimationFrame(setBaseline));
+      requestAnimationFrame(() => {
+        setBaseline();
+        applyTheme(current);
+      });
+    })();
+  </script>
+</body>
+</html>

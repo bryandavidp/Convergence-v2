@@ -1,0 +1,12 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ttf binary
+*.keystore binary
+*.jks binary
+*.p12 binary
+*.mobileprovision binary

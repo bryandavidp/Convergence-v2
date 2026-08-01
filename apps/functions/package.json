@@ -1,0 +1,22 @@
+{
+  "name": "@convergence/functions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "build": "tsc6 -p tsconfig.json",
+    "typecheck": "tsc6 --noEmit -p tsconfig.json",
+    "test": "npm run build && npm run test:handler && npm run test:emulator",
+    "test:handler": "node --test test/*.handler.test.mjs",
+    "test:emulator": "node test/run-functions-emulator-tests.mjs"
+  },
+  "dependencies": {
+    "@convergence/contracts": "0.1.0",
+    "firebase-admin": "14.2.0",
+    "firebase-functions": "7.3.2"
+  }
+}

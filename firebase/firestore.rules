@@ -1,0 +1,57 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function belongsTo(resourceData) {
+      return signedIn()
+        && resourceData.memberIds is list
+        && request.auth.uid in resourceData.memberIds;
+    }
+
+    // Datos públicos sin autoridad de juego.
+    match /publicConfig/{documentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Las puntuaciones publicadas son materializaciones escritas por backend.
+    match /leaderboards/{boardId}/entries/{entryId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // El perfil y la economía se leen por su propietario; las mutaciones
+    // autoritativas pasan por Functions para validar idempotencia y límites.
+    match /users/{userId} {
+      allow read: if isSelf(userId);
+      allow write: if false;
+
+      match /{document=**} {
+        allow read: if isSelf(userId);
+        allow write: if false;
+      }
+    }
+
+    match /rooms/{roomId} {
+      allow read: if belongsTo(resource.data);
+      allow write: if false;
+    }
+
+    match /matches/{matchId} {
+      allow read: if belongsTo(resource.data);
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

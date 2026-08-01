@@ -1,0 +1,34 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "presence": {
+      "$userId": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $userId",
+        ".validate": "newData.hasChildren(['state', 'lastChanged'])",
+        "state": {
+          ".validate": "newData.isString() && (newData.val() === 'online' || newData.val() === 'away' || newData.val() === 'offline')"
+        },
+        "lastChanged": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "rooms": {
+      "$roomId": {
+        ".read": "auth != null && data.child('memberIds').child(auth.uid).val() === true",
+        ".write": false
+      }
+    },
+    "matches": {
+      "$matchId": {
+        ".read": "auth != null && data.child('memberIds').child(auth.uid).val() === true",
+        ".write": false
+      }
+    }
+  }
+}

@@ -1,0 +1,60 @@
+# Dependencias y salidas generadas
+node_modules/
+**/node_modules/
+**/dist/
+apps/client/dist-emulator/
+apps/client/dist-cloud-dev/
+apps/client/dist-profile-emulator/
+apps/client/test/.tmp/
+**/lib/
+**/coverage/
+*.tsbuildinfo
+__pycache__/
+*.py[cod]
+
+# Configuración local y secretos
+.env
+.env.*
+!.env.example
+.firebaserc
+!.firebaserc.example
+*.local
+
+# Firebase local
+.firebase/
+.emulator-data/
+firebase-debug.log*
+firestore-debug.log*
+database-debug.log*
+ui-debug.log*
+
+# Credenciales/configuración nativa local
+apps/client/firebase-config.dev.json
+apps/client/android/app/google-services.json
+apps/client/ios/App/App/GoogleService-Info.plist
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+
+# Outputs Android (se versionará el proyecto, no sus builds)
+apps/client/android/.gradle/
+apps/client/android/local.properties
+apps/client/android/**/build/
+apps/client/android/captures/
+apps/client/android/**/key.properties
+apps/client/android/**/keystore.properties
+apps/client/android/**/signing.properties
+
+# Outputs iOS (se versionará el proyecto, no sus builds)
+apps/client/ios/App/Pods/
+apps/client/ios/App/DerivedData/
+apps/client/ios/App/build/
+apps/client/ios/**/*.xcuserstate
+apps/client/ios/**/xcuserdata/
+
+# Editor / sistema
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

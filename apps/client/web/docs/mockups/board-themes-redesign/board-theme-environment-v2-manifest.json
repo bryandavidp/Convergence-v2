@@ -1,0 +1,317 @@
+{
+  "version": "2.0",
+  "system": "board-theme-environment-and-independent-tile-variants-contract",
+  "generationMode": "built-in-imagegen-plus-deterministic-postprocess",
+  "referenceViewport": [
+    390,
+    844
+  ],
+  "runtimeBackgroundSize": [
+    780,
+    1688
+  ],
+  "runtimeBoardBackgroundSize": [
+    1024,
+    1024
+  ],
+  "runtimeTileSize": [
+    256,
+    256
+  ],
+  "runtimeTileVariantCount": 4,
+  "rules": {
+    "visualOnly": true,
+    "noBoardGeometryChanges": true,
+    "noGameplayChanges": true,
+    "missingAssetFallback": "existing theme CSS",
+    "loadPolicy": "equipped theme only",
+    "runtimeAtlasForbidden": true,
+    "filledCellsOnly": true,
+    "emptyCellsHaveNoTileArt": true,
+    "tileArtworkOwnsFullCell": true,
+    "tileArtworkHasNoAuthoredBorder": true,
+    "boardBackgroundStatic": true,
+    "boardBackgroundBehindCellsOnly": true,
+    "minimumBoardTileLuminanceSeparation": 15
+  },
+  "themes": {
+    "classic": {
+      "status": "ready-v2",
+      "assets": {
+        "gameBackground": {
+          "file": "img/board-themes/v2/classic/game-background-v1.webp",
+          "size": [
+            780,
+            1688
+          ],
+          "sha256": "6873d487d7ce8a221ecd168e4951bb54bd34da2d6cb8817021050daab5412c9f"
+        },
+        "boardBackground": {
+          "file": "img/board-themes/v2/classic/board-background-v2.webp",
+          "size": [
+            1024,
+            1024
+          ],
+          "sha256": "f703b239715e5f07ee8ac1859c0d2c53b63fc9109f2bf0be712e15d00ba4a708",
+          "runtime": true,
+          "animated": false,
+          "meanLuminance": 37.67
+        },
+        "tileVariants": [
+          {
+            "file": "img/board-themes/v2/classic/tile-variant-1-v2.png",
+            "size": [
+              256,
+              256
+            ],
+            "variant": 1,
+            "sha256": "e2a89555af428e7ae58e0186e790d9c7e6903a47b9cea644a6cbebbf501c5904",
+            "alpha": {
+              "transparent": 0,
+              "partial": 0,
+              "opaque": 65536
+            },
+            "runtime": true,
+            "fullBleed": true,
+            "authoredBorder": false,
+            "meanLuminance": 14.08
+          },
+          {
+            "file": "img/board-themes/v2/classic/tile-variant-2-v2.png",
+            "size": [
+              256,
+              256
+            ],
+            "variant": 2,
+            "sha256": "63e1b1c2473f21b23122a5ba03ebecbb1959246ff062e9e42a3ea26907cebe59",
+            "alpha": {
+              "transparent": 0,
+              "partial": 0,
+              "opaque": 65536
+            },
+            "runtime": true,
+            "fullBleed": true,
+            "authoredBorder": false,
+            "meanLuminance": 10.94
+          },
+          {
+            "file": "img/board-themes/v2/classic/tile-variant-3-v2.png",
+            "size": [
+              256,
+              256
+            ],
+            "variant": 3,
+            "sha256": "dd602bf5a85bc52b34becaf17467ee502906c585ac45022d04b2e99afa38b290",
+            "alpha": {
+              "transparent": 0,
+              "partial": 0,
+              "opaque": 65536
+            },
+            "runtime": true,
+            "fullBleed": true,
+            "authoredBorder": false,
+            "meanLuminance": 9.83
+          },
+          {
+            "file": "img/board-themes/v2/classic/tile-variant-4-v2.png",
+            "size": [
+              256,
+              256
+            ],
+            "variant": 4,
+            "sha256": "bb7f5139cf7bca3a9c06d8c080c3f6c0a2b70a3aa8c7634b43130e6706a7f8ab",
+            "alpha": {
+              "transparent": 0,
+              "partial": 0,
+              "opaque": 65536
+            },
+            "runtime": true,
+            "fullBleed": true,
+            "authoredBorder": false,
+            "meanLuminance": 12.92
+          }
+        ]
+      },
+      "contrastProfile": {
+        "boardMeanLuminance": 37.67,
+        "tileMeanLuminance": [
+          14.08,
+          10.94,
+          9.83,
+          12.92
+        ],
+        "minimumAbsoluteSeparation": 23.59
+      },
+      "source": {
+        "backgroundSha256": "1597535e750df3321f46fe248141c66a7c9c13f91a434e23a71837a6ff24beb4",
+        "boardBackgroundSha256": "9e6421c8b7d09fdce22f96b5603aa9b07cc03435022d92e1b7ea3921aa645158",
+        "tileSourceSha256": [
+          "ecebbd31fcdbe343a0f33cddbfd37d23126f99647718ee0db173cb23a105812e",
+          "cf597c964e277e91558935a007dd833f16e30c3f95f6c697e7c634dda9695844",
+          "581bb49b3f61a9f5c327a03d49b630a1a111b8bc6e88a8cd75e37137b551de86",
+          "267ba6d039ad6f10292927fbeb061050ecdcd9995b5d587af96d749135d1f6ad"
+        ],
+        "backgroundPromptSpec": "board-theme-environment-v1-prompts.md",
+        "boardBackgroundPromptSpec": "board-theme-board-backgrounds-v2-prompts.md",
+        "tilePromptSpec": "board-theme-tile-variants-v2-prompts.md"
+      }
+    },
+    "madera": {
+      "status": "fallback-css",
+      "assets": {}
+    },
+    "hielo": {
+      "status": "fallback-css",
+      "assets": {}
+    },
+    "lava": {
+      "status": "ready-v2",
+      "assets": {
+        "gameBackground": {
+          "file": "img/board-themes/v2/lava/game-background-v1.webp",
+          "size": [
+            780,
+            1688
+          ],
+          "sha256": "2b5c08ebe3ca41ff2339f867c194be71089a7c197ba98a6b2907aee76d53d7ce"
+        },
+        "boardBackground": {
+          "file": "img/board-themes/v2/lava/board-background-v2.webp",
+          "size": [
+            1024,
+            1024
+          ],
+          "sha256": "f581921b442d7d1cf3997a785b980873c19a9b88d6aa709d1ca381723275fbaf",
+          "runtime": true,
+          "animated": false,
+          "meanLuminance": 59.56
+        },
+        "tileVariants": [
+          {
+            "file": "img/board-themes/v2/lava/tile-variant-1-v2.png",
+            "size": [
+              256,
+              256
+            ],
+            "variant": 1,
+            "sha256": "f1d80a141e7d14f38d280c06b013709b1247c9d8b78446ad4d3510ab648c32b5",
+            "alpha": {
+              "transparent": 0,
+              "partial": 0,
+              "opaque": 65536
+            },
+            "runtime": true,
+            "fullBleed": true,
+            "authoredBorder": false,
+            "meanLuminance": 23.66
+          },
+          {
+            "file": "img/board-themes/v2/lava/tile-variant-2-v2.png",
+            "size": [
+              256,
+              256
+            ],
+            "variant": 2,
+            "sha256": "ccc688e98531e95fd4080ddc1d1485cccdc93926aefcf5be093ffdf3e7d9d93e",
+            "alpha": {
+              "transparent": 0,
+              "partial": 0,
+              "opaque": 65536
+            },
+            "runtime": true,
+            "fullBleed": true,
+            "authoredBorder": false,
+            "meanLuminance": 24.64
+          },
+          {
+            "file": "img/board-themes/v2/lava/tile-variant-3-v2.png",
+            "size": [
+              256,
+              256
+            ],
+            "variant": 3,
+            "sha256": "fad01417a9dd8dbccf8d309dabb4cb122a63c26b3be38c08bdab134c18253b66",
+            "alpha": {
+              "transparent": 0,
+              "partial": 0,
+              "opaque": 65536
+            },
+            "runtime": true,
+            "fullBleed": true,
+            "authoredBorder": false,
+            "meanLuminance": 28.4
+          },
+          {
+            "file": "img/board-themes/v2/lava/tile-variant-4-v2.png",
+            "size": [
+              256,
+              256
+            ],
+            "variant": 4,
+            "sha256": "acb43e2d4f2b6f7c1fdab06b98b8f2af6ecd55c58fcf35248fd10b0fd3fee65c",
+            "alpha": {
+              "transparent": 0,
+              "partial": 0,
+              "opaque": 65536
+            },
+            "runtime": true,
+            "fullBleed": true,
+            "authoredBorder": false,
+            "meanLuminance": 26.26
+          }
+        ]
+      },
+      "contrastProfile": {
+        "boardMeanLuminance": 59.56,
+        "tileMeanLuminance": [
+          23.66,
+          24.64,
+          28.4,
+          26.26
+        ],
+        "minimumAbsoluteSeparation": 31.16
+      },
+      "source": {
+        "backgroundSha256": "fd4eec96e0a01a725b8c94004ad41f4fd8bb286d4602f76f1a4cd3aa5e643301",
+        "boardBackgroundSha256": "3daa1eeb8c949c3f615f1b3882617e70c0a98ca510e9185614bbfaf4cd8fa4d6",
+        "tileSourceSha256": [
+          "033be214626951722cab46c501fc48b3596ba00fc190cd7c14dbf6e09bc20208",
+          "1f6956b0c52e4ee7a489975471c763da1827e8dde2ff82e1022a1bd41c2c20a3",
+          "ca1809c96d4fcfb44e76b148323709218e99e769f1d054448bef8e8097508cc7",
+          "166c5c5b3a8e3161107981df4880e44cbea2097d27fab0c68f5fb9ea866645c5"
+        ],
+        "backgroundPromptSpec": "board-theme-environment-v1-prompts.md",
+        "boardBackgroundPromptSpec": "board-theme-board-backgrounds-v2-prompts.md",
+        "tilePromptSpec": "board-theme-tile-variants-v2-prompts.md"
+      }
+    },
+    "cristal": {
+      "status": "fallback-css",
+      "assets": {}
+    },
+    "magico": {
+      "status": "fallback-css",
+      "assets": {}
+    },
+    "futurista": {
+      "status": "fallback-css",
+      "assets": {}
+    },
+    "dorado": {
+      "status": "fallback-css",
+      "assets": {}
+    },
+    "bosque": {
+      "status": "fallback-css",
+      "assets": {}
+    },
+    "cosmico": {
+      "status": "fallback-css",
+      "assets": {}
+    },
+    "jardin": {
+      "status": "fallback-css",
+      "assets": {}
+    }
+  }
+}

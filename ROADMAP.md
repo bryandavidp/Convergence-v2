@@ -1,0 +1,291 @@
+# Roadmap de migración — Convergence v2
+
+Actualizado: 2026-08-01
+
+Documento canónico de planificación. El detalle ejecutado se anota en
+`docs/PROGRESS.md`.
+
+## Objetivo y estrategia
+
+Entregar una única base de producto que mantenga la PWA, genere aplicaciones
+nativas Android/iOS y soporte cuenta, progreso en nube, rankings, salas y
+multijugador. La estrategia es de **paridad primero y sustitución por capas**:
+el juego 2.37.1 continúa ejecutándose mientras cada dependencia del navegador
+se mueve detrás de un adaptador y cada regla relevante se extrae a código puro.
+
+No se hará una reescritura visual ni un cambio de framework en el camino
+crítico. Capacitor permite reutilizar HTML/CSS/JS y es la vía más rápida con
+menor riesgo funcional.
+
+## Resumen
+
+| Fase | Estado | Duración orientativa | Salida verificable |
+|---|---|---:|---|
+| 0. Aislamiento y baseline | Completada | 1–2 días | Repo independiente y 343/343 tests |
+| 1. Toolchain reproducible | Gate local verde; falta CI | 2–4 días | Node 22, lockfile y `npm run validate` verde |
+| 2. Shell nativo inicial | Android automatizado verde; falta paridad manual/iOS | 3–5 días | PWA + Android instalado + proyecto iOS generado |
+| 3. Capa de plataforma y storage | Hardening automatizado verde; falta matriz manual | 1–2 semanas | mismo perfil sobre web/Preferences, migración reversible |
+| 4. Núcleo determinista y RunSave v2 | Iniciada | 2–4 semanas | reglas puras, estado RNG y replays reproducibles |
+| 5. Firebase local, Auth y progreso | Importación/perfil local E2E; faltan UI, App Check y cloud | 2–3 semanas | emuladores, cuenta y sincronización offline segura |
+| 6. Rankings por modo | Pendiente | 1–2 semanas | tablas verificadas por modo/periodo |
+| 7. Salas y lobby en tiempo real | Pendiente | 2–3 semanas | crear/unirse/listo/presencia/reconexión |
+| 8. Partida multijugador | Pendiente | 3–6 semanas | comandos ordenados, snapshots, rejoin y cierre |
+| 9. Servicios nativos y hardening | Pendiente | 2–4 semanas | push, App Check, observabilidad y seguridad |
+| 10. Beta y publicación | Pendiente | 2–4 semanas | PWA, Play y TestFlight con gates de calidad |
+
+Las duraciones son esfuerzo orientativo para un equipo pequeño y pueden
+solaparse. El multijugador competitivo plenamente autoritativo puede requerir
+un árbitro persistente en Cloud Run; se decidirá con métricas del prototipo.
+
+## Próximo hito activo
+
+Crear la pantalla visible que explica y confirma la importación legacy sobre la
+vertical local ya validada, completar el modelo de perfil más allá de `cv_meta`
+y preparar App Check en modo monitor antes del primer despliegue de Functions.
+Auth anónima funciona local/cloud-dev, Web/Android están registrados y
+Firestore aplica el ruleset cerrado. El cliente productivo continúa intacto.
+En paralelo siguen la matriz Android y la preparación de iOS desde macOS.
+
+## Fase 0 — Aislamiento y baseline
+
+Estado: **completada**
+
+- [x] Ignorar `/Convergence v2/` en el repositorio actual.
+- [x] Inicializar `Convergence v2` como repositorio Git independiente.
+- [x] Copiar el cliente 2.37.1 sin alterar rutas ni runtime.
+- [x] Copiar tests y fixtures históricos requeridos.
+- [x] Copiar la documentación canónica del design system y 127 screenshots.
+- [x] Confirmar 343/343 pruebas.
+- [x] Separar documentos históricos y marcarlos como no contractuales.
+
+Criterio de salida: el clon se comporta como el juego actual y puede evolucionar
+sin contaminar la rama del proyecto original.
+
+## Fase 1 — Toolchain reproducible
+
+Estado: **gate local completado; CI pendiente**
+
+- [x] Crear workspaces para cliente, Functions, contratos y core.
+- [x] Fijar versiones exactas de Capacitor 8 y Firebase.
+- [x] Crear build estático por allowlist, sin bundlear el IIFE legacy.
+- [x] Crear checks de Node y scripts de validación.
+- [x] Instalar y seleccionar Node 22.23.2 LTS con npm 10.9.8.
+- [x] Generar `package-lock.json` y reproducirlo con `npm ci` normal.
+- [x] Ejecutar `npm run validate` completamente en verde.
+- [x] Reauditar el árbol homologado: 11 moderate totales, 7 de producción y
+      ningún high/critical.
+- [ ] Revalidar advisories transitivos del SDK/CLI antes de cada despliegue.
+- [ ] Confirmar tras reiniciar la sesión que PowerShell hereda fnm/Node 22.
+- [ ] Añadir CI para Windows/Linux con artefactos de test.
+
+Criterio de salida: una instalación limpia reproduce el mismo build y todas las
+pruebas sin depender de paquetes globales.
+
+## Fase 2 — Shell nativo inicial
+
+Estado: **Android automatizado verde; paridad manual e iOS pendientes**
+
+- [x] Confirmar `Convergence` y `com.deploy21.convergence` como identidad.
+- [x] Generar `apps/client/android` con Capacitor.
+- [x] Bloquear Android en portrait y declarar categoría `game`.
+- [x] Configurar SystemBars e identidad de tests/recursos nativos.
+- [x] Instalar Android Studio 2025.2.1+, SDK 36 y confirmar JDK/JBR 21.
+- [x] Generar APK debug y pasar unit tests, lint y test instrumentado en API 36.
+- [x] Instalar y arrancar el APK en portrait sin excepciones nativas ni ANR.
+- [ ] Probar arranque, rotación bloqueada si procede, safe areas, teclado, audio,
+      pausa/reanudación y back button.
+- [ ] Generar `apps/client/ios` en macOS con Swift Package Manager.
+- [ ] Probar los mismos flujos en simulador y dispositivo real.
+- [x] Definir la matriz funcional/visual contra los 127 goldens.
+- [ ] Ejecutar y registrar la matriz en emulador y dispositivos reales.
+
+Criterio de salida: el snapshot actual se ejecuta sin regresiones como PWA,
+APK debug y app iOS debug.
+
+Bloqueo externo: acceso a un Mac con Xcode para generar y validar iOS.
+
+## Fase 3 — Plataforma y almacenamiento
+
+Estado: **bridge P0 activo; hardening y matriz manual pendientes**
+
+- [x] Definir contratos de storage, haptics, share y red.
+- [x] Crear adaptadores base Web y Capacitor.
+- [x] Endurecer repositorio JSON/outbox v2: schema runtime, cuarentena, owner
+      UID, updates serializados, leases, backoff y estados de conflicto/Auth.
+- [x] Añadir lifecycle y back al bridge; notificaciones/deep links quedan pendientes.
+- [x] Crear un bridge mínimo con detección Web/Capacitor y fallback web.
+- [x] Migrar `cv_meta` y `cv_run` a Preferences en nativo con escritura dual.
+- [x] Serializar mutaciones y hacer checkpoint inicial, periódico, lifecycle y exit.
+- [ ] Mantener lectura dual y rollback durante al menos una versión.
+- [x] Probar JSON corrupto, carreras asíncronas y process death/relaunch.
+- [ ] Añadir fixtures de upgrade desde schemas anteriores a 10.
+
+Criterio de salida: cerrar/actualizar la app no pierde progreso y el juego no
+conoce directamente si corre en navegador, Android o iOS.
+
+## Fase 4 — Núcleo determinista y RunSave v2
+
+Estado: **iniciada**
+
+- [x] Extraer Mulberry32 compatible y añadir snapshot/restore del stream.
+- [x] Definir el puerto de engine y el sobre de replay.
+- [ ] Inventariar todos los usos de RNG: gameplay, metaeconomía y FX.
+- [ ] Extraer reglas por verticales pequeñas: tablero, convergencia, spawn,
+      puntuación, objetivos y modos.
+- [ ] Crear fixtures legacy ↔ core con mismos estados, acciones y hashes.
+- [ ] Diseñar `GameStateV2` serializable y versionado.
+- [ ] Migrar RunSave v1 a v2 incluyendo estado RNG.
+- [ ] Ejecutar el mismo core en cliente y validador de backend.
+
+Criterio de salida: semilla + estado + comandos producen el mismo resultado sin
+DOM y pueden validarse/reproducirse en servidor.
+
+## Fase 5 — Firebase local, Auth y progreso
+
+Estado: **vertical local de importación/perfil completada; Functions cloud y UI
+de confirmación pendientes**
+
+- [x] Configurar Emulator Suite, reglas deny-by-default, índices y puertos.
+- [x] Añadir Functions Node 22 y endpoint `health` protegido.
+- [x] Definir contratos versionados y validación runtime.
+- [x] Cargar `health` en Functions Emulator con Node 22 y proyecto `demo-`.
+- [x] Instalar/exponer JDK 21 y arrancar Auth, Functions, Firestore, RTDB,
+      Storage y Hosting con el proyecto `demo-convergence-v2`.
+- [x] Añadir un smoke reproducible de puertos, Hosting y callable protegida.
+- [x] Añadir 21 tests allow/deny, una invariante TTL/índices, 9
+      handler/política y 10 Functions Emulator.
+- [x] Crear una factory Auth-only que solo admite proyectos `demo-*` y conecta
+      Auth Emulator antes de cualquier operación.
+- [x] Probar login anónimo, token, eventos, logout y reinicio de proceso contra
+      Auth Emulator.
+- [x] Crear un build `dist-emulator` con bundle hash y CSP loopback, sin tocar el
+      build/Hosting productivos.
+- [x] Definir `LegacyProgressImportV1`: idempotencia, revisión base, límites JSON
+      y UID derivado siempre de Auth.
+- [x] Confirmar proyecto `dev` (`convergence-d1a35`) y Firestore en
+      `europe-west1`.
+- [x] Preparar alias local `dev`, manteniendo `demo-convergence-v2` como destino
+      por defecto.
+- [x] Autorizar Firebase CLI con la cuenta del propietario y verificar acceso.
+- [x] Crear RTDB cerrada en `europe-west1` y registrar Web/Android.
+- [x] Descargar y validar las configuraciones cliente en rutas ignoradas; pasar
+      `processDebugGoogleServices` con JBR 21.
+- [x] Crear `dist-cloud-dev` Auth-only, con configuración estricta, CSP mínima y
+      smoke real que crea y elimina una cuenta anónima efímera.
+- [x] Desplegar exclusivamente Firestore Rules tras 21/21 tests y verificar
+      allow/deny desde fuera; no desplegar Functions, RTDB, Storage ni Hosting.
+- [ ] Desplegar las reglas RTDB granulares solo al entrar en presence/salas; la
+      instancia cloud permanece deny-all.
+- [ ] Confirmar presupuesto de `dev`; `staging` y `prod` seguirán siendo
+      proyectos separados.
+- [x] Probar las reglas actuales con Emulator Suite antes de permitir nuevas rutas.
+- [x] Añadir Auth anónima local sin bloquear el juego legacy.
+- [ ] Implementar upgrade de la identidad anónima a cuenta permanente.
+- [ ] Definir estrategia para Apple/Google Sign-In nativo.
+- [x] Implementar previsualización y commit transaccional de importación legacy
+      contra Auth + Functions + Firestore Emulator; economía y cofres quedan en
+      cuarentena y nunca se aceptan como autoritativos desde el cliente.
+- [x] Exigir confirmación explícita entre preview y commit, revisión base,
+      idempotencia por UID, una sola importación y cuota de preview.
+- [x] Crear `dist-profile-emulator`, aislado de PWA/Capacitor/cloud, y validar en
+      navegador real captura, confirmación, persistencia y recarga sin duplicado.
+- [ ] Implementar perfil en nube con revisión, idempotencia y resolución de
+      conflictos; nunca sobrescribir silenciosamente progreso mayor.
+- [x] Implementar repositorio validado y outbox durable por UID con leases,
+      backoff, `Retry-After`, recuperación y conflictos explícitos.
+- [ ] Añadir UI visible de preview/confirmación y recuperación de identidad; el
+      API/evento actual es exclusivamente una herramienta del Emulator.
+- [ ] Incorporar las claves legacy fuera de `cv_meta` que se decidan importar
+      (`cv_best`, `cv_profile` y settings), siempre con política explícita.
+- [ ] Activar App Check en monitor para Web/Android; iOS se añadirá al disponer
+      de macOS/Xcode.
+
+Criterio de salida: un jugador puede iniciar sesión, jugar offline, recuperar
+conectividad y conservar un único progreso coherente en dos dispositivos.
+
+## Fase 6 — Rankings por modo
+
+Estado: **pendiente**
+
+- [ ] Definir boards para cada modo: all-time, temporada, semana y diario.
+- [ ] Enviar claims idempotentes con seed, versión y hash final.
+- [ ] Validar runs deterministas en backend; rechazar versiones desconocidas.
+- [ ] Materializar Top N y posición alrededor del jugador.
+- [ ] Añadir paginación, alias seguro, moderación y borrado de cuenta.
+- [ ] Separar score provisional de score verificado.
+- [ ] Crear alertas de scores imposibles y límites de frecuencia.
+
+Criterio de salida: ninguna puntuación autoritativa puede escribirse directamente
+desde el SDK cliente y cada modo tiene una tabla consultable y paginada.
+
+## Fase 7 — Salas y lobby en tiempo real
+
+Estado: **pendiente**
+
+- [ ] Implementar callables `createRoom`, `joinRoom`, `leaveRoom`,
+      `setReady`, `startMatch` y `closeRoom`.
+- [ ] Generar códigos cortos sin colisiones y con caducidad.
+- [ ] Usar RTDB para presencia/lobby caliente y Firestore para metadatos/auditoría.
+- [ ] Añadir roles owner/player/spectator, límites y transferir host.
+- [ ] Diseñar reconexión, expulsión, abandono y limpieza de salas huérfanas.
+- [ ] Probar dos y cuatro jugadores con latencia/pérdida simulada y carga
+      sintética adicional.
+
+Criterio de salida: varios jugadores pueden encontrarse, prepararse y arrancar
+una sesión sin estados fantasma ni escrituras fuera de su sala.
+
+## Fase 8 — Partida multijugador
+
+Estado: **pendiente**
+
+- [ ] Elegir el primer modo multijugador de alcance reducido.
+- [ ] Secuenciar comandos por jugador con claves de idempotencia.
+- [ ] Publicar snapshots compactos, hashes y acknowledgements en RTDB.
+- [ ] Implementar optimistic UI, resync y rejoin desde último snapshot aceptado.
+- [ ] Ejecutar validación determinista de checkpoints/resultados.
+- [ ] Medir p50/p95 de latencia, ancho de banda y coste por partida.
+- [ ] Decidir con datos si Firebase basta o el árbitro debe pasar a Cloud Run con
+      WebSockets; mantener los contratos para no reescribir el cliente.
+- [ ] Añadir abandono, empate, timeout, espectadores y cierre idempotente.
+
+Criterio de salida: una partida completa sobrevive a reconexión, no duplica
+acciones y produce el mismo resultado verificado para todos.
+
+## Fase 9 — Servicios nativos y hardening
+
+Estado: **pendiente**
+
+- [ ] Push nativo con FCM/APNs y consentimiento explícito.
+- [ ] Notificaciones locales de cofres respetando zona horaria/permisos.
+- [ ] App Check: Play Integrity, App Attest/DeviceCheck y web.
+- [ ] Crash reporting, performance traces y logging sin datos sensibles.
+- [ ] Revisión de reglas, rate limits, abuso, costes y retención.
+- [ ] Exportación/borrado de cuenta, privacidad, términos y soporte.
+- [ ] Accesibilidad, reduced motion/FX, safe areas y dispositivos de gama baja.
+
+Criterio de salida: checklist de seguridad/privacidad aprobado y cero secretos en
+repositorio o logs.
+
+## Fase 10 — Beta y publicación
+
+Estado: **pendiente**
+
+- [ ] CI de PWA, Android y iOS; firma solo en runners protegidos.
+- [ ] Internal testing de Play y TestFlight con telemetría.
+- [ ] Compatibilidad Android API 24–36 e iOS 15+.
+- [ ] Pruebas de actualización desde PWA/versión nativa anterior.
+- [ ] Rollout gradual con remote kill switches para online/multiplayer.
+- [ ] Publicar PWA y después tiendas por anillos, con rollback documentado.
+
+Criterio de salida: releases reproducibles, observables y reversibles en los tres
+canales.
+
+## Gates que nunca se omiten
+
+- Paridad: las 343 pruebas legacy deben seguir verdes.
+- Visual: cambios de UI se contrastan con `docs/design-system`.
+- Datos: migraciones con copia/lectura dual, versionado y rollback.
+- Seguridad: reglas de emulador antes de despliegue; Admin SDK solo en backend.
+- Online: toda operación repetible lleva idempotency key.
+- Multijugador: nunca se acepta score/estado final solo porque lo envía el cliente.
+- Release: ninguna credencial, clave de firma o archivo APNs se versiona.

@@ -1,0 +1,10 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Cerrado hasta definir avatares/replays, límites de tamaño y validación.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

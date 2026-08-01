@@ -1,0 +1,2059 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Convergence — Estudio & Comparador de Animaciones In-Game</title>
+
+  <!-- Estilos reales del juego -->
+  <link rel="stylesheet" href="../styles.css" />
+
+  <!-- Estilos del Centro de Control & Comparador -->
+  <style>
+    :root {
+      --ctrl-bg-dark: #070c1e;
+      --ctrl-panel-bg: rgba(13, 20, 44, 0.96);
+      --ctrl-card-bg: rgba(22, 33, 68, 0.75);
+      --ctrl-border: rgba(100, 140, 240, 0.25);
+      --ctrl-accent-cyan: #00d0ff;
+      --ctrl-accent-gold: #ffd24d;
+      --ctrl-accent-pink: #ff5df0;
+      --ctrl-accent-green: #34e29b;
+      --ctrl-accent-red: #ff3c50;
+      --ctrl-text-main: #f1f5f9;
+      --ctrl-text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--ctrl-bg-dark);
+      color: var(--ctrl-text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ----------------------------------------------------
+       CABECERA PRINCIPAL Y TOOLBAR RESPONSIVA
+    ---------------------------------------------------- */
+    .ctrl-header {
+      background: linear-gradient(180deg, #0e1738 0%, #080d24 100%);
+      border-bottom: 1px solid var(--ctrl-border);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    }
+
+    .ctrl-title-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .ctrl-title-area h1 {
+      font-size: 1.25rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #ffffff 0%, var(--ctrl-accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+    }
+
+    .ctrl-tag {
+      background: rgba(0, 208, 255, 0.12);
+      color: var(--ctrl-accent-cyan);
+      border: 1px solid rgba(0, 208, 255, 0.35);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .ctrl-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .ctrl-btn {
+      background: linear-gradient(145deg, #1e2d5c, #131d3d);
+      border: 1px solid var(--ctrl-border);
+      color: var(--ctrl-text-main);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s ease;
+      user-select: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      white-space: nowrap;
+    }
+
+    .ctrl-btn:hover {
+      background: linear-gradient(145deg, #2b3d7a, #1a2754);
+      border-color: var(--ctrl-accent-cyan);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,208,255,0.25);
+    }
+
+    .ctrl-btn:active { transform: translateY(1px); }
+
+    .ctrl-btn.active {
+      background: linear-gradient(135deg, rgba(0,208,255,0.25), rgba(255,93,240,0.25));
+      border-color: var(--ctrl-accent-cyan);
+      color: #ffffff;
+      box-shadow: 0 0 14px rgba(0,208,255,0.35);
+    }
+
+    .ctrl-btn-accent {
+      background: linear-gradient(135deg, #00b4d8 0%, #0077b6 100%);
+      border-color: rgba(255,255,255,0.3);
+    }
+    .ctrl-btn-accent:hover {
+      background: linear-gradient(135deg, #00c4e8 0%, #0087c6 100%);
+    }
+
+    .ctrl-select {
+      background: #0f1836;
+      border: 1px solid var(--ctrl-border);
+      color: var(--ctrl-text-main);
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* ----------------------------------------------------
+       LAYOUT PRINCIPAL RESPONSIVO
+    ---------------------------------------------------- */
+    .ctrl-main {
+      display: grid;
+      grid-template-columns: 1fr 480px;
+      flex: 1;
+      height: calc(100vh - 58px);
+      overflow: hidden;
+    }
+
+    body.comparator-active .ctrl-main {
+      grid-template-columns: 1fr 500px;
+    }
+
+    /* ----------------------------------------------------
+       VIEWPORT DEL TABLERO Y ESCENARIO
+    ---------------------------------------------------- */
+    .ctrl-viewport-stage {
+      background: radial-gradient(circle at 50% 35%, #142048 0%, #050814 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .boards-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Tarjeta individual de tablero (A o B) */
+    .board-unit-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: min(560px, 90vw, 72vh);
+      max-width: 100%;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    body.comparator-active .board-unit-card {
+      width: min(440px, 44vw, 68vh);
+    }
+
+    .board-unit-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      background: rgba(15, 23, 52, 0.88);
+      border: 1px solid var(--ctrl-border);
+      padding: 8px 14px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .board-unit-title {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: var(--ctrl-accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* CONTENEDOR DE TABLERO MOCKUP ADAPTABLE */
+    .mockup-board-container {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      position: relative;
+      margin: 0 auto;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+      border-radius: 22px;
+    }
+
+    .mockup-board-container .board-wrap {
+      width: 100% !important;
+      height: 100% !important;
+      position: relative !important;
+      padding: 10px !important;
+      border-radius: 22px !important;
+    }
+
+    .mockup-board-container .board {
+      width: 100% !important;
+      height: 100% !important;
+      display: grid !important;
+      grid-template-columns: repeat(8, 1fr) !important;
+      grid-template-rows: repeat(8, 1fr) !important;
+      gap: clamp(3px, 0.8vmin, 6px) !important;
+    }
+
+    /* CELDAS Y FICHAS */
+    .board .cell {
+      border-radius: 11px;
+      font-size: clamp(1.2rem, 3.8vmin, 2.3rem);
+      display: grid;
+      place-items: center;
+      position: relative;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .board .cell .glyph {
+      transition: opacity 0.12s ease;
+    }
+
+    /* HUD MOCKUP COMPLETO */
+    .mockup-hud-wrap {
+      width: 100%;
+      background: rgba(14, 20, 46, 0.85);
+      border: 1px solid var(--ctrl-border);
+      border-radius: 14px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    }
+
+    .hud-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .hud-score-display {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .hud-score-num {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--ctrl-accent-cyan);
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 0 12px rgba(0,208,255,0.4);
+    }
+
+    .hud-combo-chip {
+      background: rgba(255, 216, 77, 0.15);
+      border: 1px solid rgba(255, 216, 77, 0.4);
+      color: var(--ctrl-accent-gold);
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .hud-stats-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--ctrl-text-muted);
+    }
+
+    .hud-stat-pill {
+      background: rgba(255,255,255,0.06);
+      padding: 3px 10px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* BANDEJA DE BOOSTERS (HUD INFERIOR) */
+    .mockup-booster-tray {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .booster-slot-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #223163, #0d1633);
+      border: 2px solid rgba(120, 150, 255, 0.35);
+      display: grid;
+      place-items: center;
+      font-size: 1.3rem;
+      cursor: pointer;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      transition: all 0.15s ease;
+    }
+
+    .booster-slot-btn:hover {
+      transform: translateY(-2px);
+      border-color: var(--ctrl-accent-cyan);
+      box-shadow: 0 6px 16px rgba(0,208,255,0.35);
+    }
+
+    /* ----------------------------------------------------
+       EFECTOS ELEGANTES DE EXPLOSIÓN SUPERNOVA
+    ---------------------------------------------------- */
+    .trace-line {
+      position: absolute;
+      transform-origin: 0% 50%;
+      background: linear-gradient(90deg, rgba(0,208,255,0.9), rgba(255,93,240,0.8));
+      box-shadow: 0 0 10px var(--ctrl-accent-cyan);
+      pointer-events: none;
+      z-index: 35;
+      border-radius: 4px;
+    }
+
+    .radial-particle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 45;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    /* Implosión previa de energía elegante */
+    .bomb-implosion-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 2px solid var(--ctrl-accent-cyan);
+      box-shadow: 0 0 25px var(--ctrl-accent-cyan), inset 0 0 15px var(--ctrl-accent-pink);
+      pointer-events: none;
+      z-index: 41;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Anillo dual de explosión Supernova elegante */
+    .bomb-supernova-ring {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,216,77,0.85) 0%, rgba(255,93,240,0.7) 45%, rgba(0,208,255,0.4) 75%, transparent 100%);
+      box-shadow: 0 0 50px rgba(255,216,77,0.9), 0 0 30px rgba(255,93,240,0.8);
+      pointer-events: none;
+      z-index: 43;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Laser beam del Rayo de línea */
+    .laser-beam-h {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0), rgba(52,226,155,0.95) 50%, rgba(255,255,255,0));
+      box-shadow: 0 0 30px #34e29b;
+      pointer-events: none;
+      z-index: 44;
+    }
+
+    /* ----------------------------------------------------
+       SIDEBAR DE CONTROL DE ANIMACIONES
+    ---------------------------------------------------- */
+    .ctrl-sidebar {
+      background: var(--ctrl-panel-bg);
+      border-left: 1px solid var(--ctrl-border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: -6px 0 30px rgba(0,0,0,0.6);
+    }
+
+    /* Pestañas */
+    .ctrl-tabs {
+      display: flex;
+      background: #090e24;
+      border-bottom: 1px solid var(--ctrl-border);
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .ctrl-tabs::-webkit-scrollbar { display: none; }
+
+    .ctrl-tab {
+      padding: 12px 14px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--ctrl-text-muted);
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ctrl-tab:hover { color: #ffffff; background: rgba(255,255,255,0.03); }
+    .ctrl-tab.active {
+      color: var(--ctrl-accent-cyan);
+      border-bottom-color: var(--ctrl-accent-cyan);
+      background: rgba(0, 208, 255, 0.08);
+    }
+
+    /* Contenido de la pestaña activa */
+    .ctrl-tab-pane {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Grupos de botones */
+    .anim-group-card {
+      background: var(--ctrl-card-bg);
+      border: 1px solid var(--ctrl-border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .anim-group-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding-bottom: 8px;
+    }
+
+    .anim-group-title {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .anim-group-desc {
+      font-size: 0.72rem;
+      color: var(--ctrl-text-muted);
+      line-height: 1.3;
+    }
+
+    .anim-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    /* Botones de disparo de animación */
+    .anim-btn {
+      background: linear-gradient(145deg, #18254c, #0e1735);
+      border: 1px solid rgba(100, 140, 240, 0.25);
+      color: var(--ctrl-text-main);
+      padding: 9px 10px;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .anim-btn:hover {
+      background: linear-gradient(145deg, #243770, #15234e);
+      border-color: var(--ctrl-accent-cyan);
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0,208,255,0.2);
+    }
+
+    .anim-btn:active { transform: translateY(1px); }
+
+    .anim-btn small {
+      font-size: 0.65rem;
+      color: var(--ctrl-text-muted);
+      font-weight: 500;
+    }
+
+    /* ----------------------------------------------------
+       INSPECTOR & AUDIT LOG
+    ---------------------------------------------------- */
+    .ctrl-log-panel {
+      height: 150px;
+      background: #040714;
+      border-top: 1px solid var(--ctrl-border);
+      display: flex;
+      flex-direction: column;
+      font-family: monospace;
+      font-size: 0.72rem;
+    }
+
+    .log-panel-bar {
+      background: #0c1228;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--ctrl-text-muted);
+      font-weight: bold;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .log-stream {
+      flex: 1;
+      padding: 8px 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .log-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .log-item .t { color: var(--ctrl-accent-cyan); }
+    .log-item .name { color: var(--ctrl-accent-gold); font-weight: bold; }
+    .log-item .det { color: #cbd5e1; }
+
+    /* Indicador móvil de deslizamiento horizontal */
+    .mobile-swipe-badge {
+      display: none;
+      font-size: 0.68rem;
+      color: var(--ctrl-accent-cyan);
+      font-weight: 700;
+      text-align: right;
+      padding: 2px 4px;
+    }
+
+    /* ----------------------------------------------------
+       RESPONSIVIDAD Y CONTROLES DESLIZABLES EN MÓVIL (< 900px)
+    ---------------------------------------------------- */
+    @media (max-width: 900px) {
+      .ctrl-header {
+        padding: 8px 12px;
+        gap: 10px;
+      }
+
+      .ctrl-title-area h1 {
+        font-size: 1.05rem;
+      }
+
+      .ctrl-toolbar {
+        width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: 4px;
+      }
+      .ctrl-toolbar::-webkit-scrollbar { display: none; }
+
+      .ctrl-toolbar .ctrl-btn,
+      .ctrl-toolbar .ctrl-select {
+        flex-shrink: 0;
+        font-size: 0.75rem;
+        padding: 6px 10px;
+      }
+
+      .ctrl-main {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        min-height: calc(100vh - 58px);
+        overflow-y: auto;
+      }
+
+      body.comparator-active .ctrl-main {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .ctrl-viewport-stage {
+        padding: 12px 8px;
+        width: 100%;
+        overflow-y: visible;
+      }
+
+      .boards-wrapper {
+        gap: 16px;
+        width: 100%;
+      }
+
+      body.comparator-active .boards-wrapper {
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        justify-content: flex-start;
+        padding-bottom: 12px;
+        scrollbar-width: none;
+      }
+      body.comparator-active .boards-wrapper::-webkit-scrollbar { display: none; }
+
+      .board-unit-card {
+        width: min(100%, 94vw, 420px);
+        flex-shrink: 0;
+      }
+
+      body.comparator-active .board-unit-card {
+        width: min(88vw, 360px);
+        scroll-snap-align: center;
+      }
+
+      .ctrl-sidebar {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--ctrl-border);
+        box-shadow: 0 -6px 20px rgba(0,0,0,0.5);
+        height: auto;
+      }
+
+      .ctrl-tabs {
+        -webkit-overflow-scrolling: touch;
+        padding: 4px 6px;
+      }
+
+      .ctrl-tab {
+        padding: 10px 12px;
+        font-size: 0.75rem;
+      }
+
+      .ctrl-tab-pane {
+        padding: 12px;
+        gap: 12px;
+        max-height: 52vh;
+      }
+
+      .anim-group-card {
+        padding: 10px 12px;
+        gap: 10px;
+      }
+
+      .mobile-swipe-badge {
+        display: inline-block;
+      }
+
+      /* PANEL DE BOTONES DESLIZABLE HORIZONTALMENTE */
+      .anim-grid {
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        gap: 8px;
+        padding-bottom: 6px;
+        scrollbar-width: thin;
+      }
+      .anim-grid::-webkit-scrollbar {
+        height: 4px;
+      }
+      .anim-grid::-webkit-scrollbar-thumb {
+        background: var(--ctrl-border);
+        border-radius: 4px;
+      }
+
+      .anim-btn {
+        flex: 0 0 clamp(145px, 45vw, 190px);
+        scroll-snap-align: start;
+        padding: 9px 10px;
+      }
+
+      .mockup-booster-tray {
+        gap: 8px;
+      }
+
+      .booster-slot-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 1.15rem;
+      }
+
+      .ctrl-log-panel {
+        height: 110px;
+      }
+    }
+  </style>
+</head>
+<body data-skin="madera">
+
+  <!-- CAPAS DE FX GLOBALES -->
+  <div class="stars" aria-hidden="true"></div>
+  <div class="flash" id="flash" aria-hidden="true"></div>
+  <div class="fx" id="fx" aria-hidden="true"></div>
+
+  <!-- CABECERA PRINCIPAL -->
+  <header class="ctrl-header">
+    <div class="ctrl-title-area">
+      <h1>Convergence FX Studio</h1>
+      <span class="ctrl-tag">Estudio & Comparador In-Game</span>
+    </div>
+
+    <div class="ctrl-toolbar">
+      <!-- Velocidad Global -->
+      <label style="font-size:0.78rem; font-weight:800; color:var(--ctrl-text-muted);">Velocidad:</label>
+      <select class="ctrl-select" id="speed-selector" onchange="setGlobalSpeed(this.value)">
+        <option value="0.25">0.25x (Super Slow-Mo)</option>
+        <option value="0.5">0.5x (Slow Motion)</option>
+        <option value="1" selected>1.0x (Normal 60 FPS)</option>
+        <option value="2">2.0x (Rápido)</option>
+      </select>
+
+      <!-- Toggle Reduced FX -->
+      <button class="ctrl-btn" id="btn-reduced" onclick="toggleReducedFX()">
+        <span>⚙️ Reduced FX: OFF</span>
+      </button>
+
+      <!-- Toggle Comparador Dual A/B -->
+      <button class="ctrl-btn ctrl-btn-accent" id="btn-comparator" onclick="toggleComparatorMode()">
+        <span>🔀 Modo Comparador A/B</span>
+      </button>
+
+      <!-- Auto Tour -->
+      <button class="ctrl-btn" onclick="runAutoDemo()">
+        <span>▶️ Auto Showcase</span>
+      </button>
+
+      <!-- Randomize Board -->
+      <button class="ctrl-btn" onclick="randomizeBoards()">
+        <span>🎲 Mezclar Fichas</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL SPLIT -->
+  <main class="ctrl-main">
+
+    <!-- VIEWPORT DE MOCKUPS -->
+    <section class="ctrl-viewport-stage">
+
+      <div class="boards-wrapper">
+
+        <!-- ================= TABLERO A ================= -->
+        <div class="board-unit-card" id="card-board-a">
+
+          <div class="board-unit-header">
+            <span class="board-unit-title">
+              <span>🎮 Tablero A</span>
+              <small id="skin-tag-a">(Madera)</small>
+            </span>
+            <select class="ctrl-select" style="padding:2px 6px; font-size:0.72rem;" onchange="changeSkin('wrap-a', this.value, 'skin-tag-a')">
+              <option value="madera" selected>Madera</option>
+              <option value="hielo">Hielo</option>
+              <option value="lava">Lava</option>
+              <option value="cristal">Cristal</option>
+              <option value="magico">Mágico</option>
+              <option value="futurista">Futurista</option>
+              <option value="dorado">Dorado</option>
+              <option value="bosque">Bosque</option>
+              <option value="cosmico">Cósmico</option>
+            </select>
+          </div>
+
+          <!-- HUD MOCKUP INTEGRADO A -->
+          <div class="mockup-hud-wrap">
+            <div class="hud-top-row">
+              <div class="hud-score-display">
+                <span class="hud-score-num" id="score-num-a">14,250</span>
+                <span class="hud-combo-chip" id="combo-chip-a">COMBO ×3 🔥</span>
+              </div>
+              <div style="font-size:0.8rem; font-weight:800;">❤️ <span id="lives-a">3/3</span></div>
+            </div>
+
+            <div class="hud-stats-row">
+              <span class="hud-stat-pill">Nivel: <b id="lvl-a" style="color:var(--ctrl-accent-cyan);">N3</b></span>
+              <span class="hud-stat-pill">Oleada: <b id="wave-a">Oleada 2</b></span>
+              <span class="hud-stat-pill">Ocupación: <b id="occ-a" style="color:var(--ctrl-accent-green);">35%</b></span>
+            </div>
+          </div>
+
+          <!-- TABLERO 8x8 MOCKUP REAL -->
+          <div class="mockup-board-container">
+            <div class="board-wrap" id="wrap-a" data-board="madera">
+              <div class="board" id="board-a" role="grid"></div>
+              <div class="popups" id="popups-a"></div>
+              <div class="fever" id="fever-a"></div>
+            </div>
+          </div>
+
+          <!-- BANDEJA DE BOOSTERS DE PRUEBA -->
+          <div class="mockup-booster-tray">
+            <button class="booster-slot-btn" onclick="triggerAction('booster-bomb')" title="Bomba Explosiva (Supernova Elegante)">💣</button>
+            <button class="booster-slot-btn" onclick="triggerAction('booster-line')" title="Rayo de Línea (Barrido Laser)">⚡</button>
+            <button class="booster-slot-btn" onclick="triggerAction('booster-x2')" title="Multiplicador x2">⭐</button>
+            <button class="booster-slot-btn" onclick="triggerAction('booster-wild')" title="Comodín Místico">🃏</button>
+          </div>
+
+        </div>
+
+        <!-- ================= TABLERO B (MODO COMPARADOR) ================= -->
+        <div class="board-unit-card" id="card-board-b" style="display: none;">
+
+          <div class="board-unit-header">
+            <span class="board-unit-title">
+              <span style="color:var(--ctrl-accent-pink);">🎮 Tablero B</span>
+              <small id="skin-tag-b">(Hielo)</small>
+            </span>
+            <select class="ctrl-select" style="padding:2px 6px; font-size:0.72rem;" onchange="changeSkin('wrap-b', this.value, 'skin-tag-b')">
+              <option value="madera">Madera</option>
+              <option value="hielo" selected>Hielo</option>
+              <option value="lava">Lava</option>
+              <option value="cristal">Cristal</option>
+              <option value="magico">Mágico</option>
+              <option value="futurista">Futurista</option>
+              <option value="dorado">Dorado</option>
+              <option value="bosque">Bosque</option>
+              <option value="cosmico">Cósmico</option>
+            </select>
+          </div>
+
+          <!-- HUD MOCKUP INTEGRADO B -->
+          <div class="mockup-hud-wrap">
+            <div class="hud-top-row">
+              <div class="hud-score-display">
+                <span class="hud-score-num" id="score-num-b">14,250</span>
+                <span class="hud-combo-chip" id="combo-chip-b">COMBO ×3 🔥</span>
+              </div>
+              <div style="font-size:0.8rem; font-weight:800;">❤️ <span id="lives-b">3/3</span></div>
+            </div>
+
+            <div class="hud-stats-row">
+              <span class="hud-stat-pill">Nivel: <b id="lvl-b" style="color:var(--ctrl-accent-cyan);">N3</b></span>
+              <span class="hud-stat-pill">Oleada: <b id="wave-b">Oleada 2</b></span>
+              <span class="hud-stat-pill">Ocupación: <b id="occ-b" style="color:var(--ctrl-accent-green);">35%</b></span>
+            </div>
+          </div>
+
+          <!-- TABLERO 8x8 MOCKUP REAL -->
+          <div class="mockup-board-container">
+            <div class="board-wrap" id="wrap-b" data-board="hielo">
+              <div class="board" id="board-b" role="grid"></div>
+              <div class="popups" id="popups-b"></div>
+              <div class="fever" id="fever-b"></div>
+            </div>
+          </div>
+
+          <!-- BANDEJA DE BOOSTERS DE PRUEBA -->
+          <div class="mockup-booster-tray">
+            <button class="booster-slot-btn" onclick="triggerAction('booster-bomb')" title="Bomba Explosiva (Supernova Elegante)">💣</button>
+            <button class="booster-slot-btn" onclick="triggerAction('booster-line')" title="Rayo de Línea (Barrido Laser)">⚡</button>
+            <button class="booster-slot-btn" onclick="triggerAction('booster-x2')" title="Multiplicador x2">⭐</button>
+            <button class="booster-slot-btn" onclick="triggerAction('booster-wild')" title="Comodín Místico">🃏</button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- SIDEBAR DE CONTROL DE ANIMACIONES -->
+    <aside class="ctrl-sidebar">
+
+      <!-- PESTAÑAS DE CATEGORÍA -->
+      <nav class="ctrl-tabs">
+        <button class="ctrl-tab active" onclick="showTab('pane-core', this)">🎯 Core</button>
+        <button class="ctrl-tab" onclick="showTab('pane-skins', this)">🎨 Skins</button>
+        <button class="ctrl-tab" onclick="showTab('pane-boosters', this)">💥 Boosters</button>
+        <button class="ctrl-tab" onclick="showTab('pane-special', this)">🧊 Especiales</button>
+        <button class="ctrl-tab" onclick="showTab('pane-combos', this)">⚡ Combos</button>
+        <button class="ctrl-tab" onclick="showTab('pane-survival', this)">🐉 Eventos</button>
+        <button class="ctrl-tab" onclick="showTab('pane-hud', this)">🔔 HUD</button>
+      </nav>
+
+      <!-- CONTENIDO DE PESTAÑAS -->
+      <div class="ctrl-tab-pane" id="pane-core">
+        <div class="anim-group-card">
+          <div class="anim-group-header">
+            <span class="anim-group-title">Convergencia Magnética Completa (WAAPI + FX) <small style="color:var(--ctrl-accent-cyan);">165ms</small></span>
+            <span class="anim-group-desc">Atracción magnética con física de squash/stretch, estelas luminosas y ráfaga de chispas radiales.</span>
+            <span class="mobile-swipe-badge">👈 Desliza los botones horizontalmente 👉</span>
+          </div>
+          <div class="anim-grid">
+            <button class="anim-btn" onclick="triggerAction('converge-4')">
+              <span>🧲 Converger (4 Direcciones)</span>
+              <small>Estelas + Squash/Stretch + Burst</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('converge-2')">
+              <span>🧲 Converger (2 Fichas)</span>
+              <small>Par horizontal/vertical</small>
+            </button>
+          </div>
+        </div>
+
+        <div class="anim-group-card">
+          <div class="anim-group-header">
+            <span class="anim-group-title">Animaciones de Celda & Iconos</span>
+            <span class="anim-group-desc">Retroalimentación inmediata de toque, nacer de ficha y penalización.</span>
+            <span class="mobile-swipe-badge">👈 Desliza los botones horizontalmente 👉</span>
+          </div>
+          <div class="anim-grid">
+            <button class="anim-btn" onclick="triggerAction('glyph-in')">
+              <span>✨ Glyph In</span>
+              <small>Aparición de nuevo icono</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('clear-ring')">
+              <span>⭕ Clear Ring</span>
+              <small>Onda radial expansiva del tap</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('miss')">
+              <span>❌ Miss Shake</span>
+              <small>Sacudida de error en tap</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('penalty-pop')">
+              <span>⚠️ Penalty Pop</span>
+              <small>Contracción y brillo rojo</small>
+            </button>
+          </div>
+        </div>
+
+        <div class="anim-group-card">
+          <div class="anim-group-header">
+            <span class="anim-group-title">Trayectorias & Popups</span>
+            <span class="anim-group-desc">Proyección de puntos flotantes y proyectiles hacia el HUD.</span>
+            <span class="mobile-swipe-badge">👈 Desliza los botones horizontalmente 👉</span>
+          </div>
+          <div class="anim-grid">
+            <button class="anim-btn" onclick="triggerAction('scoreToHud')">
+              <span>💫 Puntos Volando al HUD</span>
+              <small>Trayectoria Bézier a marcador</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('popup-score')">
+              <span>💬 Popups de Puntos</span>
+              <small>Textos +150, COMBO x3!</small>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 2: SKINS -->
+      <div class="ctrl-tab-pane" id="pane-skins" style="display:none;">
+        <div class="anim-group-card">
+          <div class="anim-group-header">
+            <span class="anim-group-title">Animaciones Temáticas por Skin (9 Temas)</span>
+            <span class="anim-group-desc">Cada tema reinterpreta las variables `--clear-animation` y `--clear-burst-animation`.</span>
+            <span class="mobile-swipe-badge">👈 Desliza los botones horizontalmente 👉</span>
+          </div>
+          <div class="anim-grid">
+            <button class="anim-btn" onclick="triggerSkinEffect('madera')">
+              <span>🪵 Skin Madera</span>
+              <small>clear-wood + dust</small>
+            </button>
+            <button class="anim-btn" onclick="triggerSkinEffect('hielo')">
+              <span>❄️ Skin Hielo</span>
+              <small>clear-ice + shards</small>
+            </button>
+            <button class="anim-btn" onclick="triggerSkinEffect('lava')">
+              <span>🌋 Skin Lava</span>
+              <small>clear-lava + magma</small>
+            </button>
+            <button class="anim-btn" onclick="triggerSkinEffect('cristal')">
+              <span>💎 Skin Cristal</span>
+              <small>clear-crystal + prism</small>
+            </button>
+            <button class="anim-btn" onclick="triggerSkinEffect('magico')">
+              <span>🔮 Skin Mágico</span>
+              <small>clear-magic + rune</small>
+            </button>
+            <button class="anim-btn" onclick="triggerSkinEffect('futurista')">
+              <span>🤖 Skin Futurista</span>
+              <small>clear-future + scan</small>
+            </button>
+            <button class="anim-btn" onclick="triggerSkinEffect('dorado')">
+              <span>🪙 Skin Dorado</span>
+              <small>clear-gold + spark</small>
+            </button>
+            <button class="anim-btn" onclick="triggerSkinEffect('bosque')">
+              <span>🍃 Skin Bosque</span>
+              <small>clear-leaf + burst</small>
+            </button>
+            <button class="anim-btn" onclick="triggerSkinEffect('cosmico')">
+              <span>🌌 Skin Cósmico</span>
+              <small>clear-cosmic + star-burst</small>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 3: BOOSTERS -->
+      <div class="ctrl-tab-pane" id="pane-boosters" style="display:none;">
+        <div class="anim-group-card">
+          <div class="anim-group-header">
+            <span class="anim-group-title">Potenciadores & Habilidades Tácticas</span>
+            <span class="anim-group-desc">Vuelo lateral continuo y disolución suave sin saltos visuales.</span>
+            <span class="mobile-swipe-badge">👈 Desliza los botones horizontalmente 👉</span>
+          </div>
+          <div class="anim-grid">
+            <button class="anim-btn" style="border-color:var(--ctrl-accent-pink);" onclick="triggerAction('booster-bomb')">
+              <span>💣 Supernova Bomb Elegante</span>
+              <small>Vuelo lateral + Disolución fluida</small>
+            </button>
+            <button class="anim-btn" style="border-color:var(--ctrl-accent-green);" onclick="triggerAction('booster-line')">
+              <span>⚡ Rayo de Línea (Laser)</span>
+              <small>Barrido horizontal masivo</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('booster-x2')">
+              <span>⭐ Puntos x2 Multi</span>
+              <small>x2-board marco resplandeciente</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('booster-wild')">
+              <span>🃏 Comodín Místico</span>
+              <small>wild-board marco violeta</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('armPulse')">
+              <span>🎯 Pulso de Armado</span>
+              <small>Resplandor cian listo</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('booster-fired')">
+              <span>🔘 Booster Fired</span>
+              <small>Hundimiento táctil</small>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 4: ESPECIALES -->
+      <div class="ctrl-tab-pane" id="pane-special" style="display:none;">
+        <div class="anim-group-card">
+          <div class="anim-group-header">
+            <span class="anim-group-title">Celdas Especiales & Obstáculos</span>
+            <span class="anim-group-desc">Daño a bloques congelados, oscilación de reloj y meteoritos.</span>
+            <span class="mobile-swipe-badge">👈 Desliza los botones horizontalmente 👉</span>
+          </div>
+          <div class="anim-grid">
+            <button class="anim-btn" onclick="triggerAction('ice-hit')">
+              <span>🧊 Impacto en Hielo</span>
+              <small>Crujido parcial ice-hit</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('ice-shatter')">
+              <span>💥 Rotura de Hielo</span>
+              <small>Estallido cristalino</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('special-pulse')">
+              <span>✨ Ficha Especial</span>
+              <small>Pulso de atención</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('slowdown-bob')">
+              <span>⏳ Reloj Ralentizador</span>
+              <small>Oscilación pendular</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('surv-meteor')">
+              <span>☄️ Caída de Meteorito</span>
+              <small>Impacto en picado</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('lock-stamp')">
+              <span>🔒 Candado / Cadena</span>
+              <small>Golpe seco lock-stamp</small>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 5: COMBOS & FEVER -->
+      <div class="ctrl-tab-pane" id="pane-combos" style="display:none;">
+        <div class="anim-group-card">
+          <div class="anim-group-header">
+            <span class="anim-group-title">Combos, Frenesí & Banners</span>
+            <span class="anim-group-desc">Aura de Fever, destellos full-screen y banners de rango.</span>
+            <span class="mobile-swipe-badge">👈 Desliza los botones horizontalmente 👉</span>
+          </div>
+          <div class="anim-grid">
+            <button class="anim-btn" onclick="triggerAction('fever-toggle')">
+              <span>🔥 Modo Fever / Frenesí</span>
+              <small>Aura incandescente + burst</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('rank-pop-genial')">
+              <span>🏆 Rank Pop: ¡GENIAL!</span>
+              <small>rankPop banner rotado</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('rank-pop-epico')">
+              <span>🌟 Rank Pop: ¡ÉPICO!</span>
+              <small>rankPop banner medio</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('rank-pop-legendario')">
+              <span>👑 Rank Pop: LEGENDARIO</span>
+              <small>rankPop banner gigante</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('flash-anim')">
+              <span>⚡ Screen Flash</span>
+              <small>Récord / Board Clear</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('danger-border')">
+              <span>🚨 Danger Border</span>
+              <small>Marco pulsante 90% ocupación</small>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 6: SUPERVIVENCIA & EVENTOS -->
+      <div class="ctrl-tab-pane" id="pane-survival" style="display:none;">
+        <div class="anim-group-card">
+          <div class="anim-group-header">
+            <span class="anim-group-title">Eventos Ambientales & Jefes</span>
+            <span class="anim-group-desc">Terremotos, mareas tóxicas, alertas de jefes y escarcha.</span>
+            <span class="mobile-swipe-badge">👈 Desliza los botones horizontalmente 👉</span>
+          </div>
+          <div class="anim-grid">
+            <button class="anim-btn" onclick="triggerAction('surv-quake')">
+              <span>🌋 Terremoto (Quake)</span>
+              <small>Tremor sísmico de tablero</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('surv-rain')">
+              <span>☄️ Lluvia Meteoros</span>
+              <small>Resplandor ambarino</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('surv-penalty')">
+              <span>💔 Daño de Vida</span>
+              <small>Sacudida carmesí</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('surv-wave-up')">
+              <span>🌊 Subida de Oleada</span>
+              <small>Zoom de peligro</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('tide-fill-rise')">
+              <span>🌊 Marea Tóxica</span>
+              <small>Inundación de líquido</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('frost-field')">
+              <span>❄️ Escarcha Helada</span>
+              <small>Perímetro helado</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('life-blast')">
+              <span>💚 Curación Extra Life</span>
+              <small>Halo dorado de energía</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('boss-warn-board')">
+              <span>🐉 Alerta de Jefe</span>
+              <small>Brillo y presión amenazante</small>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 7: HUD & REWARDS -->
+      <div class="ctrl-tab-pane" id="pane-hud" style="display:none;">
+        <div class="anim-group-card">
+          <div class="anim-group-header">
+            <span class="anim-group-title">HUD, Toasts & Recompensas</span>
+            <span class="anim-group-desc">Animaciones en marcadores, notificaciones flotantes e ítems.</span>
+            <span class="mobile-swipe-badge">👈 Desliza los botones horizontalmente 👉</span>
+          </div>
+          <div class="anim-grid">
+            <button class="anim-btn" onclick="triggerAction('score-bump')">
+              <span>🔢 Score Bump</span>
+              <small>Brinco numérico dorado</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('last-life')">
+              <span>❤️ Last Life Heartbeat</span>
+              <small>Parpadeo de peligro</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('toast-demo')">
+              <span>💬 Toast In / Out</span>
+              <small>Notificación flotante</small>
+            </button>
+            <button class="anim-btn" onclick="triggerAction('reward-spark')">
+              <span>🪙 Recolección Divisas</span>
+              <small>reward-chip-pop + spark</small>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TERMINAL INSPECTOR LOG -->
+      <footer class="ctrl-log-panel">
+        <div class="log-panel-bar">
+          <span>LOG DE AUDITORÍA & TIEMPOS EXPLICITOS</span>
+          <button style="background:none; border:none; color:var(--ctrl-text-muted); cursor:pointer;" onclick="clearLog()">Borrar</button>
+        </div>
+        <div class="log-stream" id="log-stream">
+          <div class="log-item">
+            <span class="t">[00:00.000]</span>
+            <span class="name">Convergence FX Studio</span>
+            <span class="det">Motor de partículas y física de convergencia activados</span>
+          </div>
+        </div>
+      </footer>
+
+    </aside>
+
+  </main>
+
+  <!-- LÓGICA DE MOTOR COMPLETO DE FX & ANIMACIONES -->
+  <script>
+    const ICONS_PALETTE = ['🚀', '💎', '🔥', '⚡', '🌸', '🔮', '⭐', '🍀'];
+    const SUPERNOVA_COLORS = ['#00d0ff', '#ff5df0', '#ffd24d', '#ff3c50', '#ffffff', '#34e29b'];
+
+    let isComparatorActive = false;
+    let globalSpeed = 1;
+    let isFever = false;
+    let isReduced = false;
+
+    const boardStateA = Array(64).fill(null);
+    const boardStateB = Array(64).fill(null);
+
+    window.addEventListener('DOMContentLoaded', () => {
+      buildGrid('board-a', boardStateA, 'a');
+      buildGrid('board-b', boardStateB, 'b');
+      log('Inicialización', 'Motor de animaciones y rejillas 8x8 listos.');
+    });
+
+    function showTab(paneId, btn) {
+      document.querySelectorAll('.ctrl-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.ctrl-tab-pane').forEach(p => p.style.display = 'none');
+      btn.classList.add('active');
+      document.getElementById(paneId).style.display = 'flex';
+    }
+
+    function toggleComparatorMode() {
+      isComparatorActive = !isComparatorActive;
+      const body = document.body;
+      const cardB = document.getElementById('card-board-b');
+      const btn = document.getElementById('btn-comparator');
+
+      if (isComparatorActive) {
+        body.classList.add('comparator-active');
+        cardB.style.display = 'flex';
+        btn.classList.add('active');
+        btn.innerHTML = '<span>🔀 Modo Individual</span>';
+        log('Comparador A/B', 'Vista dual activada');
+      } else {
+        body.classList.remove('comparator-active');
+        cardB.style.display = 'none';
+        btn.classList.remove('active');
+        btn.innerHTML = '<span>🔀 Modo Comparador A/B</span>';
+        log('Modo Individual', 'Tablero B ocultado');
+      }
+    }
+
+    function setGlobalSpeed(val) {
+      globalSpeed = parseFloat(val);
+      log('Velocidad Ajustada', `${globalSpeed}x`);
+    }
+
+    function toggleReducedFX() {
+      isReduced = !isReduced;
+      const btn = document.getElementById('btn-reduced');
+      if (isReduced) {
+        document.body.classList.add('reduced-fx');
+        btn.classList.add('active');
+        btn.innerHTML = '<span>⚙️ Reduced FX: ON</span>';
+        log('Gobernador FX', 'body.reduced-fx activado');
+      } else {
+        document.body.classList.remove('reduced-fx');
+        btn.classList.remove('active');
+        btn.innerHTML = '<span>⚙️ Reduced FX: OFF</span>';
+        log('Gobernador FX', 'body.reduced-fx desactivado');
+      }
+    }
+
+    function buildGrid(gridId, stateArr, suffix) {
+      const boardEl = document.getElementById(gridId);
+      boardEl.innerHTML = '';
+
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const idx = r * 8 + c;
+          const cell = document.createElement('div');
+
+          const icon = ICONS_PALETTE[(r * 3 + c * 2) % ICONS_PALETTE.length];
+          stateArr[idx] = icon;
+
+          cell.className = 'cell has-icon';
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.dataset.idx = idx;
+
+          const glyph = document.createElement('span');
+          glyph.className = 'glyph';
+          glyph.innerText = icon;
+          cell.appendChild(glyph);
+
+          cell.addEventListener('click', () => handleTap(r, c, suffix));
+          boardEl.appendChild(cell);
+        }
+      }
+    }
+
+    function randomizeBoards() {
+      for (let i = 0; i < 64; i++) {
+        boardStateA[i] = ICONS_PALETTE[Math.floor(Math.random() * ICONS_PALETTE.length)];
+        boardStateB[i] = ICONS_PALETTE[Math.floor(Math.random() * ICONS_PALETTE.length)];
+      }
+      buildGrid('board-a', boardStateA, 'a');
+      buildGrid('board-b', boardStateB, 'b');
+      log('Tableros Re-Mezclados', 'Nuevas fichas generadas');
+    }
+
+    function changeSkin(wrapId, skinName, tagId) {
+      const wrap = document.getElementById(wrapId);
+      wrap.setAttribute('data-board', skinName);
+      document.getElementById(tagId).innerText = `(${skinName.charAt(0).toUpperCase() + skinName.slice(1)})`;
+      log('Skin Cambiada', `${wrapId} -> ${skinName}`);
+    }
+
+    function handleTap(r, c, suffix) {
+      const state = suffix === 'a' ? boardStateA : boardStateB;
+      const matches = findMatches(r, c, state);
+
+      if (matches.length >= 2) {
+        runConvergeWAAPI(r, c, matches, suffix);
+      } else {
+        if (r >= 2 && r <= 5 && c >= 2 && c <= 5 && Math.random() > 0.4) {
+          runSupernovaBombExplosion(r, c, suffix);
+        } else {
+          const boardEl = document.getElementById(`board-${suffix}`);
+          boardEl.classList.remove('miss');
+          void boardEl.offsetWidth;
+          boardEl.classList.add('miss');
+          log('Tap Miss', `Sin match en (${r},${c}) -> Sacudida miss`);
+        }
+      }
+    }
+
+    function findMatches(r, c, state) {
+      const dirs = [{dr:-1,dc:0}, {dr:1,dc:0}, {dr:0,dc:-1}, {dr:0,dc:1}];
+      const matched = [];
+      dirs.forEach(d => {
+        let nr = r + d.dr, nc = c + d.dc;
+        if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+          const idx = nr * 8 + nc;
+          if (state[idx]) matched.push({row:nr, col:nc, idx:idx, icon:state[idx]});
+        }
+      });
+      return matched;
+    }
+
+    /* ----------------------------------------------------
+       COREOGRAFÍA DE CONVERGENCIA (WAAPI + TRAILS + BURST)
+    ---------------------------------------------------- */
+    function runConvergeWAAPI(tr, tc, matches, suffix) {
+      const wrap = document.getElementById(`wrap-${suffix}`);
+      const boardEl = document.getElementById(`board-${suffix}`);
+      const popupsEl = document.getElementById(`popups-${suffix}`);
+
+      const targetCell = boardEl.children[tr * 8 + tc];
+      const targetRect = targetCell.getBoundingClientRect();
+      const wrapRect = wrap.getBoundingClientRect();
+
+      const tx = targetRect.left + targetRect.width / 2 - wrapRect.left;
+      const ty = targetRect.top + targetRect.height / 2 - wrapRect.top;
+
+      targetCell.classList.add('clear-ring');
+      setTimeout(() => targetCell.classList.remove('clear-ring'), 400);
+
+      matches.forEach(m => {
+        const cell = boardEl.children[m.idx];
+        const rect = cell.getBoundingClientRect();
+        const sx = rect.left + rect.width / 2 - wrapRect.left;
+        const sy = rect.top + rect.height / 2 - wrapRect.top;
+
+        const dx = tx - sx, dy = ty - sy;
+        const dist = Math.hypot(dx, dy);
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+        const trace = document.createElement('div');
+        trace.className = 'trace-line';
+        trace.style.left = `${sx}px`;
+        trace.style.top = `${sy}px`;
+        trace.style.width = `${dist}px`;
+        trace.style.height = '6px';
+        trace.style.transform = `rotate(${angle}deg)`;
+        wrap.appendChild(trace);
+
+        const travelDur = 165 / globalSpeed;
+
+        trace.animate([
+          { transform: `rotate(${angle}deg) scaleX(0.01)`, opacity: 0 },
+          { transform: `rotate(${angle}deg) scaleX(0.4)`, opacity: 0.8, offset: 0.3 },
+          { transform: `rotate(${angle}deg) scaleX(1)`, opacity: 1, offset: 0.7 },
+          { transform: `rotate(${angle}deg) scaleX(1)`, opacity: 0, offset: 1 }
+        ], { duration: travelDur + 100, easing: 'ease-out' }).onfinish = () => trace.remove();
+
+        const clone = document.createElement('div');
+        clone.className = 'cell has-icon';
+        clone.style.position = 'absolute';
+        clone.style.left = '0';
+        clone.style.top = '0';
+        clone.style.width = `${rect.width}px`;
+        clone.style.height = `${rect.height}px`;
+        clone.style.zIndex = '40';
+        clone.style.boxShadow = '0 0 16px rgba(0,208,255,0.6)';
+
+        const glyph = document.createElement('span');
+        glyph.className = 'glyph';
+        glyph.innerText = m.icon;
+        clone.appendChild(glyph);
+        wrap.appendChild(clone);
+
+        const recoilX = sx - dx * 0.05, recoilY = sy - dy * 0.05;
+
+        clone.animate([
+          { transform: `translate3d(${sx - rect.width/2}px, ${sy - rect.height/2}px, 0) scale(1)`, opacity: 1 },
+          { transform: `translate3d(${recoilX - rect.width/2}px, ${recoilY - rect.height/2}px, 0) scale(1.08)`, opacity: 1, offset: 0.12 },
+          { transform: `translate3d(${sx + dx*0.4 - rect.width/2}px, ${sy + dy*0.4 - rect.height/2}px, 0) scaleX(1.2) scaleY(0.85)`, opacity: 1, offset: 0.45 },
+          { transform: `translate3d(${sx + dx*0.8 - rect.width/2}px, ${sy + dy*0.8 - rect.height/2}px, 0) scaleX(1.3) scaleY(0.75)`, opacity: 0.9, offset: 0.8 },
+          { transform: `translate3d(${tx - rect.width/2}px, ${ty - rect.height/2}px, 0) scale(0.05)`, opacity: 0 }
+        ], {
+          duration: travelDur,
+          easing: 'cubic-bezier(.2, .9, .25, 1)',
+          fill: 'forwards'
+        }).onfinish = () => clone.remove();
+      });
+
+      setTimeout(() => {
+        spawnRadialBurst(tx, ty, wrap, 12, SUPERNOVA_COLORS);
+        targetCell.style.animation = 'none';
+        void targetCell.offsetWidth;
+        targetCell.style.animation = 'var(--clear-animation)';
+
+        spawnPopup(tx, ty, '+450 Pts', popupsEl);
+        flyScoreToHud(tx, ty, suffix);
+      }, 160 / globalSpeed);
+
+      log('WAAPI FX.converge', `${matches.length} fichas -> Recoil/Stretch + Estelas + Ráfaga Radial (${Math.round(165/globalSpeed)}ms)`);
+    }
+
+    /* ----------------------------------------------------
+       EXPLOSIÓN DE BOMBA SUPERNOVA ELEGANTE (VUELO LATERAL FLUIDO SIN SALTO)
+    ---------------------------------------------------- */
+    function runSupernovaBombExplosion(cr, cc, suffix) {
+      const wrap = document.getElementById(`wrap-${suffix}`);
+      const boardEl = document.getElementById(`board-${suffix}`);
+      const popupsEl = document.getElementById(`popups-${suffix}`);
+      const wrapRect = wrap.getBoundingClientRect();
+
+      const centerCell = boardEl.children[cr * 8 + cc];
+      const centerRect = centerCell.getBoundingClientRect();
+      const cx = centerRect.left + centerRect.width / 2 - wrapRect.left;
+      const cy = centerRect.top + centerRect.height / 2 - wrapRect.top;
+
+      // FASE 1: IMPLOSIÓN / CARGA DE ENERGÍA (0 - 140ms)
+      const implosionRing = document.createElement('div');
+      implosionRing.className = 'bomb-implosion-ring';
+      implosionRing.style.left = `${cx}px`;
+      implosionRing.style.top = `${cy}px`;
+      wrap.appendChild(implosionRing);
+
+      const maxImpSize = centerRect.width * 2.5;
+
+      implosionRing.animate([
+        { width: `${maxImpSize}px`, height: `${maxImpSize}px`, opacity: 0, transform: 'translate(-50%, -50%) scale(1.4) rotate(0deg)' },
+        { width: `${maxImpSize*0.5}px`, height: `${maxImpSize*0.5}px`, opacity: 0.9, offset: 0.5, transform: 'translate(-50%, -50%) scale(1) rotate(-90deg)' },
+        { width: '0px', height: '0px', opacity: 1, offset: 1, transform: 'translate(-50%, -50%) scale(0.1) rotate(-180deg)' }
+      ], {
+        duration: 140 / globalSpeed,
+        easing: 'cubic-bezier(.4, 0, .2, 1)'
+      }).onfinish = () => implosionRing.remove();
+
+      // Recoil previo en el centro
+      centerCell.animate([
+        { transform: 'scale(1)', filter: 'none' },
+        { transform: 'scale(0.85)', filter: 'brightness(1.6) saturate(1.8)', offset: 1 }
+      ], { duration: 140 / globalSpeed });
+
+      // FASE 2: ESTALLIDO SUPERNOVA & VUELO LATERAL FLUIDO (140ms - 800ms)
+      setTimeout(() => {
+        // Tremor sutil en el marco del tablero (surv-quake)
+        wrap.style.animation = 'none';
+        void wrap.offsetWidth;
+        wrap.style.animation = 'wild-board 0.6s ease, surv-quake 0.4s ease-in-out';
+        setTimeout(() => wrap.style.animation = '', 600);
+
+        // Anillo de fuego supernova dual
+        const supernovaRing = document.createElement('div');
+        supernovaRing.className = 'bomb-supernova-ring';
+        supernovaRing.style.left = `${cx}px`;
+        supernovaRing.style.top = `${cy}px`;
+        wrap.appendChild(supernovaRing);
+
+        const snSize = centerRect.width * 4.2;
+
+        supernovaRing.animate([
+          { width: '0px', height: '0px', opacity: 1, transform: 'translate(-50%, -50%) scale(0.1)' },
+          { width: `${snSize*0.7}px`, height: `${snSize*0.7}px`, opacity: 0.95, offset: 0.35, transform: 'translate(-50%, -50%) scale(1)' },
+          { width: `${snSize}px`, height: `${snSize}px`, opacity: 0, offset: 1, transform: 'translate(-50%, -50%) scale(1.3)' }
+        ], {
+          duration: 650 / globalSpeed,
+          easing: 'cubic-bezier(.1, .8, .15, 1)'
+        }).onfinish = () => supernovaRing.remove();
+
+        // EYECTADO VISIBLE Y CONTINUO DE LAS FICHAS DE LA REJILLA 3x3
+        const affectedIndices = [];
+        for (let r = cr - 1; r <= cr + 1; r++) {
+          for (let c = cc - 1; c <= cc + 1; c++) {
+            if (r >= 0 && r < 8 && c >= 0 && c < 8) {
+              affectedIndices.push(r * 8 + c);
+            }
+          }
+        }
+
+        affectedIndices.forEach((idx, i) => {
+          const cell = boardEl.children[idx];
+          const rect = cell.getBoundingClientRect();
+          const ix = rect.left + rect.width / 2 - wrapRect.left;
+          const iy = rect.top + rect.height / 2 - wrapRect.top;
+
+          const glyphSpan = cell.querySelector('.glyph');
+          const iconText = glyphSpan ? glyphSpan.innerText : '⭐';
+
+          // Ocultar el icono original con transición suave para evitar saltos o duplicados
+          if (glyphSpan) {
+            glyphSpan.style.transition = 'opacity 0.08s linear';
+            glyphSpan.style.opacity = '0';
+          }
+
+          cell.classList.add('wild-cleared');
+          cell.style.animation = 'special-clear 0.6s ease-out forwards';
+          setTimeout(() => {
+            cell.classList.remove('wild-cleared');
+            cell.style.animation = '';
+            if (glyphSpan) {
+              glyphSpan.style.opacity = '1';
+            }
+          }, 850 / globalSpeed);
+
+          // Clon flotante neón que realiza el recorrido visual completo
+          const clone = document.createElement('div');
+          clone.className = 'cell has-icon';
+          clone.style.position = 'absolute';
+          clone.style.left = '0';
+          clone.style.top = '0';
+          clone.style.width = `${rect.width}px`;
+          clone.style.height = `${rect.height}px`;
+          clone.style.zIndex = '50';
+          clone.style.boxShadow = '0 0 25px rgba(255,93,240,0.85), 0 0 12px rgba(0,208,255,0.8)';
+          clone.style.border = '2px solid rgba(255,216,77,0.9)';
+
+          const cGlyph = document.createElement('span');
+          cGlyph.className = 'glyph';
+          cGlyph.innerText = iconText;
+          clone.appendChild(cGlyph);
+          wrap.appendChild(clone);
+
+          // Ángulo de expulsión lateral hacia los lados desde el epicentro (cx, cy)
+          let angle = Math.atan2(iy - cy, ix - cx);
+          if (ix === cx && iy === cy) {
+            angle = (i / affectedIndices.length) * Math.PI * 2;
+          }
+
+          // Distancia de vuelo visible (130 - 220px)
+          const force = 130 + Math.random() * 110;
+          const ejectX = Math.cos(angle) * force;
+          const ejectY = Math.sin(angle) * force;
+          const rot = (Math.random() - 0.5) * 280;
+
+          const expDur = (650 + Math.random() * 200) / globalSpeed;
+
+          // Animación de trayectoria continua: permanece visible volando de lado a lado
+          // y se desvanece de 0.75 a 1.0 sin dar NINGÚN salto visual.
+          clone.animate([
+            { transform: `translate3d(${ix - rect.width/2}px, ${iy - rect.height/2}px, 0) scale(1) rotate(0deg)`, opacity: 1 },
+            { transform: `translate3d(${ix + ejectX*0.35 - rect.width/2}px, ${iy + ejectY*0.35 - rect.height/2}px, 0) scale(1.35) rotate(${rot*0.35}deg)`, opacity: 1, offset: 0.25 },
+            { transform: `translate3d(${ix + ejectX*0.75 - rect.width/2}px, ${iy + ejectY*0.75 - rect.height/2}px, 0) scale(1.05) rotate(${rot*0.75}deg)`, opacity: 0.85, offset: 0.75 },
+            { transform: `translate3d(${ix + ejectX - rect.width/2}px, ${iy + ejectY - rect.height/2}px, 0) scale(0.2) rotate(${rot}deg)`, opacity: 0, offset: 1 }
+          ], {
+            duration: expDur,
+            easing: 'cubic-bezier(.1, .75, .25, 1)',
+            fill: 'forwards'
+          }).onfinish = () => clone.remove();
+        });
+
+        // 36 Chispas Neón & Polvo de Estrellas Supernova
+        spawnRadialBurst(cx, cy, wrap, 36, SUPERNOVA_COLORS);
+
+        // Banner elegante de SUPERNOVA + Proyectiles al HUD
+        spawnPopup(cx, cy, '✨ SUPERNOVA BOOM! +2,000 Pts', popupsEl);
+        flyScoreToHud(cx, cy, suffix);
+
+      }, 140 / globalSpeed);
+
+      log('Supernova Bomb Elegante', `Vuelo lateral continuo sin saltos visuales (${affectedIndices.length} fichas eyectadas)`);
+    }
+
+    /* Ráfaga radial de chispas neón */
+    function spawnRadialBurst(cx, cy, wrap, count = 16, palette = SUPERNOVA_COLORS) {
+      if (isReduced) return;
+
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'radial-particle';
+        const color = palette[i % palette.length];
+        const size = 5 + Math.random() * 8;
+        p.style.width = `${size}px`;
+        p.style.height = `${size}px`;
+        p.style.background = color;
+        p.style.color = color;
+        p.style.left = `${cx}px`;
+        p.style.top = `${cy}px`;
+
+        wrap.appendChild(p);
+
+        const angle = (i / count) * Math.PI * 2 + (Math.random() * 0.3 - 0.15);
+        const dist = 70 + Math.random() * 110;
+        const tx = Math.cos(angle) * dist;
+        const ty = Math.sin(angle) * dist;
+
+        p.animate([
+          { transform: 'translate3d(-50%, -50%, 0) scale(0.2)', opacity: 1 },
+          { transform: `translate3d(calc(-50% + ${tx*0.45}px), calc(-50% + ${ty*0.45}px), 0) scale(1.6)`, opacity: 0.95, offset: 0.35 },
+          { transform: `translate3d(calc(-50% + ${tx}px), calc(-50% + ${ty}px), 0) scale(0)`, opacity: 0 }
+        ], {
+          duration: (480 + Math.random() * 320) / globalSpeed,
+          easing: 'cubic-bezier(.1, .75, .15, 1)'
+        }).onfinish = () => p.remove();
+      }
+    }
+
+    function spawnPopup(x, y, text, container) {
+      const pop = document.createElement('div');
+      pop.innerText = text;
+      pop.style.position = 'absolute';
+      pop.style.left = `${x}px`;
+      pop.style.top = `${y}px`;
+      pop.style.color = 'var(--ctrl-accent-gold)';
+      pop.style.fontWeight = '900';
+      pop.style.fontSize = '1.35rem';
+      pop.style.pointerEvents = 'none';
+      pop.style.zIndex = '55';
+      pop.style.textShadow = '0 0 14px rgba(0,0,0,0.9), 0 0 8px #ff5df0, 0 0 16px #00d0ff';
+
+      container.appendChild(pop);
+
+      pop.animate([
+        { transform: 'translate3d(-50%, 0, 0) scale(0.4)', opacity: 0 },
+        { transform: 'translate3d(-50%, -24px, 0) scale(1.35)', opacity: 1, offset: 0.2 },
+        { transform: 'translate3d(-50%, -75px, 0) scale(1)', opacity: 0 }
+      ], {
+        duration: 800 / globalSpeed,
+        easing: 'ease-out'
+      }).onfinish = () => pop.remove();
+    }
+
+    function flyScoreToHud(x0, y0, suffix) {
+      const scoreNum = document.getElementById(`score-num-${suffix}`);
+      const targetRect = scoreNum.getBoundingClientRect();
+
+      for (let k = 0; k < 3; k++) {
+        const orb = document.createElement('div');
+        orb.style.position = 'fixed';
+        orb.style.width = '14px';
+        orb.style.height = '14px';
+        orb.style.borderRadius = '50%';
+        orb.style.background = 'var(--ctrl-accent-gold)';
+        orb.style.boxShadow = '0 0 12px var(--ctrl-accent-gold), 0 0 20px #ff5df0';
+        orb.style.zIndex = '999';
+        orb.style.pointerEvents = 'none';
+
+        document.body.appendChild(orb);
+
+        const delay = k * 60;
+
+        orb.animate([
+          { transform: `translate3d(${x0}px, ${y0}px, 0) scale(1)`, opacity: 1 },
+          { transform: `translate3d(${(x0 + targetRect.left)/2 + (k-1)*20}px, ${y0 - 60}px, 0) scale(1.5)`, opacity: 0.9, offset: 0.5 },
+          { transform: `translate3d(${targetRect.left}px, ${targetRect.top}px, 0) scale(0.2)`, opacity: 0 }
+        ], {
+          duration: 480 / globalSpeed,
+          delay: delay / globalSpeed,
+          easing: 'cubic-bezier(0.1, 0.8, 0.2, 1)'
+        }).onfinish = () => {
+          orb.remove();
+          if (k === 2) {
+            scoreNum.style.animation = 'none';
+            void scoreNum.offsetWidth;
+            scoreNum.style.animation = 'bump 0.35s ease';
+          }
+        };
+      }
+    }
+
+    function triggerAction(action) {
+      const targets = isComparatorActive ? ['a', 'b'] : ['a'];
+
+      targets.forEach(suffix => {
+        const boardEl = document.getElementById(`board-${suffix}`);
+        const wrapEl = document.getElementById(`wrap-${suffix}`);
+
+        switch(action) {
+          case 'converge-4':
+            runConvergeWAAPI(3, 3, [
+              {row:2, col:3, idx:19, icon:'🚀'},
+              {row:4, col:3, idx:35, icon:'🚀'},
+              {row:3, col:2, idx:26, icon:'🚀'},
+              {row:3, col:4, idx:28, icon:'🚀'}
+            ], suffix);
+            break;
+
+          case 'glyph-in':
+            const cIn = boardEl.children[27];
+            cIn.style.animation = 'none';
+            void cIn.offsetWidth;
+            cIn.style.animation = 'glyph-in 0.35s ease-out';
+            break;
+
+          case 'clear-ring':
+            const cRing = boardEl.children[27];
+            cRing.classList.add('clear-ring');
+            setTimeout(() => cRing.classList.remove('clear-ring'), 400);
+            break;
+
+          case 'miss':
+            boardEl.classList.remove('miss');
+            void boardEl.offsetWidth;
+            boardEl.classList.add('miss');
+            break;
+
+          case 'penalty-pop':
+            const cPen = boardEl.children[27];
+            cPen.style.animation = 'penalty-pop 0.4s ease';
+            setTimeout(() => cPen.style.animation = '', 400);
+            break;
+
+          case 'scoreToHud':
+            flyScoreToHud(240, 320, suffix);
+            break;
+
+          case 'popup-score':
+            spawnPopup(200, 260, 'COMBO x3!', document.getElementById(`popups-${suffix}`));
+            break;
+
+          case 'booster-bomb':
+            runSupernovaBombExplosion(3, 3, suffix);
+            break;
+
+          case 'booster-line':
+            wrapEl.style.animation = 'line-board 0.6s ease';
+            const laser = document.createElement('div');
+            laser.className = 'laser-beam-h';
+            laser.style.top = '45%';
+            wrapEl.appendChild(laser);
+            laser.animate([
+              { transform: 'scaleY(0.1)', opacity: 0 },
+              { transform: 'scaleY(1.4)', opacity: 1, offset: 0.3 },
+              { transform: 'scaleY(0)', opacity: 0 }
+            ], { duration: 500 / globalSpeed }).onfinish = () => laser.remove();
+
+            for (let c = 24; c < 32; c++) {
+              const cell = boardEl.children[c];
+              cell.style.animation = 'special-clear 0.4s ease forwards';
+              setTimeout(() => cell.style.animation = '', 500);
+            }
+            setTimeout(() => wrapEl.style.animation = '', 600);
+            break;
+
+          case 'booster-x2':
+            wrapEl.style.animation = 'x2-board 0.6s ease';
+            setTimeout(() => wrapEl.style.animation = '', 600);
+            break;
+
+          case 'booster-wild':
+            wrapEl.style.animation = 'wild-board 0.6s ease';
+            setTimeout(() => wrapEl.style.animation = '', 600);
+            break;
+
+          case 'armPulse':
+            wrapEl.style.animation = 'armPulse 1.2s ease infinite';
+            setTimeout(() => wrapEl.style.animation = '', 2400);
+            break;
+
+          case 'booster-fired':
+            wrapEl.style.animation = 'booster-fired 0.4s ease';
+            setTimeout(() => wrapEl.style.animation = '', 400);
+            break;
+
+          case 'ice-hit':
+            const cIce = boardEl.children[18];
+            cIce.classList.add('tile-frozen', 'ice-hit');
+            setTimeout(() => cIce.classList.remove('ice-hit'), 400);
+            break;
+
+          case 'ice-shatter':
+            const cShatter = boardEl.children[18];
+            cShatter.classList.add('tile-frozen', 'ice-shatter');
+            setTimeout(() => cShatter.classList.remove('ice-shatter'), 600);
+            break;
+
+          case 'special-pulse':
+            const cSp = boardEl.children[27];
+            cSp.style.animation = 'special-pulse 1.2s ease infinite';
+            setTimeout(() => cSp.style.animation = '', 2400);
+            break;
+
+          case 'slowdown-bob':
+            const cBob = boardEl.children[27];
+            cBob.style.animation = 'slowdown-bob 1.5s ease-in-out infinite';
+            setTimeout(() => cBob.style.animation = '', 3000);
+            break;
+
+          case 'surv-meteor':
+            const cMet = boardEl.children[27];
+            cMet.style.animation = 'surv-meteor 0.5s cubic-bezier(.2,.8,.2,1)';
+            setTimeout(() => cMet.style.animation = '', 500);
+            break;
+
+          case 'lock-stamp':
+            const cLock = boardEl.children[27];
+            cLock.style.animation = 'lock-stamp 0.45s ease';
+            setTimeout(() => cLock.style.animation = '', 450);
+            break;
+
+          case 'fever-toggle':
+            const feverEl = document.getElementById(`fever-${suffix}`);
+            isFever = !isFever;
+            if (isFever) {
+              feverEl.style.animation = 'feverPulse 1s ease-in-out infinite';
+              wrapEl.style.animation = 'fever-burst 0.5s ease';
+            } else {
+              feverEl.style.animation = 'none';
+              wrapEl.style.animation = 'none';
+            }
+            break;
+
+          case 'rank-pop-genial':
+            spawnRankBanner('¡GENIAL!', suffix);
+            break;
+
+          case 'rank-pop-epico':
+            spawnRankBanner('¡ÉPICO!', suffix);
+            break;
+
+          case 'rank-pop-legendario':
+            spawnRankBanner('¡LEGENDARIO!', suffix);
+            break;
+
+          case 'flash-anim':
+            const f = document.getElementById('flash');
+            f.style.animation = 'none';
+            void f.offsetWidth;
+            f.style.animation = 'flashAnim 0.6s ease-out';
+            break;
+
+          case 'danger-border':
+            wrapEl.style.animation = 'dangerBorder 1.2s ease-in-out infinite';
+            setTimeout(() => wrapEl.style.animation = '', 3600);
+            break;
+
+          case 'surv-quake':
+            wrapEl.style.animation = 'surv-quake 0.6s ease-in-out';
+            setTimeout(() => wrapEl.style.animation = 'surv-settle 0.3s ease', 600);
+            break;
+
+          case 'surv-rain':
+            wrapEl.style.animation = 'surv-rain 1.2s ease-in-out';
+            break;
+
+          case 'surv-penalty':
+            wrapEl.style.animation = 'surv-penalty 0.4s ease';
+            break;
+
+          case 'surv-wave-up':
+            wrapEl.style.animation = 'surv-wave-up 0.7s cubic-bezier(.2,.9,.25,1)';
+            break;
+
+          case 'tide-fill-rise':
+            wrapEl.style.animation = 'tide-warn-pulse 1s ease infinite';
+            setTimeout(() => wrapEl.style.animation = '', 2000);
+            break;
+
+          case 'frost-field':
+            wrapEl.style.animation = 'frost-field 1.4s ease';
+            break;
+
+          case 'life-blast':
+            wrapEl.style.animation = 'life-blast 0.8s ease';
+            break;
+
+          case 'boss-warn-board':
+            wrapEl.style.animation = 'boss-warn-board 1.5s ease-in-out infinite';
+            setTimeout(() => wrapEl.style.animation = '', 3000);
+            break;
+
+          case 'score-bump':
+            const sn = document.getElementById(`score-num-${suffix}`);
+            sn.style.animation = 'none';
+            void sn.offsetWidth;
+            sn.style.animation = 'bump 0.35s ease';
+            break;
+
+          case 'last-life':
+            const l = document.getElementById(`lives-${suffix}`);
+            l.style.animation = 'lastLife 0.8s ease infinite';
+            setTimeout(() => l.style.animation = '', 2400);
+            break;
+
+          case 'toast-demo':
+            spawnToast('¡EVENTO ACTIVADO!', suffix);
+            break;
+
+          case 'reward-spark':
+            const rCell = boardEl.children[27];
+            rCell.style.animation = 'reward-chip-pop 0.5s ease';
+            setTimeout(() => rCell.style.animation = '', 500);
+            break;
+        }
+      });
+
+      log('Disparo de Animación', `${action} [Comparador: ${isComparatorActive}]`);
+    }
+
+    function triggerSkinEffect(skinName) {
+      const targets = isComparatorActive ? ['a', 'b'] : ['a'];
+      targets.forEach(suffix => {
+        const wrapEl = document.getElementById(`wrap-${suffix}`);
+        const boardEl = document.getElementById(`board-${suffix}`);
+        wrapEl.setAttribute('data-board', skinName);
+
+        [18, 19, 27, 28, 35, 36].forEach(idx => {
+          const cell = boardEl.children[idx];
+          cell.style.animation = 'none';
+          void cell.offsetWidth;
+          cell.style.animation = 'var(--clear-animation)';
+        });
+      });
+
+      log('Clear FX Skin', `Skin: ${skinName}`);
+    }
+
+    function spawnRankBanner(text, suffix) {
+      const popupsEl = document.getElementById(`popups-${suffix}`);
+      const banner = document.createElement('div');
+      banner.style.position = 'absolute';
+      banner.style.left = '50%';
+      banner.style.top = '50%';
+      banner.style.transform = 'translate(-50%, -50%)';
+      banner.style.fontSize = '2.2rem';
+      banner.style.fontWeight = '900';
+      banner.style.color = 'var(--ctrl-accent-gold)';
+      banner.style.textShadow = '0 4px 20px rgba(0,0,0,0.9), 0 0 25px #ff5df0';
+      banner.style.zIndex = '60';
+      banner.style.animation = 'rankPop 1.2s cubic-bezier(.18,.9,.22,1) forwards';
+      banner.innerText = text;
+
+      popupsEl.appendChild(banner);
+      setTimeout(() => banner.remove(), 1200);
+    }
+
+    function spawnToast(text, suffix) {
+      const popupsEl = document.getElementById(`popups-${suffix}`);
+      const toast = document.createElement('div');
+      toast.style.position = 'absolute';
+      toast.style.top = '10px';
+      toast.style.left = '50%';
+      toast.style.transform = 'translateX(-50%)';
+      toast.style.background = 'rgba(10, 18, 42, 0.92)';
+      toast.style.border = '1px solid var(--ctrl-accent-cyan)';
+      toast.style.color = '#fff';
+      toast.style.padding = '8px 16px';
+      toast.style.borderRadius = '20px';
+      toast.style.fontSize = '0.85rem';
+      toast.style.fontWeight = '700';
+      toast.style.zIndex = '70';
+      toast.style.animation = 'toast-in 0.3s ease-out forwards';
+      toast.innerText = text;
+
+      popupsEl.appendChild(toast);
+      setTimeout(() => {
+        toast.style.animation = 'toast-out 0.3s ease-in forwards';
+        setTimeout(() => toast.remove(), 300);
+      }, 1500);
+    }
+
+    function runAutoDemo() {
+      log('Auto Showcase', 'Iniciando demostración guiada...');
+      const actions = ['converge-4', 'glyph-in', 'booster-bomb', 'fever-toggle', 'surv-quake', 'rank-pop-legendario', 'flash-anim'];
+      let step = 0;
+
+      const timer = setInterval(() => {
+        if (step >= actions.length) {
+          clearInterval(timer);
+          log('Auto Showcase', 'Demostración finalizada');
+          return;
+        }
+        triggerAction(actions[step]);
+        step++;
+      }, 1400);
+    }
+
+    function log(name, detail) {
+      const stream = document.getElementById('log-stream');
+      const now = new Date();
+      const tStr = `[${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}.${String(now.getMilliseconds()).padStart(3,'0')}]`;
+
+      const item = document.createElement('div');
+      item.className = 'log-item';
+      item.innerHTML = `
+        <span class="t">${tStr}</span>
+        <span class="name">${name}</span>
+        <span class="det">${detail}</span>
+      `;
+
+      stream.prepend(item);
+      if (stream.children.length > 50) stream.removeChild(stream.lastChild);
+    }
+
+    function clearLog() {
+      document.getElementById('log-stream').innerHTML = '';
+    }
+  </script>
+</body>
+</html>

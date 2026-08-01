@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a1128" />
+  <!-- CSP estricta: app 100% self-contained (sin CDNs ni terceros). 'unsafe-inline' solo
+       en style-src por los atributos style="--icv2-url:..." del sistema de iconos v2. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'" />
+  <meta name="description" content="Convergencia — junta iconos iguales tocando la casilla vacía entre ellos. Combos, niveles y varios modos de juego." />
+  <title>Convergence</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌌</text></svg>" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="convergence-legacy-script" content="game.js?v=2.37.1" />
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Convergence" />
+  <!-- Social / Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Convergence" />
+  <meta property="og:description" content="Junta iconos iguales y encadena combos. Aventura infinita, supervivencia, contrarreloj y más." />
+  <meta property="og:image" content="icon-512.png" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="stylesheet" href="styles.css?v=2.37.1" />
+</head>
+<body data-screen="login">
+  <!-- ============ PANTALLA DE CARGA INICIAL (BOOT) ============
+       Cubre la app desde el primer paint (su CSS va en <head>, sin depender de
+       ninguna imagen: el propio loader nunca puede verse "roto"). game.js precarga
+       los assets de la primera pantalla, refleja el progreso REAL en la barra y
+       revela la app solo cuando esos assets están cargados y son mostrables. -->
+  <div class="boot" id="boot-loader" role="status" aria-live="polite" aria-label="Cargando">
+    <div class="boot-inner">
+      <div class="boot-logo" aria-hidden="true">
+        <span class="boot-spinner"></span>
+        <span class="boot-core"></span>
+      </div>
+      <p class="boot-word logo">Convergence</p>
+      <div class="boot-track" id="boot-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progreso de carga">
+        <span class="boot-fill" id="boot-fill"></span>
+      </div>
+      <p class="boot-status"><span id="boot-percent">0</span><span aria-hidden="true">%</span></p>
+    </div>
+  </div>
+
+  <!-- Fondo de estrellas (decorativo) -->
+  <div class="stars" aria-hidden="true"></div>
+  <!-- Destello de pantalla (récord / tablero perfecto) -->
+  <div class="flash" id="flash" aria-hidden="true"></div>
+  <!-- Capa de partículas a pantalla completa (DOM, animada por compositor) -->
+  <div class="fx" id="fx" aria-hidden="true"></div>
+
+  <!-- Región para mensajes a lector de pantalla -->
+  <p id="sr-status" class="sr-only" role="status" aria-live="polite"></p>
+
+  <main id="app">
+
+    <!-- ============ PANTALLA: BIENVENIDA ============ -->
+    <section class="screen" id="screen-login" aria-labelledby="login-title">
+      <div class="panel">
+        <h1 id="login-title" class="logo">Convergence<span class="logo-orbit" aria-hidden="true"></span></h1>
+        <p class="subtitle" data-i18n="welcome_sub">Junta iconos iguales en el espacio</p>
+        <form id="login-form" novalidate>
+          <div class="field">
+            <label for="player-name"><span data-i18n="name_q">¿Cómo te llamas?</span> <span class="opt" data-i18n="optional">(opcional)</span></label>
+            <input id="player-name" name="player-name" type="text" maxlength="16" autocomplete="nickname" inputmode="text" placeholder="Jugador" />
+          </div>
+          <div class="avatar-pick" id="avatar-pick" role="radiogroup" aria-label="Elige un color de avatar"></div>
+          <button class="btn btn-primary btn-lg" type="submit" data-i18n="begin">¡Empezar!</button>
+          <button class="btn btn-ghost" type="button" id="btn-guest" data-i18n="guest">Jugar como invitado</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============ PANTALLA: INICIO ============ -->
+    <section class="screen home" id="screen-start" aria-labelledby="start-title" hidden>
+      <h1 class="sr-only" id="start-title" data-i18n="tab_home">Inicio</h1>
+      <div class="home-space-art" aria-hidden="true">
+        <span class="space-diamond"></span>
+      </div>
+      <!-- Top bar reutilizable: perfil, economía y acceso único a Ajustes. -->
+      <header class="appbar" data-topbar></header>
+
+      <!-- Las vistas del hub se montan aquí al iniciar. Comparten cabecera y menú
+           inferior; ya no bloquean la interfaz dentro de un modal. -->
+      <div class="hub-views" id="hub-views"></div>
+
+      <!-- Hub fijo: selector de modos cilíndrico. Recompensas, misiones,
+           reto diario y cofres viven exclusivamente en Eventos. -->
+      <div class="home-main">
+        <section class="home-mode-stage" aria-labelledby="home-modes-title">
+          <h2 class="sr-only" id="home-modes-title" data-i18n="modes_title">Elige tu modo</h2>
+
+          <div class="home-mode-carousel" id="home-mode-carousel" role="region" aria-roledescription="carousel" aria-labelledby="home-modes-title">
+            <div class="home-mode-viewport" id="home-mode-viewport">
+              <div class="home-mode-track" id="mode-cards" role="group" aria-labelledby="home-modes-title"></div>
+            </div>
+            <div class="home-mode-dots" id="home-mode-dots" role="group" data-i18n-al="home_mode_pages" aria-label="Seleccionar modo"></div>
+            <p class="sr-only" id="home-mode-status" aria-live="polite" aria-atomic="true"></p>
+          </div>
+
+          <!-- Solo aparece cuando existe una partida recuperable. -->
+          <div class="home-context" hidden>
+            <button class="home-resume" id="btn-resume-run" hidden>
+              <span class="home-resume-ic" aria-hidden="true"><img decoding="async" class="ic" src="img/ui-v2/home/clock.png" alt=""></span>
+              <span class="home-resume-copy"><small data-i18n="home_saved_run">Partida guardada</small><b id="home-resume-state">Continuar partida</b></span>
+              <span class="home-resume-cta" data-i18n="continue_word">Continuar</span>
+            </button>
+            <button class="home-resume home-play-now" id="home-play-now" type="button" data-act="home-play-now" hidden>
+              <span class="home-resume-ic" aria-hidden="true"><img decoding="async" class="ic" id="home-play-now-icon" src="img/ui-v2/home/target.png" alt=""></span>
+              <span class="home-resume-copy"><small id="home-play-now-kicker">Recomendado ahora</small><b id="home-play-now-label">Jugar ahora</b><span id="home-play-now-sub"></span></span>
+              <span class="home-resume-cta" data-i18n="play">Jugar</span>
+            </button>
+          </div>
+        </section>
+
+        <button class="btn btn-ghost btn-sm home-install btn-icon" id="btn-install" hidden><span class="btn-ic" aria-hidden="true"><img decoding="async" class="ic" src="img/ui-v2/home/upgrade.png" alt=""></span><span data-i18n="install">Instalar app</span></button>
+      </div>
+
+      <!-- Pie anclado: navegación global. -->
+      <div class="home-foot">
+        <!-- Bottom nav (anclado) -->
+        <nav class="bottom-nav" aria-label="Navegación">
+          <button class="bnav" data-act="nav-events"><span class="bn-ic"><img decoding="async" src="img/ui-generated/home/nav-events.png" alt=""></span><span class="home-chests-nav-state" id="home-chests-nav-state" hidden aria-hidden="true"></span><small data-i18n="tab_events">Eventos</small></button>
+          <button class="bnav" data-act="nav-shop"><span class="bn-ic"><img decoding="async" src="img/ui-generated/home/nav-shop.png" alt=""></span><small data-i18n="tab_shop">Tienda</small></button>
+          <button class="bnav bnav-center" data-act="nav-home" aria-current="page"><span class="bn-ic"><img decoding="async" src="img/ui-generated/home/nav-home-redesign.png" alt=""></span><small data-i18n="tab_home">Inicio</small></button>
+          <button class="bnav" data-act="open-guide"><span class="bn-ic"><img decoding="async" src="img/ui-generated/home/nav-guide.png" alt=""></span><small data-i18n="tab_guide">Guía</small></button>
+          <button class="bnav" data-act="nav-collections"><span class="bn-ic"><img decoding="async" src="img/ui-generated/home/nav-collections.png" alt=""></span><small data-i18n="tab_collections">Colecciones</small></button>
+        </nav>
+      </div>
+    </section>
+
+    <!-- ============ PANTALLA: MODO CLÁSICO (MAPA DE MUNDOS) ============ -->
+    <section class="screen screen-worlds" id="screen-worlds" aria-labelledby="worlds-title" hidden>
+      <header class="topbar">
+        <button class="icon-btn" id="worlds-back" aria-label="Volver"><span class="icv2" style="--icv2-url:url('img/icons-v2/8-ui/arrow-left.svg')" aria-hidden="true"></span></button>
+        <div class="topbar-econ" aria-label="Recursos">
+          <span class="econ-pill econ-coins" data-econ="coins">🪙 0</span>
+          <span class="econ-pill econ-gems" data-econ="gems">💎 0</span>
+        </div>
+        <button class="icon-btn" id="worlds-settings" aria-label="Ajustes"><img decoding="async" class="ic ic-inline" src="img/ui/settings.png" alt=""></button>
+      </header>
+
+      <h2 id="worlds-title" class="worlds-title" data-i18n="classic_title">Modo Clásico</h2>
+
+      <div class="worlds-body">
+        <!-- Columna principal: cabecera del mundo + mapa de niveles -->
+        <div class="worlds-main">
+          <div class="world-head">
+            <span class="world-glyph" id="world-glyph" aria-hidden="true">🌲</span>
+            <div class="world-head-tx">
+              <span class="world-name" id="world-name">Bosque Verde</span>
+              <span class="world-stars" id="world-stars">⭐ 0/150</span>
+            </div>
+          </div>
+          <div class="world-map" id="world-map" role="list" aria-label="Niveles"></div>
+          <div class="world-nov-wrap">
+            <h3 class="group-title" data-i18n="world_news">Novedades de este mundo</h3>
+            <div class="world-nov" id="world-nov"></div>
+          </div>
+        </div>
+
+        <!-- Panel lateral: lista de mundos -->
+        <aside class="worlds-side">
+          <h3 class="group-title" data-i18n="worlds_label">Mundos</h3>
+          <div class="world-rail" id="world-rail" role="list" aria-label="Mundos"></div>
+          <button class="btn btn-ghost btn-sm world-rewards" id="world-rewards" data-i18n="all_rewards">🎁 Ver recompensas</button>
+        </aside>
+      </div>
+
+      <!-- Barra de navegación inferior (estilo Supercell) -->
+      <nav class="worlds-tabs" aria-label="Navegación">
+        <button class="tab" id="wt-shop"><span class="tab-ic"><img decoding="async" class="ic ic-inline" src="img/ui/cart.png" alt=""></span><small data-i18n="style_shop_nav">Estilos</small></button>
+        <button class="tab" id="wt-missions"><span class="tab-ic"><img decoding="async" class="ic ic-inline" src="img/ui/target.png" alt=""></span><small data-i18n="tab_missions">Misiones</small></button>
+        <button class="tab tab-home" id="wt-play" aria-current="page"><span class="tab-ic">🎮</span><small data-i18n="tab_play">Jugar</small></button>
+        <button class="tab" id="wt-chests"><span class="tab-ic"><img decoding="async" class="ic ic-inline" src="img/ui/chest.png" alt=""></span><span class="q-dot q-dot-gold" id="chests-dot" hidden></span><small data-i18n="tab_chests">Cofres</small></button>
+        <button class="tab" id="wt-rank"><span class="tab-ic"><img decoding="async" class="ic ic-inline" src="img/ui/trophy.png" alt=""></span><small data-i18n="tab_rank">Clasificación</small></button>
+      </nav>
+    </section>
+
+    <!-- ============ PANTALLA: JUEGO ============ -->
+    <section class="screen screen-game" id="screen-game" aria-label="Partida" hidden>
+      <!-- Cabecera de recursos + pausa: el estado de partida vive cerca del tablero -->
+      <header class="gtop">
+        <div class="gtop-main">
+          <div class="hud-wallet" aria-label="Recursos">
+            <button class="wallet-pill wallet-coins" type="button" data-act="buy-coins" aria-label="Comprar monedas">
+              <img decoding="async" class="ic ic-inline" src="img/ui/coin.png" alt="">
+              <b id="hud-coins" data-econ-num="coins">0</b>
+              <span class="wallet-plus" aria-hidden="true"></span>
+            </button>
+            <button class="wallet-pill wallet-gems" type="button" data-act="buy-gems" aria-label="Comprar gemas">
+              <img decoding="async" class="ic ic-inline" src="img/ui/gem.png" alt="">
+              <b id="hud-gems" data-econ-num="gems">0</b>
+              <span class="wallet-plus" aria-hidden="true"></span>
+            </button>
+            <span class="wallet-pill wallet-xp-boost" id="hud-xp-boost" hidden>
+              <img decoding="async" class="ic ic-inline" src="img/ui/potion.png" alt="">
+              <b>XP ×4</b>
+              <small data-i18n="xp_boost_this_match">Esta partida</small>
+            </span>
+            <span class="wallet-pill wallet-run" id="hud-run-coins-wrap" hidden><span>Run</span> <b id="hud-run-coins">+0</b></span>
+          </div>
+          <div class="controls">
+            <button class="icon-btn" id="btn-pause" aria-label="Pausa"><span class="icv2" style="--icv2-url:url('img/icons-v2/9-media/pause.svg')" aria-hidden="true"></span></button>
+          </div>
+        </div>
+
+        <!-- Contexto del modo + puntuación + ocupación: cerca del tablero -->
+        <div class="gtop-context">
+          <!-- Banner de objetivo (modo Aventura) -->
+          <div class="obj-banner" id="obj-banner" hidden></div>
+          <!-- Barra de Supervivencia: vidas + oleada + tiempo sobrevivido -->
+          <div class="surv-bar" id="surv-bar" hidden>
+            <div class="surv-grid">
+              <span class="surv-metric surv-life-box"><span class="surv-k">Vidas</span><span class="surv-lives" id="surv-lives" data-explain="hud_lives_explain">❤️❤️❤️</span></span>
+              <!-- Visor de carrusel vertical del HUD central (Oleada / Jefe / Resultado) -->
+              <div class="surv-card-carousel" id="surv-card-carousel">
+                <!-- Card 1: Oleadas -->
+                <div class="surv-card surv-wave-wrap card-active" id="surv-wave-wrap">
+                  <span class="surv-wave-row"><span class="surv-wave" id="surv-wave" data-explain="hud_wave_explain">Oleada 1</span><span class="surv-tier" id="surv-tier" aria-label="Tier de dificultad" data-explain="hud_tier_explain">N1</span><span class="surv-boss-flag" id="surv-boss-flag" data-i18n="surv_boss_soon" hidden>⚠ Jefe</span></span>
+                  <span class="surv-waveprog" aria-hidden="true" data-explain="hud_waveprog_explain"><span class="surv-waveprog-fill" id="surv-waveprog-fill"></span></span>
+                </div>
+                <!-- Card 2: Jefe activo -->
+                <div class="surv-card surv-boss" id="surv-boss" hidden>
+                  <span class="sbx-portrait" id="surv-boss-icon" aria-hidden="true"></span>
+                  <div class="sbx-mid">
+                    <div class="sbx-head">
+                      <span class="sbx-name"><span id="surv-boss-name"></span><i class="sbx-lvl" id="surv-boss-lvl"></i></span>
+                      <span class="sbx-leave" id="surv-boss-leave" aria-label="Tiempo para abandonar"></span>
+                    </div>
+                    <div class="sbx-sub">
+                      <span class="sbx-hp" id="surv-boss-hp"></span>
+                      <span class="sbx-next" id="surv-boss-next" aria-hidden="true"></span>
+                    </div>
+                  </div>
+                </div>
+                <!-- Card 3: Tarjeta dedicada de resultado del encuentro (Derrotado / Retirado) -->
+                <div class="surv-card surv-boss-result" id="surv-boss-result" hidden>
+                  <span class="sbx-result-icon" id="surv-boss-result-icon" aria-hidden="true">👑</span>
+                  <div class="sbx-result-mid">
+                    <span class="sbx-result-title" id="surv-boss-result-title"></span>
+                    <span class="sbx-result-name" id="surv-boss-result-name"></span>
+                  </div>
+                </div>
+              </div>
+              <span class="surv-metric surv-time-box"><span class="surv-k" data-i18n="hud_time">Tiempo</span><span class="surv-time" id="surv-time" data-explain="hud_time_explain">0s</span></span>
+            </div>
+            <!-- Pie compacto de Supervivencia. Game.start mueve aquí el único
+                 #hud-score-row compartido, sin clonar datos ni listeners. -->
+            <div class="surv-footer" id="surv-footer"></div>
+          </div>
+
+          <!-- Centro único de eventos: los avisos se priorizan y serializan aquí.
+               Nunca se dibujan textos informativos sobre el tablero. -->
+          <div class="event-dock" id="hud-event-dock" aria-label="Centro de eventos">
+            <div class="toasts" id="toasts" role="status" aria-live="polite" aria-atomic="true">
+              <article class="toast hud-event-card info" id="hud-event-center" hidden>
+                <span class="toast-ic" id="hud-event-icon" aria-hidden="true"></span>
+                <span class="toast-copy">
+                  <small class="toast-kicker" id="hud-event-kicker" hidden></small>
+                  <strong class="toast-tx" id="hud-event-title"></strong>
+                  <span class="toast-detail" id="hud-event-detail" hidden></span>
+                </span>
+                <span class="toast-x" id="hud-event-count" hidden></span>
+                <span class="toast-bar" id="hud-event-progress" aria-hidden="true"></span>
+              </article>
+            </div>
+          </div>
+
+          <div class="hud-score-slot" id="hud-score-slot">
+          <div class="score-row" id="hud-score-row" aria-label="Puntuación, multiplicador y frenesí">
+            <div class="score-side">
+              <div class="power-rings" id="power-rings" aria-hidden="true">
+                <svg viewBox="0 0 56 56">
+                  <circle class="pr-bg" cx="28" cy="28" r="24"/>
+                  <circle class="pr-fill pr-frenzy" id="pr-frenzy" cx="28" cy="28" r="24"/>
+                  <circle class="pr-bg" cx="28" cy="28" r="17"/>
+                  <circle class="pr-fill pr-charge" id="pr-charge" cx="28" cy="28" r="17"/>
+                </svg>
+                <span class="pr-flame">🔥</span>
+              </div>
+              <div class="gctx">
+                <span class="g-chip lvl-chip"><span class="g-k" data-i18n="hud_level">Nivel</span> <b id="hud-level">1</b></span>
+                <span class="g-chip time-chip"><b id="hud-time">0:00</b></span>
+                <span class="g-chip zen-chip" id="hud-zen-wrap" hidden>🌸 <b id="hud-zen-flowers">0</b></span>
+                <span class="g-chip ghost-chip" id="hud-ghost" hidden>▲</span>
+              </div>
+            </div>
+            <div class="gscore">
+              <!-- Feedback inmediato (puntos, combo, monedas): pool fijo junto al
+                   marcador; nunca ocupa el tablero ni entra en la cola de eventos. -->
+              <div class="score-feedback" id="score-feedback" aria-hidden="true"></div>
+              <!-- Héroe: la métrica DOMINANTE del modo (restantes / tiempo / medalla /
+                   objetivo / jefe). Solo visible en modos con objetivo-héroe; en
+                   Supervivencia y Zen manda la puntuación (score-main). Ver Render.hero(). -->
+              <div class="hud-hero" id="hud-hero" hidden>
+                <span class="hero-val" id="hud-hero-val"></span>
+                <span class="hero-sub" id="hud-hero-sub" hidden></span>
+                <div class="hero-bar" id="hud-hero-bar" hidden aria-hidden="true"><span class="hero-bar-fill" id="hud-hero-bar-fill"></span></div>
+              </div>
+              <span class="score-main"><span class="hud-value" id="hud-score">0</span><span class="mult-chip" id="hud-mult" aria-hidden="true">×1</span></span>
+              <span class="score-meta"><span class="score-best" id="hud-best-wrap"><span data-i18n="best_score">Mejor puntuación</span> <b id="hud-best">0</b></span></span>
+              <!-- Desglose del multiplicador (HUD-S4): aparece al tocar el marcador. -->
+              <div class="mult-bd" id="mult-bd" hidden aria-live="polite"></div>
+            </div>
+            <span class="score-spacer" aria-hidden="true"></span>
+          </div>
+          </div>
+
+        </div>
+        <!-- Velocidad: conservada para Render.hud pero oculta (HUD minimalista) -->
+        <span class="hud-value" id="hud-speed" hidden>3.0s</span>
+      </header>
+
+      <div class="board-area">
+        <div class="board-column">
+          <div class="board-shell">
+            <div class="board-wrap">
+              <div class="board" id="board" role="grid" aria-label="Tablero de juego"></div>
+              <!-- Host técnico de la coreografía de fichas. No contiene texto HUD. -->
+              <div class="popups" id="popups" aria-hidden="true"></div>
+              <!-- Aura de modo Fever -->
+              <div class="fever" id="fever" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <!-- Barra contextual: peligro por defecto; cede el espacio a ataques,
+               oleadas o efectos temporales cuando son más urgentes. -->
+          <div class="occ context-bar" id="hud-context-bar" data-context="danger" data-explain="hud_danger_explain">
+            <span class="occ-label" id="occ-label">
+              <span class="icv2" id="occ-icon" style="--icv2-url:url('img/icons-v2/8-ui/grid.svg')" aria-hidden="true"></span>
+              <span class="occ-text" id="occ-text" data-i18n="hud_board_fill">Tablero</span>
+            </span>
+            <div class="occ-bar-wrap" aria-hidden="true">
+              <span class="sr-only" id="hud-progress-label" data-i18n="hud_occ">Ocupación</span>
+              <div class="bar-fill" id="hud-progress-fill"></div>
+            </div>
+            <span class="occ-percent" id="occ-percent">0%</span>
+            <button class="icon-btn hint-btn hint-fab" id="btn-hint" aria-label="Pista"><img decoding="async" class="ic ic-inline" src="img/ui/search.png" alt=""><span class="badge" id="hint-badge">3</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tutorial interactivo: tercera fila del HUD, nunca superpuesta al tablero. -->
+      <div class="coach" id="coach" hidden>
+        <span class="coach-step" id="coach-step" aria-hidden="true"></span>
+        <p class="coach-text" id="coach-text" aria-live="polite"></p>
+        <button class="btn btn-primary coach-play" id="coach-play" hidden>Jugar nivel 1</button>
+        <button class="btn btn-ghost coach-skip" id="coach-skip" data-i18n="coach_skip">Saltar tutorial</button>
+      </div>
+
+      <!-- Tutoriales de jefe: aparecen una sola vez y pausan la partida. -->
+      <div class="boss-coach" id="boss-coach" hidden role="dialog" aria-modal="true" aria-labelledby="boss-coach-title" aria-describedby="boss-coach-text">
+        <div class="boss-coach-card">
+          <span class="boss-coach-spark boss-coach-spark-a" aria-hidden="true">✦</span>
+          <span class="boss-coach-spark boss-coach-spark-b" aria-hidden="true">✦</span>
+
+          <div class="boss-coach-frame">
+            <div class="boss-coach-standard">
+              <div class="boss-coach-portrait" aria-hidden="true">
+                <span class="boss-coach-portrait-ring"></span>
+                <img decoding="async" src="img/ui-generated/boss-coach/boss-portrait.webp" alt="">
+                <span class="boss-coach-icon" id="boss-coach-icon">🛡️</span>
+              </div>
+
+              <header class="boss-coach-head">
+                <strong class="boss-coach-title" id="boss-coach-title"></strong>
+                <span class="boss-coach-title-rule" aria-hidden="true"><i></i></span>
+              </header>
+
+              <section class="boss-coach-copy">
+                <p class="boss-coach-text" id="boss-coach-text" aria-live="polite"></p>
+                <div class="boss-coach-tip">
+                  <span class="boss-coach-tip-icon" aria-hidden="true">★</span>
+                  <p><b id="boss-coach-tip-title"></b><span id="boss-coach-tip-text"></span></p>
+                </div>
+              </section>
+
+              <aside class="boss-coach-details" aria-labelledby="boss-coach-details-label">
+                <b class="boss-coach-details-label" id="boss-coach-details-label"></b>
+                <div class="boss-coach-detail">
+                  <span class="boss-coach-detail-icon" id="boss-coach-detail-icon-1" aria-hidden="true"></span>
+                  <p><b id="boss-coach-detail-title-1"></b><span id="boss-coach-detail-text-1"></span></p>
+                </div>
+                <div class="boss-coach-detail">
+                  <span class="boss-coach-detail-icon" id="boss-coach-detail-icon-2" aria-hidden="true"></span>
+                  <p><b id="boss-coach-detail-title-2"></b><span id="boss-coach-detail-text-2"></span></p>
+                </div>
+              </aside>
+            </div>
+
+            <div class="boss-coach-boons" aria-hidden="true">
+              <div class="boss-coach-trophy" aria-hidden="true">
+                <span class="boss-coach-trophy-glow"></span>
+                <img decoding="async" src="img/ui-generated/home/tournament-trophy.png" alt="">
+                <img decoding="async" class="boss-coach-float boss-coach-float-heart" src="img/icon-packs/gem-pattern/pink-heart-2.png" alt="">
+                <img decoding="async" class="boss-coach-float boss-coach-float-bolt" src="img/ui-generated/mode-launch/bolt.png" alt="">
+                <img decoding="async" class="boss-coach-float boss-coach-float-gem" src="img/icon-packs/gem-pattern/orange-gem-2.png" alt="">
+              </div>
+
+              <div class="boss-coach-boons-copy">
+                <header class="boss-coach-boons-head">
+                  <span aria-hidden="true">✦</span>
+                  <strong id="boss-coach-boons-title"></strong>
+                </header>
+                <p id="boss-coach-boons-text"></p>
+              </div>
+
+              <div class="boss-coach-boon-list">
+                <div class="boss-coach-boon">
+                  <span><img decoding="async" src="img/icon-packs/gem-pattern/pink-heart-2.png" alt="" aria-hidden="true"></span>
+                  <b data-i18n="boon_life">Vida extra</b>
+                </div>
+                <div class="boss-coach-boon">
+                  <span><img decoding="async" src="img/ui-generated/mode-launch/bolt.png" alt="" aria-hidden="true"></span>
+                  <b data-i18n="boon_charge">Sobrecarga</b>
+                </div>
+                <div class="boss-coach-boon">
+                  <span><img decoding="async" src="img/icon-packs/prismatic-jewels/violet-spiral.png" alt="" aria-hidden="true"></span>
+                  <b data-i18n="boon_slow">Calma</b>
+                </div>
+                <div class="boss-coach-boon">
+                  <span><img decoding="async" src="img/ui/magnet.png" alt="" aria-hidden="true"></span>
+                  <b data-i18n="boon_magnet">Imán</b>
+                </div>
+                <div class="boss-coach-boon">
+                  <span><i class="boss-coach-score-icon" aria-hidden="true">2×</i></span>
+                  <b data-i18n="boon_score_boost">Impulso de Puntos</b>
+                </div>
+              </div>
+
+              <div class="boss-coach-boons-tip">
+                <span aria-hidden="true">💡</span>
+                <p id="boss-coach-boons-tip"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="boss-coach-actions">
+            <button class="btn boss-coach-ok" id="boss-coach-ok" data-i18n="understood">¡Entendido!</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de potenciadores (Supervivencia): toolbelt de objetos + pista integrada -->
+      <div class="booster-bar" id="booster-bar" hidden>
+        <div class="boosters" id="boosters"></div>
+        <button class="booster hint-tool" id="btn-hint-tool" aria-label="Pista"><span class="b-ic"><img decoding="async" class="ic ic-inline" src="img/ui/search.png" alt=""></span><span class="b-label">Pista</span><span class="b-count" id="hint-badge-tool">3</span></button>
+      </div>
+
+    </section>
+
+    <!-- Selector global de eleccion (bendiciones/rutas/reliquias/continuar/Zen) -->
+    <div class="pick-overlay" id="pick-overlay" hidden>
+      <div class="pick-card" role="dialog" aria-modal="true" aria-labelledby="pick-title">
+        <h2 class="pick-title" id="pick-title"></h2>
+        <p class="pick-sub" id="pick-sub" hidden></p>
+        <div class="pick-options" id="pick-options"></div>
+        <button class="btn btn-ghost pick-cancel" id="pick-cancel" hidden></button>
+      </div>
+    </div>
+
+    <!-- Lanzador global de nivel de Clasico (GM-03): potenciadores opcionales pre-nivel -->
+    <div class="pick-overlay" id="prelevel" hidden>
+      <div class="pick-card" role="dialog" aria-modal="true" aria-labelledby="pl-title">
+        <h2 class="pick-title" id="pl-title"></h2>
+        <p class="pick-sub" data-i18n="pl_sub">Lleva hasta 2 potenciadores (opcional)</p>
+        <div class="pl-items" id="pl-items"></div>
+        <div class="pl-actions">
+          <button class="btn btn-primary" id="pl-play" data-i18n="pl_play">Jugar</button>
+          <button class="btn btn-ghost" id="pl-skip" data-i18n="pl_skip">Sin potenciadores</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ============ CAPAS TRANSITORIAS + VISTAS DEL HUB ============ -->
+  <div class="overlay" id="overlay" hidden>
+    <!-- Lanzador compartido de modos. Mantiene Inicio visible y atenuado,
+         siguiendo el panel de referencia de Supervivencia. -->
+    <div class="modal mode-launch-modal" id="modal-mode-launch" role="dialog" aria-modal="true" aria-labelledby="mode-launch-title" aria-describedby="mode-launch-tagline" hidden>
+      <header class="mode-launch-head">
+        <span class="mode-launch-emblem" aria-hidden="true"><img decoding="async" id="mode-launch-emblem" src="img/ui-generated/mode-launch/survival-emblem.png" alt=""></span>
+        <span class="mode-launch-heading">
+          <h2 id="mode-launch-title">Supervivencia</h2>
+          <span id="mode-launch-tagline">Oleadas infinitas ∞</span>
+        </span>
+        <button class="mode-launch-close" type="button" data-close data-i18n-al="mode_launch_close" aria-label="Cerrar"><span aria-hidden="true"></span></button>
+      </header>
+      <div class="modal-body mode-launch-body" id="mode-launch-body"></div>
+      <section class="mode-launch-detail" id="mode-launch-detail" aria-labelledby="mode-launch-detail-title" hidden>
+        <button class="mode-launch-detail-close" type="button" id="btn-mode-launch-detail-close" aria-label="Volver">
+          <span aria-hidden="true"></span>
+        </button>
+        <div class="mode-launch-detail-content" id="mode-launch-detail-content"></div>
+      </section>
+      <div class="modal-actions mode-launch-actions">
+        <button class="btn mode-launch-start" type="button" id="btn-mode-launch-start">
+          <span class="mode-launch-start-icon" aria-hidden="true"><img decoding="async" id="mode-launch-start-icon" src="img/ui-generated/mode-launch/heart.png" alt=""></span>
+          <span id="mode-launch-start-label">Empezar supervivencia</span>
+        </button>
+      </div>
+    </div>
+    <!-- Estas vistas se trasladan a #hub-views en el arranque. Permanecen aquí
+         en el HTML para mantener una única fuente de contenido sin duplicados. -->
+    <section class="hub-view view-events" id="view-events" data-hub-view="events" aria-labelledby="events-title" hidden>
+      <div class="m-head"><span class="m-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui-generated/home/nav-events.png" alt=""></span><h2 id="events-title" data-i18n="events_title">Eventos</h2></div>
+      <p class="hub-view-intro" data-i18n="events_sub">Tus retos, recompensas y actividades de hoy, reunidos en un solo lugar.</p>
+      <div class="modal-body view-body events-board">
+        <div class="events-grid">
+          <article class="event-card event-card-reward" id="events-reward-card">
+            <span class="event-card-art" aria-hidden="true"><img decoding="async" src="img/ui-generated/home/daily-gift.png" alt=""></span>
+            <span class="event-card-copy"><small data-i18n="events_daily_label">Cada día</small><b data-i18n="daily_banner_title">Recompensa diaria</b><span id="events-reward-state">Lista para reclamar</span></span>
+            <button class="event-card-action" id="events-reward-claim" type="button" data-act="claim-daily" data-i18n="claim">Reclamar</button>
+          </article>
+
+          <article class="event-card">
+            <span class="event-card-art" aria-hidden="true"><img decoding="async" src="img/ui-generated/home/nav-missions.png" alt=""></span>
+            <span class="event-card-copy"><small data-i18n="events_progress_label">Progreso diario</small><b data-i18n="home_daily_mission">Misión diaria</b><span id="events-mission-progress">0 / 1</span></span>
+            <button class="event-card-action" type="button" data-act="open-missions" data-i18n="events_view">Ver</button>
+          </article>
+
+          <article class="event-card">
+            <span class="event-card-art" aria-hidden="true"><img decoding="async" src="img/ui-generated/home/nav-daily.png" alt=""></span>
+            <span class="event-card-copy"><small data-i18n="events_today_label">Solo hoy</small><b data-i18n="daily_challenge">Reto del día</b><span id="events-daily-status">Pendiente</span></span>
+            <button class="event-card-action" type="button" data-act="home-daily" data-i18n="events_play">Jugar</button>
+          </article>
+
+          <article class="event-card event-card-choice" id="events-choice-card" hidden>
+            <span class="event-card-art" aria-hidden="true"><img decoding="async" src="img/ui-generated/home/nav-chest.png" alt=""></span>
+            <span class="event-card-copy"><small data-i18n="daily_choice_event_label">Primera victoria</small><b data-i18n="daily_choice_title">Cofre de elección</b><span id="events-choice-status">Elige 1 de 3 premios</span></span>
+            <button class="event-card-action" id="events-choice-open" type="button" data-act="open-daily-choice" data-i18n="daily_choice_open">Elegir</button>
+          </article>
+
+          <article class="event-card" id="events-chests-card">
+            <span class="event-card-art" aria-hidden="true"><img decoding="async" src="img/ui-generated/home/nav-chest.png" alt=""></span>
+            <span class="event-card-copy"><small data-i18n="events_rewards_label">Premios</small><b data-i18n="home_chests">Cofres</b><span id="events-chests-status">Ninguno disponible</span></span>
+            <button class="event-card-action" type="button" data-act="open-chests" data-i18n="events_open">Abrir</button>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="hub-view view-missions" id="view-missions" data-hub-view="missions" aria-labelledby="missions-title" hidden>
+      <div class="m-head"><span class="m-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/target.png" alt=""></span><h2 id="missions-title" data-i18n="missions_title">Misiones</h2></div>
+      <p class="hub-view-intro" data-i18n="missions_sub">Completa objetivos diarios y semanales para acelerar tu progreso.</p>
+      <div class="modal-body view-body missions-view-body">
+        <div class="missions-hero" aria-hidden="true"><span>✦</span><div><b>CONVERGENCE OPS</b><small>DAILY SIGNAL</small></div></div>
+        <div class="start-missions" id="start-missions"></div>
+      </div>
+      <div class="modal-actions view-actions">
+        <button class="btn btn-primary" data-view-back data-i18n="back">Volver</button>
+      </div>
+    </section>
+    <!-- Cómo jugar -->
+    <section class="hub-view view-how" id="view-how" data-hub-view="how" aria-labelledby="how-title" hidden>
+      <header class="how-hero">
+        <button class="how-back" type="button" data-view-back data-i18n-al="back" aria-label="Volver">
+          <img decoding="async" src="img/icons-v2/8-ui/arrow-left.svg" alt="">
+        </button>
+        <div class="how-hero-copy">
+          <span class="how-kicker" data-i18n="guide_kicker">Guía de juego</span>
+          <h2 id="how-title" data-i18n="how_title">¿Cómo se juega?</h2>
+          <p data-i18n="how_sub">Aprende la mecánica, descubre los modos y domina tus potenciadores.</p>
+        </div>
+        <div class="how-hero-art" aria-hidden="true">
+          <img decoding="async" src="img/ui-generated/guide/guide-mentor.png" alt="">
+          <img decoding="async" class="how-float-token how-float-star" src="img/icon-packs/basic-redesigned/yellow-star.png" alt="">
+          <img decoding="async" class="how-float-token how-float-circle" src="img/icon-packs/basic-redesigned/red-circle.png" alt="">
+          <img decoding="async" class="how-float-token how-float-triangle" src="img/icon-packs/basic-redesigned/green-triangle.png" alt="">
+        </div>
+      </header>
+
+      <div class="modal-body view-body how-scroll">
+        <section class="guide-section guide-rules" aria-labelledby="guide-rules-title">
+          <div class="guide-section-heading">
+            <span aria-hidden="true">✦</span>
+            <h3 id="guide-rules-title" data-i18n="guide_rules_title">Reglas básicas</h3>
+            <span aria-hidden="true">✦</span>
+          </div>
+
+          <div class="guide-rules-grid">
+            <article class="guide-rule-card">
+              <div class="guide-rule-visual guide-rule-image" aria-hidden="true">
+                <img decoding="async" src="img/ui-generated/guide/rule-1-tap.png" alt="">
+              </div>
+              <div class="guide-rule-copy">
+                <b class="guide-step">1</b>
+                <p data-i18n-html="how1">Toca una <strong>casilla vacía</strong>.</p>
+              </div>
+            </article>
+
+            <article class="guide-rule-card">
+              <div class="guide-rule-visual guide-rule-image" aria-hidden="true">
+                <img decoding="async" src="img/ui-generated/guide/rule-2-scan.png" alt="">
+              </div>
+              <div class="guide-rule-copy">
+                <b class="guide-step">2</b>
+                <p data-i18n-html="how2">Se mira el icono más cercano en cada dirección.</p>
+              </div>
+            </article>
+
+            <article class="guide-rule-card">
+              <div class="guide-rule-visual guide-rule-image" aria-hidden="true">
+                <img decoding="async" src="img/ui-generated/guide/rule-3-converge.png" alt="">
+              </div>
+              <div class="guide-rule-copy">
+                <b class="guide-step">3</b>
+                <p data-i18n-html="how3">Si <strong>2 o más coinciden</strong>, ¡convergen!</p>
+              </div>
+            </article>
+
+            <article class="guide-rule-card">
+              <div class="guide-rule-visual guide-rule-image" aria-hidden="true">
+                <img decoding="async" src="img/ui-generated/guide/rule-4-combo.png" alt="">
+              </div>
+              <div class="guide-rule-copy">
+                <b class="guide-step">4</b>
+                <p data-i18n-html="how4">Encadena eliminaciones para subir el <strong>combo</strong>.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="guide-warning">
+            <img decoding="async" src="img/ui/warning.png" alt="" aria-hidden="true">
+            <p data-i18n-html="how5">Los iconos aparecen solos: vacía el tablero antes de que se llene.</p>
+          </div>
+        </section>
+
+        <section class="guide-section guide-modes" aria-labelledby="guide-modes-title">
+          <div class="guide-section-heading">
+            <span aria-hidden="true">✦</span>
+            <h3 id="guide-modes-title" data-i18n="guide_modes_title">Modos de juego</h3>
+            <span aria-hidden="true">✦</span>
+          </div>
+          <p class="guide-section-sub" data-i18n="guide_modes_sub">Toca un modo para conocer sus reglas y empezar una partida.</p>
+
+          <div class="guide-mode-grid">
+            <button class="guide-mode-card guide-mode-classic" type="button" data-act="mission-play" data-mode="clasico">
+              <span class="guide-mode-art"><img decoding="async" src="img/ui-generated/mode-launch/trophy.png" alt=""></span>
+              <span class="guide-mode-copy">
+                <strong data-i18n="card_classic">Clásico</strong>
+                <small data-i18n="guide_mode_classic_desc">Supera niveles y gana hasta tres estrellas.</small>
+                <b data-i18n="card_classic_badge">Por niveles</b>
+              </span>
+            </button>
+            <button class="guide-mode-card guide-mode-timed" type="button" data-act="mission-play" data-mode="contrarreloj">
+              <span class="guide-mode-art"><img decoding="async" src="img/ui-generated/mode-launch/clock.png" alt=""></span>
+              <span class="guide-mode-copy">
+                <strong data-i18n="guide_mode_timed">Contrarreloj</strong>
+                <small data-i18n="guide_mode_timed_desc">Cada convergencia compra segundos y mantiene el ritmo.</small>
+                <b data-i18n="card_contra_badge">Tiempo límite</b>
+              </span>
+            </button>
+            <button class="guide-mode-card guide-mode-adventure" type="button" data-act="mission-play" data-mode="aventura">
+              <span class="guide-mode-art"><img decoding="async" src="img/ui-generated/mode-launch/mode-adventure.png" alt=""></span>
+              <span class="guide-mode-copy">
+                <strong data-i18n="guide_mode_adventure">Aventura</strong>
+                <small data-i18n="guide_mode_adventure_desc">Viaja por biomas con objetivos y mini-jefes.</small>
+                <b data-i18n="card_adv_badge">Viaje infinito</b>
+              </span>
+            </button>
+            <button class="guide-mode-card guide-mode-survival" type="button" data-act="mission-play" data-mode="supervivencia">
+              <span class="guide-mode-art"><img decoding="async" src="img/ui-generated/mode-launch/survival-emblem.png" alt=""></span>
+              <span class="guide-mode-copy">
+                <strong data-i18n="card_surv">Supervivencia</strong>
+                <small data-i18n="guide_mode_survival_desc">Resiste oleadas, jefes y un tablero cada vez más rápido.</small>
+                <b data-i18n="card_surv_badge">Desafío extremo</b>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <section class="guide-section guide-powerups" aria-labelledby="guide-powerups-title">
+          <div class="guide-section-heading">
+            <span aria-hidden="true">✦</span>
+            <h3 id="guide-powerups-title" data-i18n="guide_powerups_title">Potenciadores</h3>
+            <span aria-hidden="true">✦</span>
+          </div>
+          <p class="guide-section-sub" data-i18n="guide_powerups_sub">Úsalos en el momento justo para recuperar el control del tablero.</p>
+
+          <div class="guide-powerup-grid">
+            <article class="guide-powerup-card">
+              <span><img decoding="async" src="img/ui/bomb.png" alt=""></span>
+              <strong data-i18n="booster_name_bomb">Bomba</strong>
+              <small data-i18n="guide_power_bomb">Elimina una zona alrededor del objetivo.</small>
+            </article>
+            <article class="guide-powerup-card">
+              <span><img decoding="async" src="img/icons-v2/4-nature/snowflake.svg" alt=""></span>
+              <strong data-i18n="booster_name_freeze">Congelación</strong>
+              <small data-i18n="guide_power_freeze">Detiene temporalmente el ritmo de aparición.</small>
+            </article>
+            <article class="guide-powerup-card">
+              <span><img decoding="async" src="img/ui/bolt.png" alt=""></span>
+              <strong data-i18n="booster_name_clearLine">Rayo</strong>
+              <small data-i18n="guide_power_ray">Limpia una línea completa del tablero.</small>
+            </article>
+            <article class="guide-powerup-card">
+              <span><img decoding="async" src="img/icons-v2/10-editing/brush.svg" alt=""></span>
+              <strong data-i18n="booster_name_wild">Escoba</strong>
+              <small data-i18n="guide_power_broom">Barre la fila o columna con más iconos.</small>
+            </article>
+            <article class="guide-powerup-card">
+              <span><img decoding="async" src="img/icons-v2/1-game/double.svg" alt=""></span>
+              <strong data-i18n="booster_name_x2">Comodín</strong>
+              <small data-i18n="guide_power_wild">Transforma un grupo repetido y salva la jugada.</small>
+            </article>
+          </div>
+        </section>
+      </div>
+
+      <div class="modal-actions view-actions how-actions">
+        <button class="btn btn-primary btn-icon" id="btn-tutorial">
+          <span class="btn-ic"><img decoding="async" src="img/icons-v2/9-media/play.svg" alt="" aria-hidden="true"></span>
+          <span data-i18n="guide_tutorial_cta">Jugar tutorial</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Pausa -->
+    <div class="modal pause-modal" id="modal-pause" role="dialog" aria-modal="true" aria-labelledby="pause-title" hidden>
+      <div class="pause-head-decor" aria-hidden="true">
+        <span class="pause-decor-gem"><img decoding="async" src="img/icon-packs/prismatic-jewels/violet-diamond.png" alt=""></span>
+        <span class="pause-decor-star"><img decoding="async" src="img/icon-packs/prismatic-jewels/golden-star.png" alt=""></span>
+        <span class="pause-decor-orb pause-decor-orb-a"></span>
+        <span class="pause-decor-orb pause-decor-orb-b"></span>
+        <span class="pause-decor-orb pause-decor-orb-c"></span>
+        <span class="pause-decor-orb pause-decor-orb-d"></span>
+      </div>
+      <!-- Acceso directo a Ajustes (vuelve a la pausa al cerrar). -->
+      <button class="pause-settings" type="button" id="btn-pause-settings" aria-label="Ajustes" data-i18n-al="settings_word">
+        <span class="pause-settings-badge" aria-hidden="true"><span class="icv2" style="--icv2-url:url('img/icons-v2/8-ui/settings.svg')"></span></span>
+        <span class="pause-settings-tx" data-i18n="settings_word">Ajustes</span>
+      </button>
+      <div class="pause-head">
+        <span class="pause-emblem" aria-hidden="true"><span class="icv2" style="--icv2-url:url('img/icons-v2/9-media/pause.svg')"></span></span>
+        <h2 id="pause-title" data-i18n="pause">Pausa</h2>
+        <p class="pause-subtitle" data-i18n="pause_subtitle">Tómate un respiro, ¡tú puedes!</p>
+      </div>
+      <div class="pause-scroll">
+        <div class="pause-player-card" id="pause-player-card"></div>
+        <section class="pause-run-panel" aria-labelledby="pause-run-heading">
+          <h3 class="sr-only" id="pause-run-heading" data-i18n="pause_run_title">Partida en curso</h3>
+          <div class="pause-run-summary" id="pause-run-summary"></div>
+          <p class="modal-sub pause-note" id="pause-note" data-i18n="pause_no_save" hidden>Este modo no guarda la partida al salir.</p>
+        </section>
+        <div class="modal-actions modal-buttons">
+          <button class="btn btn-primary btn-icon pause-btn-resume" id="btn-resume"><span class="btn-ic icv2" style="--icv2-url:url('img/icons-v2/9-media/play.svg')" aria-hidden="true"></span><span data-i18n="resume">Reanudar</span></button>
+          <button class="btn btn-icon pause-btn-restart" id="btn-pause-restart"><span class="btn-ic icv2" style="--icv2-url:url('img/icons-v2/8-ui/refresh.svg')" aria-hidden="true"></span><span data-i18n="restart">Reiniciar</span></button>
+          <button class="btn btn-icon pause-btn-menu" id="btn-pause-quit"><span class="btn-ic icv2" style="--icv2-url:url('img/icons-v2/6-buildings/house.svg')" aria-hidden="true"></span><span data-i18n="main_menu">Menú principal</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenido de un pack de iconos de tablero (reutilizable: tienda + colección) -->
+    <div class="modal icon-pack-modal" id="modal-icon-pack" role="dialog" aria-modal="true" aria-labelledby="icon-pack-title" hidden>
+      <div class="m-head"><span class="m-emblem" id="icon-pack-emblem" aria-hidden="true"></span><h2 id="icon-pack-title">Pack</h2></div>
+      <div class="modal-body">
+        <div class="icon-pack-meta"><span class="rarity-chip" id="icon-pack-rarity"></span><p class="modal-sub" id="icon-pack-desc"></p></div>
+        <h3 class="group-title" data-i18n="iconpack_contents">Iconos del pack</h3>
+        <div class="icon-pack-grid" id="icon-pack-grid" aria-label="Iconos del pack"></div>
+        <p class="icon-pack-note" id="icon-pack-note" hidden></p>
+      </div>
+      <div class="modal-actions modal-buttons">
+        <button class="btn btn-primary" id="icon-pack-action" type="button"></button>
+        <button class="btn btn-ghost" id="icon-pack-close" type="button" data-close data-i18n="back">Volver</button>
+      </div>
+    </div>
+
+    <!-- Nivel completado -->
+    <div class="modal modal-win" id="modal-level" role="dialog" aria-modal="true" aria-labelledby="level-title" hidden>
+      <div class="m-head"><span class="m-emblem" id="level-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/star.png" alt=""></span><h2 id="level-title">¡Nivel completado!</h2></div>
+      <div class="modal-body">
+        <p class="modal-sub" id="level-sub"></p>
+        <div class="stats" id="level-stats"></div>
+        <div class="next-info" id="level-next"></div>
+      </div>
+      <div class="modal-actions modal-buttons">
+        <button class="btn btn-primary btn-lg" id="btn-next-level">Siguiente nivel →</button>
+        <button class="btn btn-ghost btn-icon" id="btn-level-map" hidden><span class="btn-ic icv2" style="--icv2-url:url('img/icons-v2/2-items/map.svg')" aria-hidden="true"></span><span data-i18n="to_map">Volver al mapa</span></button>
+      </div>
+    </div>
+
+    <!-- Fin de partida -->
+    <div class="modal modal-over endgame-modal" id="modal-over" role="dialog" aria-modal="true" aria-labelledby="over-title" hidden>
+      <div class="m-head"><span class="m-emblem" id="over-emblem" aria-hidden="true"><span class="icv2" style="--icv2-url:url('img/icons-v2/6-buildings/flag.svg')"></span></span><h2 id="over-title">¡Misión fallida!</h2></div>
+      <div class="modal-body endgame-body">
+        <section class="endgame-section endgame-result" aria-label="Resultado principal">
+          <p class="record-badge" id="over-record" hidden><span class="icv2 icv2-inline" style="--icv2-url:url('img/icons-v2/12-misc/four-pointed-star.svg')" aria-hidden="true"></span> ¡Nuevo récord!</p>
+          <p class="modal-sub" id="over-reason"></p>
+          <!-- Héroe de Supervivencia (SV-22): la OLEADA es el ancla del modo, no el score. -->
+          <div class="over-hero" id="over-hero" hidden></div>
+          <div class="over-score" id="over-score"></div>
+          <p class="over-near" id="over-near" hidden></p>
+          <p class="modal-meta" id="over-meta"></p>
+        </section>
+
+        <section class="endgame-section endgame-ledger" id="over-ledger" aria-label="Hoja de supervivencia" hidden>
+          <div class="endgame-section-title"><span data-i18n="over_surv_sheet">Hoja de supervivencia</span><small data-i18n="over_surv_sheet_sub">bendiciones, jefes y rango</small></div>
+          <!-- Hoja de la run (SV-22): la cadena de bendiciones elegidas + jefes superados. -->
+          <div class="over-run" id="over-run" hidden></div>
+          <!-- Progreso de rango del Superviviente (SV-30): +N oleadas de servicio → rango. -->
+          <div class="over-service" id="over-service" hidden></div>
+        </section>
+
+        <section class="endgame-section endgame-performance" aria-label="Rendimiento">
+          <div class="endgame-section-title"><span data-i18n="over_performance">Rendimiento</span><small data-i18n="over_performance_sub">lo esencial de la run</small></div>
+          <div class="stats" id="over-stats"></div>
+        </section>
+
+        <div class="over-peak" id="over-peak" hidden></div>
+        <div class="over-exped" id="over-exped" hidden></div>
+
+        <section class="endgame-section endgame-rewards" aria-label="Recompensas">
+          <div class="endgame-section-title"><span data-i18n="surv_rewards">Recompensas</span><small data-i18n="over_profile_general">perfil general</small></div>
+          <div class="over-xp" id="over-xp"></div>
+          <div class="over-ach" id="over-ach"></div>
+        </section>
+
+        <section class="endgame-section endgame-next" aria-label="Siguiente paso">
+          <div class="over-next" id="over-next"></div>
+        </section>
+      </div>
+      <div class="modal-actions modal-buttons">
+        <button class="btn btn-primary btn-icon" id="btn-retry"><span class="btn-ic icv2" style="--icv2-url:url('img/icons-v2/8-ui/refresh.svg')" aria-hidden="true"></span><span data-i18n="retry">Reintentar</span></button>
+        <button class="btn btn-ghost btn-icon" id="btn-share"><span class="btn-ic icv2" style="--icv2-url:url('img/icons-v2/9-media/share.svg')" aria-hidden="true"></span><span data-i18n="share">Compartir</span></button>
+        <button class="btn btn-ghost btn-icon" id="btn-over-quit"><span class="btn-ic icv2" style="--icv2-url:url('img/icons-v2/8-ui/cross.svg')" aria-hidden="true"></span><span data-i18n="menu">Menú</span></button>
+      </div>
+    </div>
+
+    <!-- Ajustes (skin "candy": tarjeta morada con marco dorado, banner y X). -->
+    <section class="hub-view view-settings" id="view-settings" data-hub-view="settings" aria-labelledby="settings-title" hidden>
+      <div class="set-card">
+        <button class="set-close" type="button" data-view-back aria-label="Cerrar" data-i18n-al="back"><span class="set-close-x" aria-hidden="true"></span></button>
+        <div class="set-banner">
+          <span class="set-banner-star" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/star.png" alt=""></span>
+          <h2 id="settings-title" data-i18n="settings_word">Ajustes</h2>
+        </div>
+        <div class="settings-list" id="settings-list"></div>
+      </div>
+    </section>
+
+    <!-- Última oportunidad (Supervivencia) -->
+    <div class="modal modal-revive" id="modal-revive" role="dialog" aria-modal="true" aria-labelledby="revive-title" hidden>
+      <div class="m-head"><span class="m-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/heart.png" alt=""></span><h2 id="revive-title" data-i18n="revive_title">¡Última oportunidad!</h2></div>
+      <div class="modal-body">
+        <p class="modal-sub" data-i18n="revive_sub">Te has quedado sin vidas. ¿Revivir y seguir sobreviviendo?</p>
+        <p class="revive-gets" id="revive-gets" data-i18n="revive_gets">Recibes 1 vida y despeja el 60% del tablero</p>
+        <p class="revive-short" id="revive-short" hidden></p>
+        <p class="revive-count" id="revive-count"></p>
+      </div>
+      <div class="modal-actions modal-buttons">
+        <button class="btn btn-primary" id="btn-revive"><img decoding="async" class="ic ic-inline" src="img/ui/coin.png" alt=""> <span data-i18n="revive_btn">Revivir</span> (<span id="revive-cost">120</span>)</button>
+        <button class="btn btn-ghost" id="btn-giveup" data-i18n="giveup">Rendirse</button>
+      </div>
+    </div>
+
+    <!-- Reto del día -->
+    <section class="hub-view view-daily" id="view-daily" data-hub-view="daily" aria-labelledby="daily-info-title" hidden>
+      <div class="m-head"><span class="m-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/target.png" alt=""></span><h2 id="daily-info-title" data-i18n="daily_challenge">Reto del día</h2></div>
+      <div class="modal-body view-body">
+        <div class="daily-info" id="daily-info"></div>
+      </div>
+      <div class="modal-actions view-actions modal-buttons">
+        <button class="btn btn-primary btn-icon" id="btn-daily-start"><span class="btn-ic"><img decoding="async" class="ic" src="img/ui/target.png" alt=""></span><span data-i18n="daily_play">Jugar</span></button>
+        <button class="btn btn-ghost" data-view-back data-i18n="back">Volver</button>
+      </div>
+    </section>
+
+    <!-- Mapa de Aventura -->
+    <section class="hub-view view-adventure" id="view-adventure" data-hub-view="adventure" aria-labelledby="adventure-title" hidden>
+      <div class="m-head"><span class="m-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/rocket.png" alt=""></span><h2 id="adventure-title" data-i18n="adventure_title">Aventura</h2></div>
+      <div class="modal-body view-body">
+        <p class="modal-sub" data-i18n="adventure_sub">Viaje infinito por biomas. Cada capítulo cambia las reglas y termina con un mini-jefe.</p>
+        <div class="adventure-map" id="adventure-map"></div>
+      </div>
+      <div class="modal-actions view-actions">
+        <button class="btn btn-primary btn-lg" id="adventure-continue">Continuar</button>
+        <button class="btn btn-ghost" data-view-back data-i18n="back">Volver</button>
+      </div>
+    </section>
+
+    <!-- Tienda de recursos: monedas, gemas y XP booster. Flujo independiente
+         de la personalización para sustituir el checkout simulado sin tocar
+         tableros ni temas. -->
+    <section class="hub-view view-resource-shop" id="view-resource-shop" data-hub-view="resource-shop" aria-labelledby="resource-shop-title" hidden>
+      <div class="m-head"><span class="m-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/cart.png" alt=""></span><h2 id="resource-shop-title" data-i18n="resource_shop_title">Tienda de recursos</h2></div>
+      <div class="resource-shop-test" role="note">
+        <span class="resource-shop-test-dot" aria-hidden="true"></span>
+        <span><b data-i18n="test_payment_title">Modo de pruebas</b> · <span data-i18n="test_payment_note">Las compras de monedas y gemas se acreditan automáticamente. No se realiza ningún cobro.</span></span>
+      </div>
+      <div class="modal-body view-body resource-shop-scroll">
+        <section class="resource-section resource-section-gems" aria-labelledby="resource-gems-title">
+          <div class="resource-section-head">
+            <span class="resource-section-icon"><img decoding="async" src="img/ui-v2/home/gem.png" alt="" aria-hidden="true"></span>
+            <div><p data-i18n="resource_shop_premium">RECURSO PREMIUM</p><h3 id="resource-gems-title" data-i18n="gems">Gemas</h3></div>
+          </div>
+          <div class="resource-offers" id="gem-offers"></div>
+        </section>
+
+        <section class="resource-section resource-section-coins" aria-labelledby="resource-coins-title">
+          <div class="resource-section-head">
+            <span class="resource-section-icon"><img decoding="async" src="img/ui-generated/home/header-coin-star.png" alt="" aria-hidden="true"></span>
+            <div><p data-i18n="resource_shop_game_currency">DIVISA DEL JUEGO</p><h3 id="resource-coins-title" data-i18n="coins">Monedas</h3></div>
+          </div>
+          <div class="resource-offers" id="coin-offers"></div>
+        </section>
+
+        <section class="resource-section resource-section-xp" aria-labelledby="resource-xp-title">
+          <div class="resource-section-head">
+            <span class="resource-section-icon"><img decoding="async" src="img/ui/potion.png" alt="" aria-hidden="true"></span>
+            <div><p data-i18n="resource_shop_progress">PROGRESIÓN</p><h3 id="resource-xp-title" data-i18n="xp_booster_title">XP Booster</h3></div>
+            <span class="xp-boost-status" id="xp-boost-status"></span>
+          </div>
+          <p class="resource-section-copy" data-i18n="xp_booster_desc">Multiplica ×4 todo el XP ganado en las partidas que empieces mientras esté activo.</p>
+          <div class="resource-offers xp-offers" id="xp-boost-offers"></div>
+        </section>
+
+        <section class="resource-section resource-section-chests" aria-labelledby="resource-chests-title">
+          <div class="resource-section-head">
+            <span class="resource-section-icon"><img decoding="async" src="img/ui/chest.png" alt="" aria-hidden="true"></span>
+            <div><p data-i18n="resource_shop_chests">COFRES</p><h3 id="resource-chests-title" data-i18n="chest_shop_title">Cofres</h3></div>
+          </div>
+          <p class="resource-section-copy" data-i18n="chest_shop_desc">Compra cofres al instante con gemas y ábrelos cuando quieras. El cofre de evento solo se gana jugando.</p>
+          <div class="resource-offers chest-offers" id="chest-offers"></div>
+        </section>
+      </div>
+      <div class="modal-actions view-actions resource-shop-actions">
+        <button class="btn btn-ghost" type="button" data-act="open-style-shop" data-i18n="style_shop_short">Tableros y temas</button>
+        <button class="btn btn-primary" id="resource-shop-close" type="button" data-view-back data-i18n="back">Volver</button>
+      </div>
+    </section>
+
+    <!-- Tienda de personalización: tableros + temas. -->
+    <section class="hub-view view-shop" id="view-shop" data-hub-view="shop" aria-labelledby="shop-title" hidden>
+      <div class="m-head"><span class="m-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/cart.png" alt=""></span><h2 id="shop-title" data-i18n="style_shop_title">Tableros y temas</h2></div>
+      <p class="shop-hint" data-i18n="shop_player_hint">Personaliza tu tarjeta. También puedes conseguir iconos y bordes en los cofres.</p>
+      <div class="modal-body view-body">
+        <div class="shop-list" id="shop-list"></div>
+      </div>
+      <div class="modal-actions view-actions">
+        <button class="btn btn-ghost" type="button" data-act="open-resource-shop" data-i18n="resource_shop_short">Monedas, gemas y XP</button>
+        <button class="btn btn-primary" id="shop-close" data-view-back data-i18n="back">Volver</button>
+      </div>
+    </section>
+
+    <!-- Cofres -->
+    <section class="hub-view view-chests" id="view-chests" data-hub-view="chests" aria-labelledby="chests-title" hidden>
+      <header class="chests-heading">
+        <p class="chests-kicker" data-i18n="chests_kicker">Recompensas</p>
+        <h2 id="chests-title"><img decoding="async" src="img/ui-generated/home/nav-chest.png" alt="" aria-hidden="true"><span data-i18n="chests_title">Cofres</span></h2>
+        <p data-i18n="chests_subtitle">Juega, consigue cofres y descubre premios increíbles.</p>
+        <button class="chests-close" type="button" data-view-back aria-label="Volver">×</button>
+      </header>
+
+      <div class="modal-body view-body chests-scroll">
+        <div class="chest-topbar">
+          <p><span aria-hidden="true">✦</span> <span data-i18n="chest_selected">Cofre seleccionado</span></p>
+          <div class="chest-topbar-actions">
+            <button class="chest-shop-shortcut" type="button" data-act="open-chest-shop"><img decoding="async" src="img/ui/cart.png" alt="" aria-hidden="true"><span data-i18n="chest_store_shortcut">Tienda de cofres</span></button>
+            <button class="chest-catalog-button" id="btn-chest-catalog" type="button"><img decoding="async" src="img/ui/chest.png" alt="" aria-hidden="true"><span data-i18n="chest_view_all">Ver todos</span></button>
+          </div>
+        </div>
+
+        <section class="chest-showcase-shell" id="chest-preview" data-i18n-al="chest_selected" aria-label="Cofre seleccionado">
+          <div class="chest-preview-body" id="chest-preview-body" aria-live="polite"></div>
+          <div class="chest-open-options chest-main-actions">
+            <button class="chest-main-button chest-main-instant" id="btn-open-premium" type="button" disabled>
+              <span class="chest-main-label" id="chest-instant-label" data-i18n="chest_open_now_action">Abrir ahora</span>
+              <span class="chest-main-price"><img decoding="async" src="img/ui/gem.png" alt="" aria-hidden="true"><strong id="premium-chest-cost">10</strong></span>
+            </button>
+            <button class="chest-main-button chest-main-timer" id="btn-open-chest" type="button" disabled>
+              <span class="chest-main-label" id="chest-timer-label" data-i18n="chest_start_unlock">Abrir</span>
+              <span class="chest-main-price"><img decoding="async" src="img/ui/clock.png" alt="" aria-hidden="true"><strong id="chest-timer-value">3 h</strong></span>
+            </button>
+          </div>
+          <aside class="chest-empty-actions" id="chest-empty-actions" hidden>
+            <div class="chest-empty-message">
+              <span class="chest-empty-icon" aria-hidden="true"><img decoding="async" src="img/ui-generated/home/nav-chest.png" alt=""></span>
+              <span><strong data-i18n="empty_chests_title">Aún no tienes cofres</strong><small data-i18n="empty_chests_pitch">Abre premios hoy: compra un cofre al instante o juega para conseguir el siguiente gratis.</small></span>
+            </div>
+            <div class="chest-empty-buttons">
+              <button class="chest-empty-buy" type="button" data-act="open-chest-shop"><img decoding="async" src="img/ui/cart.png" alt="" aria-hidden="true"><span data-i18n="empty_chests_buy">Comprar cofres</span></button>
+              <button class="chest-empty-play" type="button" data-act="chest-play"><img decoding="async" src="img/ui/rocket.png" alt="" aria-hidden="true"><span data-i18n="empty_chests_play">Jugar y ganar</span></button>
+            </div>
+          </aside>
+          <div class="chest-preview-details">
+            <aside class="chest-selected-card" id="chest-selected-card"></aside>
+            <aside class="chest-contents-card">
+              <div class="chest-mini-heading"><span data-i18n="chest_contains">Qué puede contener</span><img decoding="async" src="img/ui/info.png" alt="" aria-hidden="true"></div>
+              <!-- CH-1: buildChests() rellena esta lista con los rangos y % reales del cofre seleccionado. -->
+              <ul id="chest-contents-list">
+                <li><img decoding="async" src="img/ui/coin.png" alt="" aria-hidden="true"><span data-i18n="chest_contents_coins">Monedas</span></li>
+                <li><img decoding="async" src="img/ui/gem.png" alt="" aria-hidden="true"><span data-i18n="chest_contents_gems">Gemas</span></li>
+                <li><img decoding="async" src="img/ui/ticket.png" alt="" aria-hidden="true"><span data-i18n="chest_contents_tickets">Tickets</span></li>
+                <li><img decoding="async" src="img/ui/gift.png" alt="" aria-hidden="true"><span data-i18n="chest_contents_cosmetics">Cosméticos y más</span></li>
+              </ul>
+            </aside>
+          </div>
+        </section>
+
+        <!-- La ceremonia es una pantalla hermana, nunca una capa dentro del cofre cerrado. -->
+        <section class="chest-ceremony-shell" id="chest-ceremony" aria-labelledby="chest-ceremony-title" hidden inert>
+          <h3 class="sr-only" id="chest-ceremony-title" data-i18n="chest_ceremony_title">Apertura del cofre</h3>
+          <div class="chests-body" id="chests-body" aria-live="polite"></div>
+        </section>
+
+        <section class="chest-slots-section" aria-labelledby="chest-slots-title">
+          <div class="chest-section-heading"><span></span><h3 id="chest-slots-title" data-i18n="chest_slots_title">Ranuras de cofres</h3><span></span></div>
+          <div class="chest-slots-grid" id="chest-slots"></div>
+          <div class="chest-reserve" id="chest-reserve" hidden></div>
+        </section>
+
+        <section class="chest-rewards-section" aria-labelledby="chest-rewards-title">
+          <div class="chest-section-heading"><span></span><h3 id="chest-rewards-title" data-i18n="chest_possible_rewards">Posibles recompensas</h3><span></span></div>
+          <!-- CH-4: boosters vuelve a la banda porque ya es una recompensa real con
+               inventario persistente; no se anuncian categorías sin implementación. -->
+          <div class="chest-rewards-grid">
+            <div class="chest-reward-tile"><img decoding="async" src="img/ui/coin.png" alt=""><b data-i18n="chest_contents_coins">Monedas</b><small data-i18n="chest_level_scaled">Escala con tu nivel</small></div>
+            <div class="chest-reward-tile"><img decoding="async" src="img/ui/gem.png" alt=""><b data-i18n="chest_contents_gems">Gemas</b><small data-i18n="chest_level_scaled">Escala con tu nivel</small></div>
+            <div class="chest-reward-tile"><img decoding="async" src="img/ui/ticket.png" alt=""><b data-i18n="chest_contents_tickets">Tickets</b><small>x1 – x10</small></div>
+            <div class="chest-reward-tile"><img decoding="async" src="img/ui/bolt.png" alt=""><b data-i18n="chest_reward_boosters">Potenciadores</b><small>x1</small></div>
+            <div class="chest-reward-tile"><img decoding="async" src="img/ui/planet.png" alt=""><b data-i18n="chest_reward_boards">Tableros</b><small data-i18n="chest_rarity_cosmetic">Especial</small></div>
+            <div class="chest-reward-tile"><img decoding="async" src="img/ui/crystal.png" alt=""><b data-i18n="chest_reward_themes">Temas</b><small data-i18n="chest_rarity_cosmetic">Especial</small></div>
+            <div class="chest-reward-tile"><img decoding="async" src="img/ui/player.png" alt=""><b data-i18n="chest_reward_avatars">Iconos y bordes</b><small data-i18n="chest_rarity_cosmetic">Especial</small></div>
+          </div>
+        </section>
+
+        <section class="chest-progress-card" aria-labelledby="chest-progress-title">
+          <div class="chest-progress-copy">
+            <span class="chest-section-label" id="chest-progress-title" data-i18n="chests_progress_title">Tu progreso</span>
+            <p data-i18n="chests_progress_rule">Cumple objetivos en cualquier modo: cada 3 cae el siguiente cofre del ciclo.</p>
+          </div>
+          <div class="chest-progress-row">
+            <span class="chest-progress-icon" aria-hidden="true"><img decoding="async" src="img/ui-generated/home/nav-chest.png" alt=""></span>
+            <div class="chest-progress-track-wrap">
+              <div class="chest-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0" id="chest-progress-track"><span id="chest-progress-fill"></span></div>
+              <span class="chest-progress-value" id="chest-progress-value">0 / 3</span>
+            </div>
+          </div>
+          <!-- CH-2: pity visible — qué cofre viene y a cuánto queda el mítico garantizado. -->
+          <p class="chest-pity" id="chest-pity"></p>
+          <button class="chest-survival-cta" type="button" data-act="go-surv">
+            <span class="chest-survival-icon" aria-hidden="true"><img decoding="async" src="img/ui/target.png" alt=""></span>
+            <span><b data-i18n="chests_play_survival">Jugar Supervivencia</b><small id="chest-next-wave" data-i18n="chests_next_wave">Próximo cofre en 10 oleadas</small></span>
+            <span class="chest-chevron" aria-hidden="true">›</span>
+          </button>
+        </section>
+
+        <div class="chest-info-strip">
+          <span class="chest-info-icon" aria-hidden="true"><img decoding="async" src="img/ui/info.png" alt=""></span>
+          <p data-i18n="chests_contents_note">Los cofres contienen monedas, gemas, tickets, potenciadores y cosméticos.</p>
+          <button type="button" data-premium-open><span data-i18n="chest_premium_action">Abrir cofre premium</span><small><img decoding="async" src="img/ui/gem.png" alt="" aria-hidden="true"> 25</small></button>
+        </div>
+
+        <section class="chest-catalog" id="chest-catalog" aria-labelledby="chest-catalog-title" hidden>
+          <div class="chest-catalog-head">
+            <div><p data-i18n="chests_kicker">Recompensas</p><h3 id="chest-catalog-title" data-i18n="chest_catalog_title">Tipos de cofres</h3><span data-i18n="chest_catalog_sub">Cuanto más raro sea el cofre, mejores serán sus recompensas.</span></div>
+            <button type="button" id="btn-chest-catalog-close" data-i18n="chest_catalog_close">Volver a mis cofres</button>
+          </div>
+          <div class="chest-catalog-grid" id="chest-catalog-grid"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- Multijugador (próximamente) -->
+    <section class="hub-view view-multi" id="view-multi" data-hub-view="multi" aria-labelledby="multi-title" hidden>
+      <div class="m-head"><span class="m-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/players.png" alt=""></span><h2 id="multi-title" data-i18n="card_multi">Multijugador</h2></div>
+      <div class="modal-body view-body">
+        <div class="multi-vs" aria-hidden="true">
+          <span class="multi-p multi-p1"><span class="icv2" style="--icv2-url:url('img/icons-v2/8-ui/user.svg')" aria-hidden="true"></span></span>
+          <span class="multi-vs-tag">VS</span>
+          <span class="multi-p multi-p2"><span class="icv2" style="--icv2-url:url('img/icons-v2/8-ui/user.svg')" aria-hidden="true"></span></span>
+        </div>
+        <p class="modal-sub" data-i18n="card_multi_desc">Compite contra otro jugador en el mismo tablero. Gana quien termine primero y consiga la mejor puntuación.</p>
+        <div class="multi-feats">
+          <div class="multi-feat"><span class="feat-ic"><img decoding="async" class="ic ic-inline" src="img/ui/trophy.png" alt=""></span><span data-i18n="card_feat_first">Termina primero el tablero</span></div>
+          <div class="multi-feat"><span class="feat-ic"><img decoding="async" class="ic ic-inline" src="img/ui/star.png" alt=""></span><span data-i18n="card_feat_best">Mejor puntuación</span></div>
+          <div class="multi-feat"><span class="feat-ic"><span class="icv2 icv2-inline" style="--icv2-url:url('img/icons-v2/9-media/wi-fi.svg')" aria-hidden="true"></span></span><span data-i18n="card_feat_online">Partidas en línea</span></div>
+        </div>
+        <p class="multi-soon-badge"><span class="icv2 icv2-inline" style="--icv2-url:url('img/icons-v2/8-ui/prohibited.svg')" aria-hidden="true"></span> <span data-i18n="soon_badge">Próximamente</span></p>
+      </div>
+      <div class="modal-actions view-actions modal-buttons">
+        <button class="btn btn-primary btn-icon" id="btn-multi-notify"><span class="btn-ic icv2" style="--icv2-url:url('img/icons-v2/9-media/notification.svg')" aria-hidden="true"></span><span data-i18n="notify_me">Avísame</span></button>
+        <button class="btn btn-ghost" data-view-back data-i18n="back">Volver</button>
+      </div>
+    </section>
+
+    <!-- Perfil: estadísticas + leaderboard + logros -->
+    <section class="hub-view view-profile" id="view-medals" data-hub-view="medals" aria-labelledby="medals-title" hidden>
+      <div class="m-head"><span class="m-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/player.png" alt=""></span><h2 id="medals-title" data-i18n="profile_title">Perfil</h2></div>
+      <div class="modal-body view-body profile-view-body">
+        <div class="profile-player-card profile-only" id="profile-player-card"></div>
+        <button class="profile-edit-name btn btn-ghost btn-sm profile-only" type="button" data-act="edit-name" data-i18n="edit_name_action">Editar nombre</button>
+        <section class="profile-customizer profile-only" aria-labelledby="profile-loadout-title">
+          <div class="profile-section-head"><h3 id="profile-loadout-title" data-i18n="profile_loadout_title">Tu estilo</h3></div>
+          <div class="profile-section-head"><h4 data-i18n="profile_icons_title">Iconos</h4><span id="profile-icons-count"></span></div>
+          <div class="profile-cosmetic-grid" id="profile-icon-grid"></div>
+          <div class="profile-section-head"><h4 data-i18n="profile_borders_title">Bordes</h4><span id="profile-borders-count"></span></div>
+          <div class="profile-cosmetic-grid" id="profile-border-grid"></div>
+        </section>
+        <div class="stats profile-only" id="profile-stats"></div>
+        <h3 class="group-title profile-only" data-i18n="best_by_mode">Mejores marcas por modo</h3>
+        <div class="profile-lb profile-only" id="profile-lb"></div>
+        <h3 class="group-title achievements-heading" data-i18n="achievements">Trofeos</h3>
+        <div class="trophy-summary" id="trophy-summary"></div>
+        <div class="medals-list" id="medals-list"></div>
+      </div>
+      <div class="modal-actions view-actions">
+        <button class="btn btn-primary" data-view-back data-i18n="back">Volver</button>
+      </div>
+    </section>
+
+    <!-- Colecciones: hub con 5 categorías (tableros/temas/iconos/bordes/logros). -->
+    <section class="hub-view view-collections col-view" id="view-collections" data-hub-view="collections" aria-labelledby="collections-title" hidden>
+      <div class="col-hero">
+        <span class="col-hero-emblem" aria-hidden="true"><img decoding="async" src="img/ui-generated/home/nav-collections.png" alt=""></span>
+        <div class="col-hero-copy">
+          <h2 id="collections-title" data-i18n="collections_title">Colecciones</h2>
+          <p data-i18n="collections_hub_sub">Reúne tableros, temas, iconos, bordes y logros mientras juegas.</p>
+        </div>
+        <img decoding="async" class="col-hero-mascot" src="img/ui-generated/home/avatar-robot.png" alt="" aria-hidden="true">
+      </div>
+      <div class="modal-body view-body col-hub-body">
+        <div class="col-pills" id="collections-pills" aria-hidden="true"></div>
+        <div class="col-cards" id="collections-cards"></div>
+      </div>
+    </section>
+
+    <!-- Colecciones: detalle de una categoría (rejilla por rareza). Reutilizable. -->
+    <section class="hub-view view-collection-detail col-view" id="view-collection-detail" data-hub-view="collection-detail" aria-labelledby="col-detail-title" hidden>
+      <div class="col-hero col-hero-detail">
+        <button class="col-back" type="button" data-view-back data-i18n-al="back" aria-label="Volver"><span class="icv2" style="--icv2-url:url('img/icons-v2/8-ui/arrow-left.svg')" aria-hidden="true"></span></button>
+        <span class="col-hero-emblem" id="col-detail-emblem" aria-hidden="true"></span>
+        <div class="col-hero-copy">
+          <h2 id="col-detail-title">—</h2>
+          <p id="col-detail-sub"></p>
+        </div>
+        <img decoding="async" class="col-hero-mascot" src="img/ui-generated/home/avatar-robot.png" alt="" aria-hidden="true">
+      </div>
+      <div class="modal-body view-body col-detail-body">
+        <div class="col-progress" id="col-detail-progress"></div>
+        <div class="col-toolbar" id="col-detail-toolbar"></div>
+        <div class="col-sections" id="col-detail-sections"></div>
+        <div class="col-banner" id="col-detail-banner"></div>
+      </div>
+    </section>
+  </div>
+
+  <script src="native-bridge.js?v=0.1.0" defer></script>
+</body>
+</html>
