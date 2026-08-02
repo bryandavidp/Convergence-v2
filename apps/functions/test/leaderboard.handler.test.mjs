@@ -1,15 +1,21 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { MAX_LEADERBOARD_PAGE_SIZE } from '@convergence/contracts';
+
 import {
   ACCEPTED_GAME_VERSIONS,
   boardsForClaim,
   createLeaderboardService,
+  decodeLeaderboardCursor,
+  DEFAULT_LEADERBOARD_PAGE_SIZE,
   deriveClaimOperationId,
+  encodeLeaderboardCursor,
   MAX_CLAIMS_PER_WINDOW,
   prepareClaim,
+  resolvePageQuery,
 } from '../lib/leaderboard.js';
-import { submitRunClaim } from '../lib/index.js';
+import { getLeaderboardPage, submitRunClaim } from '../lib/index.js';
 
 const NOW = Date.UTC(2026, 7, 2, 12, 0, 0);
 const UID = 'uid-runner-1';
@@ -252,4 +258,119 @@ test('prepareClaim no publica nada: solo verifica', () => {
   const rejected = prepareClaim(UID, claim({ claimedScore: 1 }), NOW);
   assert.equal(rejected.verification, 'rejected');
   assert.deepEqual(rejected.boards, [], 'una rechazada no aspira a ninguna tabla');
+});
+
+/* ===================== Lectura de tablas ===================== */
+
+/** Lector en memoria que ordena e impagina como el de Firestore. */
+function createReader(rows) {
+  return {
+    async page(query, viewerUid) {
+      const ordered = [...rows].sort((a, b) => b.score - a.score || a.userId.localeCompare(b.userId));
+      const start = query.cursor
+        ? ordered.findIndex((row) => row.userId === query.cursor.userId) + 1
+        : 0;
+      const slice = ordered.slice(start, start + query.limit);
+      const viewer = ordered.findIndex((row) => row.userId === viewerUid);
+      const last = slice.at(-1);
+      return {
+        boardId: query.boardId,
+        entries: slice,
+        nextCursor: start + query.limit < ordered.length && last
+          ? encodeLeaderboardCursor({ score: last.score, userId: last.userId })
+          : null,
+        viewerRank: viewer === -1 ? null : viewer + 1,
+      };
+    },
+  };
+}
+
+function entry(userId, score) {
+  return {
+    protocolVersion: 1,
+    userId,
+    displayName: userId,
+    mode: 'contrarreloj',
+    scope: 'daily',
+    scopeId: '2026-08-02',
+    score,
+    verification: 'verified',
+    updatedAt: NOW,
+  };
+}
+
+test('el periodo en curso lo resuelve el servidor, no el cliente', () => {
+  const current = resolvePageQuery({ mode: 'contrarreloj', scope: 'daily' }, NOW);
+  assert.equal(current.boardId, 'contrarreloj:daily:2026-08-02');
+  assert.equal(current.limit, DEFAULT_LEADERBOARD_PAGE_SIZE);
+  assert.equal(current.cursor, null);
+
+  // Un periodo explícito sí se respeta: sirve para consultar históricos.
+  const past = resolvePageQuery(
+    { mode: 'contrarreloj', scope: 'daily', scopeId: '2026-07-01' },
+    NOW,
+  );
+  assert.equal(past.boardId, 'contrarreloj:daily:2026-07-01');
+});
+
+test('el cursor es opaco y va y vuelve sin perder la posición', () => {
+  const raw = encodeLeaderboardCursor({ score: 4820, userId: 'uid-7' });
+  assert.doesNotMatch(raw, /uid-7|4820/, 'el cursor no debe revelar su contenido');
+  assert.deepEqual(decodeLeaderboardCursor(raw), { score: 4820, userId: 'uid-7' });
+});
+
+test('un cursor manipulado se rechaza en vez de consultarse', () => {
+  for (const bad of ['', 'no-base64!!', Buffer.from('sin-separador').toString('base64url')]) {
+    assert.throws(() => decodeLeaderboardCursor(bad), (error) => {
+      assert.equal(error?.code, 'invalid-argument');
+      return true;
+    });
+  }
+});
+
+test('la página respeta el tope, ordena por puntuación y encadena cursor', async () => {
+  const rows = [entry('uid-a', 300), entry('uid-b', 500), entry('uid-c', 100), entry('uid-d', 400)];
+  const api = createLeaderboardService(createStore(), () => NOW, createReader(rows));
+
+  const first = await api.page('uid-c', { mode: 'contrarreloj', scope: 'daily', limit: 2 });
+  assert.deepEqual(first.entries.map((row) => row.userId), ['uid-b', 'uid-d']);
+  assert.equal(first.viewerRank, 4, 'el jugador que consulta va último con 100');
+  assert.ok(first.nextCursor, 'quedan filas, debe haber cursor');
+
+  const second = await api.page('uid-c', {
+    mode: 'contrarreloj', scope: 'daily', limit: 2, cursor: first.nextCursor,
+  });
+  assert.deepEqual(second.entries.map((row) => row.userId), ['uid-a', 'uid-c']);
+  assert.equal(second.nextCursor, null, 'agotada la tabla no debe encadenar más');
+});
+
+test('quien no ha puntuado en la tabla no tiene posición', async () => {
+  const api = createLeaderboardService(createStore(), () => NOW, createReader([entry('uid-a', 10)]));
+  const page = await api.page('uid-desconocido', { mode: 'contrarreloj', scope: 'daily' });
+  assert.equal(page.viewerRank, null);
+});
+
+test('la consulta de tabla exige identidad autenticada', async () => {
+  await assert.rejects(
+    getLeaderboardPage.run({ data: { mode: 'contrarreloj', scope: 'daily' }, auth: undefined }),
+    (error) => {
+      assert.equal(error?.code, 'unauthenticated');
+      return true;
+    },
+  );
+});
+
+test('una consulta que no cumple el contrato se rechaza antes de tocar Firestore', () => {
+  for (const bad of [
+    {},
+    { mode: 'contrarreloj' },
+    { mode: 'contrarreloj', scope: 'mensual' },
+    { mode: 'contrarreloj', scope: 'daily', limit: 0 },
+    { mode: 'contrarreloj', scope: 'daily', limit: MAX_LEADERBOARD_PAGE_SIZE + 1 },
+  ]) {
+    assert.throws(() => resolvePageQuery(bad, NOW), (error) => {
+      assert.equal(error?.code, 'invalid-argument');
+      return true;
+    });
+  }
 });

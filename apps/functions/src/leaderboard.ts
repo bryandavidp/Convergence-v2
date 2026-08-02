@@ -1,7 +1,10 @@
 import {
   leaderboardBoardId,
+  leaderboardEntrySchema,
+  leaderboardPageQuerySchema,
   leaderboardScopeId,
   runClaimSchema,
+  type LeaderboardPage,
   type LeaderboardScope,
   type RunClaim,
   type ScoreVerification,
@@ -272,18 +275,144 @@ class FirestoreLeaderboardStore implements LeaderboardStore {
   }
 }
 
+/* ===================== Lectura de tablas ===================== */
+
+export const DEFAULT_LEADERBOARD_PAGE_SIZE = 20;
+
+/**
+ * Cursor de paginación. Es opaco a propósito: el cliente no debe poder saltar a
+ * una posición arbitraria ni deducir cuántas entradas hay. Lleva la última
+ * puntuación y el uid de la última fila, que es lo que Firestore necesita para
+ * continuar de forma determinista (el orden real es `score desc, __name__ desc`).
+ */
+export interface LeaderboardCursor {
+  readonly score: number;
+  readonly userId: string;
+}
+
+export function encodeLeaderboardCursor(cursor: LeaderboardCursor): string {
+  return Buffer.from(`${cursor.score}\0${cursor.userId}`, 'utf8').toString('base64url');
+}
+
+export function decodeLeaderboardCursor(raw: string): LeaderboardCursor {
+  const decoded = Buffer.from(raw, 'base64url').toString('utf8');
+  const separator = decoded.indexOf('\0');
+  if (separator <= 0) throw invalid('Cursor de paginación inválido.');
+  const score = Number(decoded.slice(0, separator));
+  const userId = decoded.slice(separator + 1);
+  if (!Number.isSafeInteger(score) || score < 0 || userId.length === 0) {
+    throw invalid('Cursor de paginación inválido.');
+  }
+  return { score, userId };
+}
+
+export interface LeaderboardReader {
+  page(query: ResolvedPageQuery, viewerUid: string): Promise<LeaderboardPage>;
+}
+
+export interface ResolvedPageQuery {
+  readonly boardId: string;
+  readonly limit: number;
+  readonly cursor: LeaderboardCursor | null;
+}
+
+/**
+ * Traduce la consulta del cliente a una tabla concreta. El `scopeId` ausente
+ * significa "el periodo en curso", y lo resuelve el servidor con su reloj: si lo
+ * eligiera el cliente podría consultar —y más adelante competir en— un periodo
+ * que no le toca.
+ */
+export function resolvePageQuery(data: unknown, now: number): ResolvedPageQuery {
+  const result = leaderboardPageQuerySchema.safeParse(data);
+  if (!result.success) {
+    throw invalid('Consulta de tabla inválida.', {
+      issues: result.error.issues.slice(0, 20).map((issue) => ({
+        path: issue.path.map(String).join('.'),
+        message: issue.message,
+      })),
+    });
+  }
+  const query = result.data;
+  const scopeId = query.scopeId ?? leaderboardScopeId(query.scope, now);
+  return {
+    boardId: leaderboardBoardId(query.mode, query.scope, scopeId),
+    limit: query.limit ?? DEFAULT_LEADERBOARD_PAGE_SIZE,
+    cursor: query.cursor === undefined ? null : decodeLeaderboardCursor(query.cursor),
+  };
+}
+
+class FirestoreLeaderboardReader implements LeaderboardReader {
+  async page(query: ResolvedPageQuery, viewerUid: string): Promise<LeaderboardPage> {
+    const firestore = getFirestore();
+    const entries = firestore.collection('leaderboards').doc(query.boardId).collection('entries');
+
+    // Solo se publican entradas verificadas (una reclamación rechazada no aspira
+    // a ninguna tabla), así que basta ordenar: no hace falta filtrar por estado
+    // y el índice de campo simple de Firestore cubre la consulta.
+    let page = entries.orderBy('score', 'desc').limit(query.limit + 1);
+    if (query.cursor) {
+      const anchor = await entries.doc(query.cursor.userId).get();
+      // Si la fila del cursor desapareció, se continúa por puntuación: perder la
+      // página es peor que repetir alguna entrada en un empate.
+      page = anchor.exists ? page.startAfter(anchor) : page.startAfter(query.cursor.score);
+    }
+
+    const [snapshot, viewerSnapshot] = await Promise.all([
+      page.get(),
+      entries.doc(viewerUid).get(),
+    ]);
+
+    const rows = snapshot.docs.slice(0, query.limit);
+    const hasMore = snapshot.docs.length > query.limit;
+    const last = rows.at(-1);
+
+    return {
+      boardId: query.boardId,
+      entries: rows.map((doc) => leaderboardEntrySchema.parse(doc.data())),
+      nextCursor: hasMore && last
+        ? encodeLeaderboardCursor({ score: Number(last.get('score')), userId: last.id })
+        : null,
+      viewerRank: await this.rankOf(entries, viewerSnapshot),
+    };
+  }
+
+  /**
+   * Posición del jugador = cuántas puntuaciones la superan, más uno. Se resuelve
+   * con una agregación `count()`, que el servidor cobra por índice y no por
+   * documento leído: contar trayendo la tabla entera no escala.
+   */
+  private async rankOf(
+    entries: FirebaseFirestore.CollectionReference,
+    viewer: FirebaseFirestore.DocumentSnapshot,
+  ): Promise<number | null> {
+    if (!viewer.exists) return null;
+    const score = Number(viewer.get('score'));
+    if (!Number.isFinite(score)) return null;
+    const above = await entries.where('score', '>', score).count().get();
+    return above.data().count + 1;
+  }
+}
+
 export function createLeaderboardService(
   store: LeaderboardStore = new FirestoreLeaderboardStore(),
   now: () => number = Date.now,
+  reader: LeaderboardReader = new FirestoreLeaderboardReader(),
 ) {
+  const clock = () => {
+    const timestamp = now();
+    if (!Number.isSafeInteger(timestamp) || timestamp < 0) {
+      throw new HttpsError('internal', 'El reloj del servicio es inválido.');
+    }
+    return timestamp;
+  };
+
   return {
     async submit(uid: string, data: unknown): Promise<ClaimResult> {
-      const timestamp = now();
-      if (!Number.isSafeInteger(timestamp) || timestamp < 0) {
-        throw new HttpsError('internal', 'El reloj del servicio es inválido.');
-      }
-      const prepared = prepareClaim(uid, data, timestamp);
+      const prepared = prepareClaim(uid, data, clock());
       return store.publish(prepared, 'Jugador');
+    },
+    async page(viewerUid: string, data: unknown): Promise<LeaderboardPage> {
+      return reader.page(resolvePageQuery(data, clock()), viewerUid);
     },
   };
 }

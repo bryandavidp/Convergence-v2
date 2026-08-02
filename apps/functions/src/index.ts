@@ -101,3 +101,13 @@ export const submitRunClaim = onCall(
   { enforceAppCheck: true },
   (request) => leaderboardService.submit(authenticatedUid(request), request.data),
 );
+
+/**
+ * Devuelve una página de una tabla, con la posición del jugador que consulta.
+ * Las entradas son de lectura pública en reglas, pero la paginación y el rango
+ * pasan por aquí: el cursor es opaco y el periodo en curso lo fija el servidor.
+ */
+export const getLeaderboardPage = onCall(
+  { enforceAppCheck: true },
+  (request) => leaderboardService.page(authenticatedUid(request), request.data),
+);
