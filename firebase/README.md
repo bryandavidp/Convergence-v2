@@ -67,9 +67,10 @@ modifican. Consultar los README de raíz y frontend para el paso de confirmació
 | RTDB | `europe-west1`; reglas cloud totalmente cerradas |
 | Auth | Anonymous habilitada y smoke real verde |
 | Apps | Web y Android registradas |
-| Functions | No desplegadas |
-| Hosting | No desplegado |
-| Storage/índices | No desplegados desde este repo |
+| Functions | **Desplegadas** (2026-08-02): 9 callables v2, `europe-west1`, Node 22 |
+| Hosting | **Desplegado** (2026-08-02): `dist-cloud-dev` en `convergence-d1a35.web.app` |
+| Índices | **Desplegados** (2026-08-02) desde `firebase/firestore.indexes.json` |
+| Storage | Sin inicializar en el proyecto; el ruleset cerrado sigue sin desplegar |
 
 `.firebaserc` está ignorado y conserva:
 
@@ -109,6 +110,36 @@ La comprobación externa posterior dio acceso anónimo a `publicConfig` y entrie
 de leaderboards, y HTTP 403 a perfiles, salas, partidas, rutas internas y al
 padre de leaderboards. La RTDB cloud conserva `.read: false` y `.write: false`;
 las reglas granulares de este directorio aún no están desplegadas.
+
+El 2026-08-02, con `validate:full` en verde (631 tests, incluidas las 22 de
+reglas y TTL) y autorización explícita del propietario para desplegar front y
+back, se ejecutó una superficie cada vez sobre `--project dev`:
+
+```powershell
+npm exec -- firebase deploy --only firestore:rules    --project dev --non-interactive
+npm exec -- firebase deploy --only firestore:indexes  --project dev --non-interactive
+npm exec -- firebase deploy --only functions          --project dev --non-interactive --force
+npm exec -- firebase deploy --only hosting            --project dev --non-interactive
+```
+
+`--only storage` falló: Firebase Storage no está inicializado en el proyecto y
+la consola exige un "Get Started" manual para crear el bucket. El ruleset
+cerrado de este directorio sigue sin desplegar.
+
+El primer intento de Functions desplegó los nueve contenedores y **los nueve
+murieron al arrancar** con `Cannot find module '@firebase/app'`.
+`firebase-admin` carga `@firebase/database-compat`, que declara ese paquete como
+peer *opcional*, así que npm no lo instala; en local existía solo porque
+`@convergence/client` depende del SDK `firebase` completo y npm lo elevaba a la
+raíz del workspace. Se añadió a las dependencias de `apps/functions` y el
+redespliegue salió verde. Ver `apps/functions/README.md`.
+
+Hosting sirve `dist-cloud-dev` — el único build del cliente cuya CSP permite
+hablar con Firebase. `dist` (juego offline) sigue siendo lo que empaqueta
+Capacitor para el APK.
+
+`--force` en Functions fijó además la política de limpieza de Artifact Registry
+(imágenes de más de 1 día se borran solas), que si no acumula factura mensual.
 
 ## Política de futuros cambios cloud
 

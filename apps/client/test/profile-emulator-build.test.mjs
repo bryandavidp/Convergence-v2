@@ -147,8 +147,10 @@ test('build:profile-emulator aisla Auth y Functions sin contaminar otros artefac
     await readFile(resolve(profileEmulatorRoot, 'sw.js'), 'utf8'),
     productionSw,
   );
+  // Lo que este test protege es que la variante de emulador nunca se convierta en
+  // el sitio desplegado, no cuál es el artefacto de Hosting en cada momento.
   const hostingConfig = JSON.parse(await readFile(resolve(workspaceRoot, 'firebase.json'), 'utf8'));
-  assert.equal(hostingConfig.hosting.public, 'apps/client/dist');
+  assert.notEqual(hostingConfig.hosting.public, 'apps/client/dist-profile-emulator');
   const capacitorConfig = await readFile(resolve(clientRoot, 'capacitor.config.ts'), 'utf8');
   assert.match(capacitorConfig, /webDir:\s*["']dist["']/);
   assert.doesNotMatch(capacitorConfig, /dist-profile-emulator/);

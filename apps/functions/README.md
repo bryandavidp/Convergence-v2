@@ -5,26 +5,59 @@ frontera autoritativa; Firestore guarda datos durables, Realtime Database
 gestiona presencia/lobby caliente y Storage permanece cerrado hasta definir
 límites y validación.
 
-El proyecto `dev` (`convergence-d1a35`) está enlazado. Solo se ha desplegado el
-ruleset de Firestore; no hay Functions, Hosting, RTDB Rules, Storage ni índices
-desplegados desde este repositorio.
+El proyecto `dev` (`convergence-d1a35`) está enlazado. Desde el 2026-08-02 hay
+desplegados Functions, Hosting, reglas de Firestore e índices. Siguen sin
+desplegar las RTDB Rules (la instancia cloud es deny-all) y Storage, que ni
+siquiera está inicializado en el proyecto.
 
 ## Estado operativo
 
 | Área | Estado actual |
 |---|---|
-| Functions | Node 22 + ESM; `health`, preview y commit legacy exportadas localmente |
+| Functions | Node 22 + ESM; 9 callables v2 desplegadas en `europe-west1` |
 | Auth/App Check | Las tres callables exigen ambos; App Check cloud pendiente |
-| Firestore | Ruleset desplegado en `dev`; escrituras cliente cerradas |
+| Firestore | Ruleset e índices desplegados en `dev`; escrituras cliente cerradas |
 | RTDB | Cloud deny-all; ruleset granular de presence/rooms solo local |
 | Storage | Lectura y escritura completamente cerradas |
 | Emuladores | Suite completa validada con Node 22/JDK 21 y smoke reproducible |
 | Tests | 9 handler + 10 Functions Emulator + 6 Auth E2E + 22 reglas/TTL |
-| Nube | Alias `dev` activo; ningún deploy de Functions/Hosting/RTDB/Storage |
+| Nube | Alias `dev` activo; Functions, Hosting, reglas e índices desplegados; RTDB/Storage no |
 
 El backend sigue aislado de `web/index.html` y del build productivo. La variante
 `dist-profile-emulator` prueba identidad, preview, confirmación y commit contra
 servicios locales; no existen aún perfil cloud general, rankings o multiplayer.
+
+## Artefacto de despliegue
+
+`package.json` **no declara `@convergence/contracts` ni `@convergence/game-core`**
+como dependencias, y es deliberado. Firebase sube solo el directorio `source` de
+`firebase.json` (`apps/functions`), sin `node_modules`, y ejecuta `npm install`
+contra el registro público: esos dos paquetes son del workspace, no están
+publicados, y el despliegue se caía en Cloud Build antes de arrancar.
+
+`scripts/bundle-deploy.mjs` los inlinea con esbuild (junto a `zod`) en
+`lib/index.js`, dejando como externos solo lo que el runtime de Functions sí
+resuelve: `firebase-admin` y `firebase-functions`. El script aborta si algún
+`import` de `@convergence/*` sobrevive al bundle, para que el fallo salga aquí y
+no a mitad de un despliegue.
+
+```powershell
+npm run build:functions:deploy   # tsc (typecheck real) + bundle
+```
+
+Es el `predeploy` de Functions en `firebase.json`, así que un `firebase deploy`
+siempre parte del bundle recién generado. Para desarrollo local y tests nada
+cambia: `npm run build` sigue emitiendo el `lib/` normal de tsc y la resolución
+de los paquetes del workspace la dan los symlinks de npm workspaces.
+
+A la inversa, `@firebase/app` **sí** figura en `dependencies` aunque el código no
+lo importe: `firebase-admin` carga `@firebase/database-compat`, que lo declara
+como peer *opcional*, así que npm no lo instala solo. En local existía únicamente
+porque `@convergence/client` depende del SDK `firebase` completo y npm lo elevaba
+a la raíz del workspace. En la nube solo se instalan las dependencias de este
+paquete, así que faltaba y **los nueve contenedores morían al arrancar** con
+`Cannot find module '@firebase/app'`. Depender del hoisting de otro workspace es
+invisible hasta que despliegas.
 
 ## Responsabilidades
 
@@ -74,7 +107,8 @@ emuladores.
 |---|---:|---|
 | `firebase-functions` | 7.3.2 | Callables v2 y opciones de runtime |
 | `firebase-admin` | 14.2.0 | Acceso autoritativo desde backend |
-| `@convergence/contracts` | 0.1.0 | Validación de payloads compartidos |
+| `@firebase/app` | 0.16.0 | Peer opcional que `firebase-admin` necesita en la nube |
+| `@convergence/contracts` | 0.1.0 | Validación de payloads; se inlinea en el bundle, no se declara |
 | Firebase CLI, raíz | 15.25.0 | Build local, emuladores y futuro deploy |
 | TypeScript compatible, raíz | 6.0.2 | Compilación ESM mediante `tsc6` |
 

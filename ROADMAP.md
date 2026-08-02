@@ -44,9 +44,15 @@ claims están cerrados: `submitRunClaim` recalcula con el núcleo y solo publica
 lo que cuadra. Quedan la materialización del Top N, la consulta paginada con la
 posición del jugador, y alias/moderación.
 
-**Nada está desplegado en cloud** salvo las Firestore Rules. El proyecto `dev`
-ya está en plan Blaze con presupuesto de 5 €; siguen faltando App Check en
-monitor y la verificación de TTL antes del primer despliegue de Functions.
+Desplegado en cloud el 2026-08-02, con `validate:full` verde y autorización del
+propietario: Firestore Rules e índices, las 9 callables v2 en `europe-west1` y
+Hosting sirviendo `dist-cloud-dev`. Fuera quedan las RTDB Rules (instancia
+deny-all) y Storage, que ni siquiera está inicializado en el proyecto. El
+proyecto `dev` está en plan Blaze con presupuesto de 5 €.
+
+⚠️ **App Check sigue sin configurar en la nube y las callables llevan
+`enforceAppCheck: true`**, así que rechazarán toda llamada hasta registrarlo.
+Falta también la verificación de TTL.
 
 ## Fase 0 — Aislamiento y baseline
 

@@ -23,7 +23,8 @@ plataformas nativas viven aquí.
 - Firebase Functions, reglas e índices están preparados para desarrollo local.
   El proyecto `dev` está conectado, Auth anónima funciona en un artefacto cloud
   separado y Firestore ya aplica el ruleset versionado. No se han desplegado
-  Functions, RTDB Rules, Storage, índices ni Hosting.
+  RTDB Rules ni Storage. Functions, reglas de Firestore, índices y Hosting sí
+  están desplegados desde el 2026-08-02 (ver `firebase/README.md`).
 - La importación legacy `cv_meta` ya recorre preview, confirmación explícita,
   commit transaccional y perfil revisionado contra Emulator Suite. El outbox es
   durable y está ligado al UID; economía, cofres y rankings quedan excluidos.

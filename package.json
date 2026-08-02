@@ -26,6 +26,7 @@
     "build:profile:emulator": "npm run build:contracts && npm run build:profile-emulator --workspace @convergence/client",
     "build:cloud:dev": "npm run build:cloud-dev --workspace @convergence/client",
     "build:functions": "npm run build --workspace @convergence/functions",
+  "build:functions:deploy": "npm run build:contracts && npm run build:core && npm run build:deploy --workspace @convergence/functions",
     "build": "npm run build:packages && npm run build:web && npm run build:functions",
     "smoke:web": "npm run smoke --workspace @convergence/client",
     "smoke:cloud:auth": "npm run smoke:cloud-auth --workspace @convergence/client",

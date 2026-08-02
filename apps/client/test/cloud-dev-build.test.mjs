@@ -195,8 +195,12 @@ test('build:cloud-dev crea Auth cloud aislado sin contaminar produccion', async 
   const cloudSw = await readFile(resolve(cloudDevRoot, 'sw.js'), 'utf8');
   assert.equal(cloudSw, productionSwBefore);
 
+  // Hosting sirve este artefacto desde el despliegue del 2026-08-02: es el único
+  // build del cliente que puede hablar con Firebase (los demás llevan una CSP con
+  // `connect-src 'self'`). Capacitor sigue empaquetando `dist`, así que el APK
+  // conserva el juego offline y no arrastra el bundle de Auth.
   const hostingConfig = JSON.parse(await readFile(resolve(workspaceRoot, 'firebase.json'), 'utf8'));
-  assert.equal(hostingConfig.hosting.public, 'apps/client/dist');
+  assert.equal(hostingConfig.hosting.public, 'apps/client/dist-cloud-dev');
   const capacitorConfig = await readFile(resolve(clientRoot, 'capacitor.config.ts'), 'utf8');
   assert.match(capacitorConfig, /webDir:\s*["']dist["']/);
   assert.doesNotMatch(capacitorConfig, /dist-cloud-dev/);

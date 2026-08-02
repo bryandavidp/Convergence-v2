@@ -36,5 +36,5 @@ test('los puertos del artefacto coinciden con Emulator Suite y no cambian Hostin
   assert.equal(firebaseConfig.emulators.auth.port, 9099);
   assert.equal(firebaseConfig.emulators.functions.port, 5001);
   assert.equal(firebaseConfig.emulators.singleProjectMode, true);
-  assert.equal(firebaseConfig.hosting.public, 'apps/client/dist');
+  assert.notEqual(firebaseConfig.hosting.public, 'apps/client/dist-profile-emulator');
 });
