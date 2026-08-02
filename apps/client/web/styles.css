@@ -16220,3 +16220,41 @@ body.reduced-fx #screen-start #view-how .how-float-token { animation: none; }
 .sync-status-badge[data-status="synced"] { background: rgba(38, 222, 129, 0.2); color: var(--good); border: 1px solid var(--good); }
 .sync-status-badge[data-status="error"], .sync-status-badge[data-status="conflict"], .sync-status-badge[data-status="identity-mismatch"] { background: rgba(255, 77, 77, 0.2); color: #ff6b6b; border: 1px solid #ff6b6b; }
 
+
+/* ===================== Clasificación (fase 6) =====================
+ * Tabla de Contrarreloj con sus cuatro periodos. Sin animaciones de entrada por
+ * fila: la lista se repinta al cambiar de periodo y al paginar, y animar cada
+ * repintado es exactamente el patrón que RENDER_STABILITY_PLAN desaconseja.
+ */
+.ranks-view-body { display:grid; gap:14px; }
+
+.ranks-scopes { display:flex; gap:8px; flex-wrap:wrap; }
+.ranks-scope {
+  flex:1 1 auto; min-width:78px; padding:9px 12px; border-radius:999px;
+  border:1px solid var(--line); background:var(--surface-2); color:var(--txt-2);
+  font:inherit; font-size:.92rem; font-weight:600; cursor:pointer;
+}
+.ranks-scope:hover { color:var(--txt); border-color:var(--accent); }
+.ranks-scope.on { background:var(--accent); border-color:var(--accent); color:#0b0f22; }
+
+.ranks-status { color:var(--txt-2); font-size:.94rem; text-align:center; padding:6px 0; }
+
+.ranks-list { list-style:none; margin:0; padding:0; display:grid; gap:6px; }
+.ranks-row {
+  display:grid; grid-template-columns:2.4rem 1fr auto; align-items:center; gap:10px;
+  padding:10px 12px; border-radius:12px;
+  background:var(--surface-2); border:1px solid var(--line);
+}
+/* La fila propia se destaca con borde y fondo, no con color de texto: hay que
+   distinguirla también sin percibir el matiz. */
+.ranks-row.is-me { border-color:var(--accent); background:rgba(120,160,255,.14); }
+.ranks-pos { font-variant-numeric:tabular-nums; font-weight:700; color:var(--txt-2); text-align:right; }
+.ranks-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ranks-score { font-variant-numeric:tabular-nums; font-weight:700; }
+
+.ranks-viewer { text-align:center; color:var(--txt-2); font-size:.94rem; }
+.ranks-more-wrap { display:flex; justify-content:center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ranks-scope { transition:none; }
+}

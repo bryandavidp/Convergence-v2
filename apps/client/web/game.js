@@ -16,7 +16,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.37.7';
+  const VERSION = '2.37.8';
 
   /* Núcleo de reglas compartido con el backend (`packages/game-core`). Llega
    * como script clásico cargado antes que game.js, porque el cliente es vanilla
@@ -522,6 +522,12 @@
     set zenDiff(v) { localStorage.setItem('cv_zen_diff', v || 'normal'); },
     get preboostSeen() { return localStorage.getItem('cv_preboost') === '1'; },
     set preboostSeen(v) { localStorage.setItem('cv_preboost', v ? '1' : '0'); },
+    // Alias público de la clasificación. Se pide explícitamente la primera vez
+    // que el jugador publica: el nombre de la pantalla de bienvenida se dio como
+    // privado y convertirlo en público sin avisar sería un cambio de uso a su
+    // espalda.
+    get rankAlias() { return localStorage.getItem('cv_rank_alias') || ''; },
+    set rankAlias(v) { v ? localStorage.setItem('cv_rank_alias', v) : localStorage.removeItem('cv_rank_alias'); },
     get lastMode() { return localStorage.getItem('cv_last_mode') || ''; },
     set lastMode(v) { v ? localStorage.setItem('cv_last_mode', v) : localStorage.removeItem('cv_last_mode'); },
     get swipeHintSeen() { return localStorage.getItem('cv_swipe_hint') === '1'; },
@@ -563,6 +569,18 @@
         play: 'Jugar', reward: 'Recompensa diaria', menu_profile: 'Logros', menu_shop: 'Tienda',
         menu_settings: 'Ajustes', how: '¿Cómo se juega?', install: 'Instalar app', sound: 'Sonido', best: 'Mejor puntuación:',
         tab_log: 'Logros', tab_events: 'Eventos', tab_shop: 'Tienda', tab_home: 'Inicio', tab_guide: 'Guía', tab_collections: 'Colecciones', tab_set: 'Ajustes', missions_title: '🎯 Misiones', missions_sub: 'Completa objetivos diarios y semanales para acelerar tu progreso.',
+        // Clasificación (fase 6)
+        ranks_title: 'Clasificación', ranks_sub: 'Contrarreloj. Solo se publican las partidas verificadas por el servidor.',
+        ranks_scope_daily: 'Hoy', ranks_scope_weekly: 'Semana', ranks_scope_season: 'Temporada', ranks_scope_all: 'Histórico',
+        ranks_loading: 'Cargando clasificación…', ranks_empty: 'Todavía no hay marcas en este periodo. ¡Sé el primero!',
+        ranks_offline: 'Sin conexión con el servidor de rankings. Tu progreso local está a salvo.',
+        ranks_error: 'No se pudo cargar la clasificación. Inténtalo de nuevo en un momento.',
+        ranks_more: 'Ver más', ranks_you: 'Tú', ranks_your_rank: 'Tu posición: {n}', ranks_unranked: 'Aún no tienes marca en este periodo.',
+        ranks_alias_title: 'Elige tu alias público', ranks_alias_sub: 'Aparecerá en la clasificación junto a tu puntuación. No uses tu nombre real.',
+        ranks_alias_ph: 'Alias (máx. 24)', ranks_alias_save: 'Publicar', ranks_alias_cancel: 'Ahora no',
+        ranks_alias_invalid: 'El alias debe tener entre 1 y 24 caracteres.',
+        ranks_published: '¡Publicado! Puesto {n} en {b}.', ranks_not_improved: 'No has mejorado tu marca en este periodo.',
+        ranks_rejected: 'El servidor no pudo verificar esta partida, así que no se ha publicado.',
         events_title: 'Eventos', events_sub: 'Tus retos, recompensas y actividades de hoy, reunidos en un solo lugar.',
         events_daily_label: 'Cada día', events_progress_label: 'Progreso diario', events_today_label: 'Solo hoy', events_rewards_label: 'Premios',
         events_view: 'Ver', events_play: 'Jugar', events_open: 'Abrir', events_reward_ready: 'Lista para reclamar', events_reward_claimed: 'Reclamada hoy',
@@ -999,6 +1017,18 @@
         play: 'Play', reward: 'Daily reward', menu_profile: 'Profile', menu_shop: 'Shop',
         menu_settings: 'Settings', how: 'How to play?', install: 'Install app', sound: 'Sound', best: 'Best score:',
         tab_log: 'Trophies', tab_events: 'Events', tab_shop: 'Shop', tab_home: 'Home', tab_guide: 'Guide', tab_collections: 'Collections', tab_set: 'Settings', missions_title: '🎯 Missions', missions_sub: 'Complete daily and weekly objectives to speed up your progress.',
+        // Leaderboards (phase 6)
+        ranks_title: 'Leaderboard', ranks_sub: 'Time Attack. Only runs verified by the server are published.',
+        ranks_scope_daily: 'Today', ranks_scope_weekly: 'Week', ranks_scope_season: 'Season', ranks_scope_all: 'All time',
+        ranks_loading: 'Loading leaderboard…', ranks_empty: 'No scores in this period yet. Be the first!',
+        ranks_offline: 'No connection to the leaderboard server. Your local progress is safe.',
+        ranks_error: 'Could not load the leaderboard. Try again in a moment.',
+        ranks_more: 'Show more', ranks_you: 'You', ranks_your_rank: 'Your rank: {n}', ranks_unranked: 'You have no score in this period yet.',
+        ranks_alias_title: 'Choose your public alias', ranks_alias_sub: 'It shows on the leaderboard next to your score. Do not use your real name.',
+        ranks_alias_ph: 'Alias (max 24)', ranks_alias_save: 'Publish', ranks_alias_cancel: 'Not now',
+        ranks_alias_invalid: 'The alias must be between 1 and 24 characters.',
+        ranks_published: 'Published! Rank {n} on {b}.', ranks_not_improved: 'You did not beat your score in this period.',
+        ranks_rejected: 'The server could not verify this run, so it was not published.',
         events_title: 'Events', events_sub: "Today's challenges, rewards and activities, all in one place.",
         events_daily_label: 'Every day', events_progress_label: 'Daily progress', events_today_label: 'Today only', events_rewards_label: 'Rewards',
         events_view: 'View', events_play: 'Play', events_open: 'Open', events_reward_ready: 'Ready to claim', events_reward_claimed: 'Claimed today',
@@ -3212,6 +3242,178 @@
    * Las secciones de metajuego comparten la pantalla de Inicio, su appbar y su
    * navegación inferior. Solo las decisiones transitorias de una partida
    * siguen usando Modal (pausa, reanimación y resultados). */
+  /* ===================== Ranks (clasificación en nube) =====================
+   * Lee las tablas por callable y publica la partida terminada.
+   *
+   * Regla de degradación: la nube es OPCIONAL. Sin sesión, sin App Check o sin
+   * red, la vista muestra su estado y el juego sigue igual. Nada de aquí puede
+   * impedir jugar ni bloquear el fin de partida.
+   */
+  const Ranks = {
+    MODE: 'contrarreloj',
+    SCOPES: [
+      { id: 'daily', key: 'ranks_scope_daily' },
+      { id: 'weekly', key: 'ranks_scope_weekly' },
+      { id: 'season', key: 'ranks_scope_season' },
+      { id: 'all-time', key: 'ranks_scope_all' },
+    ],
+    scope: 'daily',
+    entries: [],
+    cursor: null,
+    viewerRank: null,
+    loading: false,
+
+    /** El transporte lo publica el bundle modular tras iniciar sesión. */
+    transport() { return window.ConvergenceLeaderboards || null; },
+    available() { return !!this.transport(); },
+
+    open() {
+      this.scope = 'daily'; this.entries = []; this.cursor = null; this.viewerRank = null;
+      this.buildScopes(); this.render();
+      HubViews.open('ranks');
+      void this.load({ reset: true });
+    },
+
+    buildScopes() {
+      const host = $('#ranks-scopes'); if (!host) return;
+      host.innerHTML = this.SCOPES.map((scope) => (
+        `<button class="ranks-scope${scope.id === this.scope ? ' on' : ''}" role="tab" type="button"`
+        + ` aria-selected="${scope.id === this.scope}" data-scope="${scope.id}">${I18n.t(scope.key)}</button>`
+      )).join('');
+      host.querySelectorAll('[data-scope]').forEach((button) => button.addEventListener('click', () => {
+        if (this.loading || button.dataset.scope === this.scope) return;
+        this.scope = button.dataset.scope;
+        this.entries = []; this.cursor = null; this.viewerRank = null;
+        Sound.ui(); this.buildScopes(); this.render();
+        void this.load({ reset: true });
+      }));
+    },
+
+    status(messageKey) {
+      const el = $('#ranks-status'); if (!el) return;
+      el.textContent = messageKey ? I18n.t(messageKey) : '';
+      el.hidden = !messageKey;
+    },
+
+    async load({ reset = false } = {}) {
+      const transport = this.transport();
+      if (!transport) { this.status('ranks_offline'); this.render(); return; }
+      if (this.loading) return;
+      this.loading = true;
+      this.status('ranks_loading');
+      try {
+        const page = await transport.page({
+          mode: this.MODE,
+          scope: this.scope,
+          limit: 20,
+          ...(reset || !this.cursor ? {} : { cursor: this.cursor }),
+        });
+        this.entries = reset ? page.entries : this.entries.concat(page.entries);
+        this.cursor = page.nextCursor;
+        this.viewerRank = page.viewerRank;
+        this.status(this.entries.length ? null : 'ranks_empty');
+      } catch (error) {
+        ErrLog.push('ranks', error && error.message);
+        this.status('ranks_error');
+      } finally {
+        this.loading = false;
+        this.render();
+      }
+    },
+
+    render() {
+      const list = $('#ranks-list'); if (!list) return;
+      // La fila propia se marca por alias: el uid en nube no se guarda en local
+      // y no hace falta para resaltar una fila.
+      const alias = Storage.rankAlias;
+      list.innerHTML = this.entries.map((entry, index) => {
+        const mine = alias && entry.displayName === alias;
+        return `<li class="ranks-row${mine ? ' is-me' : ''}">`
+          + `<span class="ranks-pos">${index + 1}</span>`
+          + `<span class="ranks-name">${esc(entry.displayName)}</span>`
+          + `<span class="ranks-score">${fmtNum(entry.score)}</span></li>`;
+      }).join('');
+
+      const viewer = $('#ranks-viewer');
+      if (viewer) {
+        viewer.hidden = !this.entries.length;
+        viewer.textContent = this.viewerRank
+          ? I18n.t('ranks_your_rank').replace('{n}', String(this.viewerRank))
+          : I18n.t('ranks_unranked');
+      }
+      const more = $('#ranks-more');
+      if (more) {
+        more.hidden = !this.cursor;
+        more.disabled = this.loading;
+      }
+    },
+
+    initEvents() {
+      const more = $('#ranks-more');
+      if (more) more.addEventListener('click', () => { Sound.ui(); void this.load(); });
+    },
+
+    /* ---------- Publicación ---------- */
+
+    /** Pide alias la primera vez; devuelve null si el jugador declina. */
+    async ensureAlias() {
+      const stored = Storage.rankAlias;
+      if (stored) return stored;
+      const raw = window.prompt(`${I18n.t('ranks_alias_title')}\n${I18n.t('ranks_alias_sub')}`, '');
+      if (raw === null) return null;
+      const alias = String(raw).trim().slice(0, 24);
+      if (!alias) { Toasts.show(I18n.t('ranks_alias_invalid'), 'bad', 2200); return null; }
+      Storage.rankAlias = alias;
+      return alias;
+    },
+
+    /**
+     * Publica la partida recién terminada. Silencioso por diseño: si no hay
+     * nube, si la bitácora desbordó o si el modo no puntúa, no se dice nada —
+     * no es un error del jugador y no debe interrumpir el fin de partida.
+     */
+    async publishRun() {
+      const transport = this.transport();
+      if (!transport) return;
+      if (State.mode !== this.MODE) return;
+      if (!RunLog.publishable()) return;
+      if (!(await this.ensureAlias())) return;
+
+      try {
+        const result = await transport.submit({
+          protocolVersion: 1,
+          idempotencyKey: `${RunLog.startedAt}-${State.score}-${RunLog.events.length}`,
+          mode: State.mode,
+          difficulty: State.diff,
+          claimedScore: State.score,
+          seed: State.seed == null ? 0 : State.seed,
+          startedAt: RunLog.startedAt,
+          finishedAt: Date.now(),
+          gameVersion: VERSION,
+          finalStateHash: `${State.score}:${State.removedTotal}:${State.maxCombo}`,
+          events: RunLog.events,
+        });
+        if (result.verification === 'rejected') {
+          Toasts.show(I18n.t('ranks_rejected'), 'bad', 2600);
+          return;
+        }
+        if (!result.improvedBoards || !result.improvedBoards.length) {
+          Toasts.show(I18n.t('ranks_not_improved'), 'info', 2200);
+          return;
+        }
+        Toasts.show(
+          I18n.t('ranks_published')
+            .replace('{n}', '')
+            .replace('{b}', String(result.improvedBoards.length)),
+          'good', 2600, 'trophy',
+        );
+      } catch (error) {
+        // Publicar es un extra: un fallo aquí no puede ensuciar el fin de partida.
+        ErrLog.push('ranks-publish', error && error.message);
+      }
+    },
+  };
+
   const HubViews = {
     current: 'home',
     host: null,
@@ -10526,6 +10728,9 @@
       // La bitácora se cierra aquí: lo que venga después (resúmenes, cofres) ya
       // no es partida y no puede añadir eventos a una run terminada.
       RunLog.stop();
+      // Publicar es un extra opcional y asincrono: nunca se espera a que
+      // termine ni se deja que un fallo suyo interrumpa el fin de partida.
+      void Ranks.publishRun();
       // Cierra el relato de la jugada anterior antes de encolar resultados de run.
       Toasts.reset();
       // Supervivencia: registra el récord de tiempo sobrevivido.
@@ -14377,6 +14582,7 @@
     Perf.init();
     applyLargeText();
     HubViews.init();
+    Ranks.initEvents();
     // CH-1: la cuenta atrás del chip de cofres en Inicio se refresca sola; 30 s
     // basta (el detalle por segundo vive en la vista de cofres con su ticker).
     setInterval(() => {
@@ -14518,6 +14724,7 @@
       else if (a === 'nav-shop') { Sound.ensure(); openResourceShop(); }
       else if (a === 'nav-missions') { Sound.ui(); buildMissions(); HubViews.open('missions', { nav: 'nav-events' }); }
       else if (a === 'nav-collections') { Sound.ensure(); openCollections(); }
+      else if (a === 'nav-ranks') { Sound.ensure(); Ranks.open(); }
       else if (a === 'nav-home') { Sound.ui(); HubViews.home({ clearHistory: true }); refreshStart(); }
     });
 
@@ -14740,5 +14947,5 @@
   else init();
 
   // Hook opcional para pruebas/QA (solo con ?dev en la URL). No afecta al juego normal.
-  if (location.search.indexOf('dev') !== -1) window.__cv = { State, Engine, Game, Render, Config, Storage, FX, Meta, IconPacks, PlayerIcons, PlayerBorders, playerAvatarHtml, Storefront, XP_BOOST_MULTIPLIER, CHEST_TYPES, CHEST_TYPE_ORDER, CHEST_SKIP_GEMS_PER_HOUR, chestOdds, chestRollCount, ChestNotices, Econ, ShopFX, Settings, Music, Loop, Sound, Tiles, Boosters, Modifiers, Rules, Themes, Cosmetics, Boards, Worlds, Classic, Coach, BossCoach, Adventure, Survival, Bosses, Share, I18n, Toasts, Feedback, RNG, RunSave, Picker, PreLevel, DailyMut, Modal, HubViews, Perf, ModeSignals, ModeLaunch, HomeModeCarousel, buildHomeModeCarousel, buildMissions, showHome, refreshStart, applyLanguage, Haptics, Platform, RunLog };
+  if (location.search.indexOf('dev') !== -1) window.__cv = { State, Engine, Game, Render, Config, Storage, FX, Meta, IconPacks, PlayerIcons, PlayerBorders, playerAvatarHtml, Storefront, XP_BOOST_MULTIPLIER, CHEST_TYPES, CHEST_TYPE_ORDER, CHEST_SKIP_GEMS_PER_HOUR, chestOdds, chestRollCount, ChestNotices, Econ, ShopFX, Settings, Music, Loop, Sound, Tiles, Boosters, Modifiers, Rules, Themes, Cosmetics, Boards, Worlds, Classic, Coach, BossCoach, Adventure, Survival, Bosses, Share, I18n, Toasts, Feedback, RNG, RunSave, Picker, PreLevel, DailyMut, Modal, HubViews, Perf, ModeSignals, ModeLaunch, HomeModeCarousel, buildHomeModeCarousel, buildMissions, showHome, refreshStart, applyLanguage, Haptics, Platform, RunLog, Ranks };
 })();

@@ -132,7 +132,7 @@ async function commit(uid, key, previewResult) {
   );
 }
 
-test('los callables mantienen Auth y App Check obligatorios', async () => {
+test('los callables mantienen Auth obligatorio', async () => {
   const key = `legacy-auth-${runId}`;
   const request = validImport(key);
 
@@ -143,19 +143,34 @@ test('los callables mantienen Auth y App Check obligatorios', async () => {
   );
   assertCallableError(anonymousPreview, 'UNAUTHENTICATED');
 
-  const authWithoutAppCheck = await callCallable(
-    'previewLegacyProgressImport',
-    request,
-    { appCheck: false },
-  );
-  assertCallableError(authWithoutAppCheck, 'UNAUTHENTICATED');
-
   const anonymousCommit = await callCallable(
     'commitLegacyProgressImport',
     {},
     { auth: false },
   );
   assertCallableError(anonymousCommit, 'UNAUTHENTICATED');
+});
+
+test('sin App Check la llamada pasa: la exigencia la decide la consola', async () => {
+  // Este test afirmaba lo contrario mientras `enforceAppCheck: true` vivía en el
+  // código. Al desplegar App Check de verdad se pasó a fase Monitor: forzar
+  // desde el código el día que se configura habría cortado en seco a quien no
+  // consiga un token de reCAPTCHA —una extensión, un dominio sin autorizar— y el
+  // sintoma habria llegado como "no cargan los rankings", sin metrica detras.
+  //
+  // Lo que NO se relajo, y por eso sigue habiendo test arriba: la identidad. El
+  // uid autoritativo sale de Auth y una llamada anonima se rechaza.
+  const request = validImport(`legacy-appcheck-${runId}`);
+  const authWithoutAppCheck = await callCallable(
+    'previewLegacyProgressImport',
+    request,
+    { appCheck: false },
+  );
+  assert.equal(
+    authWithoutAppCheck.response.status,
+    200,
+    'en fase Monitor la falta de App Check no puede rechazar la llamada',
+  );
 });
 
 test('preview no toca perfil y commit guarda solo claim no autoritativo', async () => {

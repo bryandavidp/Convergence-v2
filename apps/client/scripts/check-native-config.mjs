@@ -31,8 +31,12 @@ if (!appName.trim()) {
   errors.push('appName no puede estar vacío.');
 }
 
-if (webDir !== 'dist') {
-  errors.push(`webDir debe ser "dist"; valor actual: ${webDir}.`);
+// El APK empaqueta el artefacto con nube desde la vertical de rankings: `dist`
+// lleva `connect-src 'self'` y no puede alcanzar Firebase, asi que una app
+// nativa construida sobre el no tendria clasificacion. Se sigue exigiendo un
+// valor concreto —no cualquiera— para que un webDir accidental no llegue al APK.
+if (webDir !== 'dist-cloud-dev') {
+  errors.push(`webDir debe ser "dist-cloud-dev"; valor actual: ${webDir}.`);
 }
 
 try {

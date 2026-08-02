@@ -12,8 +12,8 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌌</text></svg>" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <meta name="convergence-core-script" content="game-core.js?v=2.37.7" />
-  <meta name="convergence-legacy-script" content="game.js?v=2.37.7" />
+  <meta name="convergence-core-script" content="game-core.js?v=2.37.8" />
+  <meta name="convergence-legacy-script" content="game.js?v=2.37.8" />
   <!-- PWA -->
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -26,7 +26,7 @@
   <meta property="og:description" content="Junta iconos iguales y encadena combos. Aventura infinita, supervivencia, contrarreloj y más." />
   <meta property="og:image" content="icon-512.png" />
   <meta name="twitter:card" content="summary" />
-  <link rel="stylesheet" href="styles.css?v=2.37.7" />
+  <link rel="stylesheet" href="styles.css?v=2.37.8" />
 </head>
 <body data-screen="login">
   <!-- ============ PANTALLA DE CARGA INICIAL (BOOT) ============
@@ -533,6 +533,12 @@
             <button class="event-card-action" type="button" data-act="home-daily" data-i18n="events_play">Jugar</button>
           </article>
 
+          <article class="event-card">
+            <span class="event-card-art" aria-hidden="true"><img decoding="async" src="img/ui/trophy.png" alt=""></span>
+            <span class="event-card-copy"><small data-i18n="ranks_scope_daily">Hoy</small><b data-i18n="ranks_title">Clasificación</b><span id="events-ranks-status" data-i18n="ranks_sub">Contrarreloj</span></span>
+            <button class="event-card-action" type="button" data-act="nav-ranks" data-i18n="events_view">Ver</button>
+          </article>
+
           <article class="event-card event-card-choice" id="events-choice-card" hidden>
             <span class="event-card-art" aria-hidden="true"><img decoding="async" src="img/ui-generated/home/nav-chest.png" alt=""></span>
             <span class="event-card-copy"><small data-i18n="daily_choice_event_label">Primera victoria</small><b data-i18n="daily_choice_title">Cofre de elección</b><span id="events-choice-status">Elige 1 de 3 premios</span></span>
@@ -554,6 +560,23 @@
       <div class="modal-body view-body missions-view-body">
         <div class="missions-hero" aria-hidden="true"><span>✦</span><div><b>CONVERGENCE OPS</b><small>DAILY SIGNAL</small></div></div>
         <div class="start-missions" id="start-missions"></div>
+      </div>
+      <div class="modal-actions view-actions">
+        <button class="btn btn-primary" data-view-back data-i18n="back">Volver</button>
+      </div>
+    </section>
+    <!-- Rankings (fase 6): tabla de Contrarreloj con sus cuatro periodos -->
+    <section class="hub-view view-ranks" id="view-ranks" data-hub-view="ranks" aria-labelledby="ranks-title" hidden>
+      <div class="m-head"><span class="m-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/trophy.png" alt=""></span><h2 id="ranks-title" data-i18n="ranks_title">Clasificación</h2></div>
+      <p class="hub-view-intro" data-i18n="ranks_sub">Contrarreloj. Solo se publican las partidas verificadas por el servidor.</p>
+      <div class="modal-body view-body ranks-view-body">
+        <div class="ranks-scopes" id="ranks-scopes" role="tablist" aria-labelledby="ranks-title"></div>
+        <div class="ranks-status" id="ranks-status" role="status" aria-live="polite"></div>
+        <ol class="ranks-list" id="ranks-list"></ol>
+        <div class="ranks-viewer" id="ranks-viewer" hidden></div>
+        <div class="ranks-more-wrap">
+          <button class="btn btn-ghost" id="ranks-more" type="button" data-i18n="ranks_more" hidden>Ver más</button>
+        </div>
       </div>
       <div class="modal-actions view-actions">
         <button class="btn btn-primary" data-view-back data-i18n="back">Volver</button>

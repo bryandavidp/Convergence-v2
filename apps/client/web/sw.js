@@ -8,10 +8,10 @@
  *   imágenes ya descargadas sobreviven a las actualizaciones (antes se
  *   re-descargaba todo en cada bump). Súbelo a mano (v1 → v2 …) SOLO si cambias
  *   arte reutilizando la misma ruta de archivo. Ver docs/ASSET_CACHING_PLAN.md. */
-const CACHE = 'cv-cache-v2.37.7';
+const CACHE = 'cv-cache-v2.37.8';
 const ASSET_CACHE = 'cv-assets-v1';
 const ASSETS = [
-  './', './index.html', './styles.css?v=2.37.7', './native-bridge.js?v=0.1.2', './game-core.js?v=2.37.7', './game.js?v=2.37.7', './manifest.webmanifest',
+  './', './index.html', './styles.css?v=2.37.8', './native-bridge.js?v=0.1.2', './game-core.js?v=2.37.8', './game.js?v=2.37.8', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable.png', './apple-touch-icon.png',
   './fonts/NunitoSans-Variable.ttf',
 ];

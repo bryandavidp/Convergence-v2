@@ -67,7 +67,7 @@ modifican. Consultar los README de raíz y frontend para el paso de confirmació
 | RTDB | `europe-west1`; reglas cloud totalmente cerradas |
 | Auth | Anonymous habilitada y smoke real verde |
 | Apps | Web y Android registradas |
-| Functions | **Desplegadas** (2026-08-02): 9 callables v2, `europe-west1`, Node 22 |
+| Functions | **Desplegadas** (2026-08-02): 10 callables v2, `europe-west1`, Node 22 |
 | Hosting | **Desplegado** (2026-08-02): `dist-cloud-dev` en `convergence-d1a35.web.app` |
 | Índices | **Desplegados** (2026-08-02) desde `firebase/firestore.indexes.json` |
 | Storage | **Desplegado** (2026-08-02): ruleset cerrado a lectura y escritura |
@@ -141,6 +141,19 @@ Capacitor para el APK.
 
 `--force` en Functions fijó además la política de limpieza de Artifact Registry
 (imágenes de más de 1 día se borran solas), que si no acumula factura mensual.
+
+La vertical de rankings de Contrarreloj quedó conectada de punta a punta el
+2026-08-02: `getLeaderboardPage` sirve Top N, rango del jugador y paginación por
+cursor opaco, y `submitRunClaim` publica solo lo que el servidor logra
+reproducir. **No hizo falta índice compuesto**: como una reclamación rechazada no
+aspira a ninguna tabla, solo existen entradas verificadas y basta ordenar por
+puntuación, que Firestore cubre con índices de campo simple. Un test de emulador
+lo fija: si dejara de ser cierto, falla ahí con `FAILED_PRECONDITION` y no en
+producción.
+
+App Check quedó en **fase Monitor**: las callables llevan `enforceAppCheck:
+false` para que la consola decida sin bloquear a nadie mientras se miden
+métricas. Activar Enforce es un cambio de consola, sin redespliegue.
 
 ## Política de futuros cambios cloud
 

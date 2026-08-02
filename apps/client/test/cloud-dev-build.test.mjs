@@ -238,7 +238,8 @@ test('build:cloud-dev crea Auth cloud aislado sin contaminar produccion', async 
   // conserva el juego offline y no arrastra el bundle de Auth.
   const hostingConfig = JSON.parse(await readFile(resolve(workspaceRoot, 'firebase.json'), 'utf8'));
   assert.equal(hostingConfig.hosting.public, 'apps/client/dist-cloud-dev');
+  // Capacitor empaqueta ESTE artefacto desde la vertical de rankings: es el unico
+  // build del cliente cuya CSP puede alcanzar Firebase.
   const capacitorConfig = await readFile(resolve(clientRoot, 'capacitor.config.ts'), 'utf8');
-  assert.match(capacitorConfig, /webDir:\s*["']dist["']/);
-  assert.doesNotMatch(capacitorConfig, /dist-cloud-dev/);
+  assert.match(capacitorConfig, /webDir:\s*["']dist-cloud-dev["']/);
 });

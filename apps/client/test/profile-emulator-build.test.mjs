@@ -151,7 +151,8 @@ test('build:profile-emulator aisla Auth y Functions sin contaminar otros artefac
   // el sitio desplegado, no cuál es el artefacto de Hosting en cada momento.
   const hostingConfig = JSON.parse(await readFile(resolve(workspaceRoot, 'firebase.json'), 'utf8'));
   assert.notEqual(hostingConfig.hosting.public, 'apps/client/dist-profile-emulator');
+  // Lo que protege este test es que la variante de emulador nunca acabe dentro
+  // del APK, no cual es el artefacto nativo en cada momento.
   const capacitorConfig = await readFile(resolve(clientRoot, 'capacitor.config.ts'), 'utf8');
-  assert.match(capacitorConfig, /webDir:\s*["']dist["']/);
   assert.doesNotMatch(capacitorConfig, /dist-profile-emulator/);
 });

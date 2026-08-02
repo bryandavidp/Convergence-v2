@@ -262,7 +262,8 @@ conectividad y conservar un único progreso coherente en dos dispositivos.
 
 ## Fase 6 — Rankings por modo
 
-Estado: **iniciada** — contratos y periodos cerrados
+Estado: **vertical de Contrarreloj cerrada de punta a punta** — tabla visible
+y conectada; faltan los otros cinco modos y el replay de tablero/spawn
 
 Decidido el 2026-08-02: primera tabla para **Contrarreloj**, con **los cuatro
 periodos** (histórico, temporada, semana y día) y **replay completo siempre**.
@@ -290,12 +291,25 @@ jugador.
       versiones es explícita —no un mínimo— porque las reglas de puntuación
       pueden cambiar entre versiones, y un test exige que la VERSION del cliente
       esté en ella para que un release no rechace en silencio a todos.
+- [x] Registrar la partida en el cliente (`RunLog`) con TODA fuente de puntos.
+      Faltaban dos que puntúan fuera de convergencia —casilla bonus y bomba— y
+      sin ellas el recálculo salía corto: la marca legítima se rechazaba en
+      silencio. El replay del servidor las modela como eventos propios.
+      Balance verificado idéntico con y sin bitácora (`balance-sim`).
+- [x] Vista de clasificación con los cuatro periodos, rango propio y paginación,
+      en ES y EN. Degrada sola: sin nube, sin red o con bitácora desbordada, el
+      juego sigue igual y nada bloquea el fin de partida.
 - [ ] Reproducir además tablero y spawn: hoy se recalcula desde la bitácora de
       eventos, así que un cliente aún podría mentir sobre cuántos iconos convergió.
-- [ ] Materializar Top N y posición alrededor del jugador.
-- [ ] Añadir paginación, alias seguro, moderación y borrado de cuenta.
+- [x] Materializar Top N y posición alrededor del jugador (`getLeaderboardPage`).
+      El rango sale de una agregación `count()`, no de leer la tabla entera, y el
+      cursor es opaco para que nadie salte a un offset arbitrario. Sin índice
+      compuesto: solo se publican entradas verificadas, así que basta ordenar.
+- [x] Paginación por cursor opaco y alias público pedido explícitamente al
+      publicar por primera vez (el nombre de bienvenida se dio como privado).
+- [ ] Moderación del alias y borrado de cuenta.
 - [x] Modelar la separación provisional/verificado/rechazado en el contrato.
-- [ ] Aplicarla en la materialización: en esta fase solo se publica lo verificado.
+- [x] Aplicarla en la materialización: en esta fase solo se publica lo verificado.
 - [ ] Crear alertas de scores imposibles y límites de frecuencia.
 
 Criterio de salida: ninguna puntuación autoritativa puede escribirse directamente

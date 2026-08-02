@@ -14,8 +14,8 @@ se queda hasta que entren presence/salas.
 
 | Área | Estado actual |
 |---|---|
-| Functions | Node 22 + ESM; 9 callables v2 desplegadas en `europe-west1` |
-| Auth/App Check | Las tres callables exigen ambos; App Check cloud pendiente |
+| Functions | Node 22 + ESM; 10 callables v2 desplegadas en `europe-west1` |
+| Auth/App Check | Todas exigen Auth. App Check en fase Monitor: `enforceAppCheck: false` en código para que mande la consola sin bloquear a nadie mientras se miden métricas |
 | Firestore | Ruleset e índices desplegados en `dev`; escrituras cliente cerradas |
 | RTDB | Cloud deny-all; ruleset granular de presence/rooms solo local |
 | Storage | Ruleset desplegado; lectura y escritura completamente cerradas |
