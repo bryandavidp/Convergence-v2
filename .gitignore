@@ -61,3 +61,6 @@ apps/client/ios/**/xcuserdata/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Temporal propio de los emuladores Java (ver scripts/emulator-temp.mjs)
+.emulator-tmp/

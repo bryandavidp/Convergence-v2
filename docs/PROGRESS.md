@@ -917,6 +917,45 @@ Mientras dure el bloqueo, el trabajo de backend puede avanzar con
   habla con un servidor de pruebas en memoria.
 - UI para resolver un conflicto de perfil: se señala, pero no se elige.
 
+## 2026-08-02 — Causa raíz del bloqueo de emuladores: `%TEMP%` rechaza AF_UNIX
+
+### Qué era en realidad
+
+Ni el JDK ni el estado del driver: reiniciar Windows no cambió nada. `AF_UNIX`
+funciona en `C:\cvtmp`, en el perfil del usuario, en `C:\ProgramData` y dentro
+del propio repositorio, y **falla solo en `C:\Users\<user>\AppData\Local\Temp`**.
+
+Como Java NIO crea el pipe interno de `Selector.open()` sobre un socket AF_UNIX
+ubicado en `java.io.tmpdir` —que en Windows sale de `%TEMP%`—, todo emulador
+Java moría con `failed to create a child event loop`. El directorio no es un
+reparse point y el único antivirus registrado es Windows Defender, así que algo
+filtra esa carpeta concreta.
+
+### Corrección
+
+- `scripts/emulator-temp.mjs` da a los emuladores un temporal propio dentro del
+  repositorio (`.emulator-tmp/`, ignorado por Git). Solo se aplica en Windows:
+  en POSIX Java resuelve `java.io.tmpdir` a `/tmp` e ignora esas variables.
+- El mismo helper localiza el JDK si `java` no está en el PATH, prefiriendo el
+  21 homologado, y solo modifica el entorno del proceso hijo. Esto cumple el
+  criterio de la fase 1: reproducir las pruebas sin depender de instalaciones
+  globales ni de variables exportadas a mano en la sesión.
+- `scripts/firebase.mjs` envuelve firebase-tools reenviando argumentos, y todos
+  los scripts de `package.json` que arrancaban emuladores pasan por ahí.
+
+### Evidencia
+
+- `npm run validate:full` **desde un shell limpio**, sin `JAVA_HOME` ni `TMP`:
+  **506/506** = 468 del gate normal + 38 de backend (6 Auth Emulator, 10
+  Functions Emulator, 21 allow/deny y 1 invariante TTL/índices).
+- Es la primera vez que el gate completo, emuladores incluidos, se ejecuta sin
+  preparación manual del entorno.
+
+### Pendiente
+
+Queda sin explicar **qué** filtra `%TEMP%`. El síntoma sigue latente para
+cualquier otra herramienta Java del sistema que no pase por estos scripts.
+
 
 
 

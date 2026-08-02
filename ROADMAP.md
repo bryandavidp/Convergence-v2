@@ -82,14 +82,12 @@ Estado: **gate local completado; CI pendiente**
 - [ ] Confirmar tras reiniciar la sesión que PowerShell hereda fnm/Node 22. En
       shells no interactivos hay que activar fnm a mano: sin ello `check:node`
       encuentra Node 23 y aborta el gate.
-- [ ] Reparar `AF_UNIX` en la máquina de desarrollo: `connect` devuelve
-      `Invalid argument` (EINVAL) para cualquier proceso Java, así que
-      `Selector.open()` falla y **ningún** emulador Java arranca. Bloquea
-      `test:functions:emulator` y `test:rules`. No depende del JDK (reproducido
-      con JBR 21.0.11 y 25.0.2), ni del shell, ni de la ruta del socket: `bind`
-      funciona y `connect` falla. Primer remedio a probar: reiniciar Windows;
-      si persiste, revisar antivirus/EDR que intercepte sockets de dominio Unix.
-      El JDK 21 homologado sigue disponible en `~/.jdks/jbr-21.0.11`.
+- [x] Desbloquear los emuladores Java: `%TEMP%` rechaza el `connect` de los
+      sockets AF_UNIX que Java NIO usa para el pipe de `Selector.open()`. Los
+      emuladores reciben ahora un temporal propio y, si `java` no está en el
+      PATH, el JDK homologado se localiza solo (`scripts/emulator-temp.mjs`).
+- [ ] Averiguar qué intercepta `%TEMP%` (probablemente Defender u otro filtro):
+      el síntoma sigue latente para cualquier otra herramienta Java del sistema.
 - [ ] Añadir CI para Windows/Linux con artefactos de test.
 
 Criterio de salida: una instalación limpia reproduce el mismo build y todas las

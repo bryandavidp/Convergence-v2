@@ -1,18 +1,15 @@
 import { spawn } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+
+import {
+  emulatorEnv,
+  firebaseCli,
+  repositoryRoot,
+} from '../../../scripts/emulator-temp.mjs';
 
 const projectId = 'demo-convergence-v2';
 if (!projectId.startsWith('demo-')) {
   throw new Error('El runner se niega a usar un proyecto que no sea demo-*');
 }
-
-const testDirectory = dirname(fileURLToPath(import.meta.url));
-const repositoryRoot = resolve(testDirectory, '../../..');
-const firebaseCli = resolve(
-  repositoryRoot,
-  'node_modules/firebase-tools/lib/bin/firebase.js',
-);
 
 const child = spawn(
   process.execPath,
@@ -30,7 +27,7 @@ const child = spawn(
   {
     cwd: repositoryRoot,
     env: {
-      ...process.env,
+      ...emulatorEnv(),
       CONVERGENCE_TEST_PROJECT_ID: projectId,
       GCLOUD_PROJECT: projectId,
       GOOGLE_CLOUD_PROJECT: projectId,
