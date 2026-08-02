@@ -74,6 +74,8 @@ function installSpyCore() {
     iconPenaltyCount() { calls.push(['iconPenaltyCount']); return 4; },
     penalizedSpawnRate() { calls.push(['penalizedSpawnRate']); return 1234; },
     areaClearPoints() { calls.push(['areaClearPoints']); return 66; },
+    // Devuelve 0 para que el delta de puntuación siga siendo solo la convergencia.
+    milestoneBonusFor() { calls.push(['milestoneBonusFor']); return 0; },
     timeGainFor() { calls.push(['timeGainFor']); return 0; },
     applyTimeGain() { calls.push(['applyTimeGain']); return 42; },
     applyMistakePenalty() { calls.push(['applyMistakePenalty']); return 11; },
@@ -190,6 +192,22 @@ test('el fallo con penalización usa el núcleo para iconos y ritmo de spawn', (
   } finally {
     delete globalThis.window.ConvergenceGameCore;
   }
+});
+
+test('ninguna fuente de puntuación queda fuera del núcleo', () => {
+  // Criterio de salida de la fase 4: si alguien añade puntos en game.js sin
+  // pasar por game-core, este test lo caza. Cada `State.score +=` debe estar a
+  // tiro de una llamada o constante del núcleo.
+  const lines = gameJs.split(/\r?\n/);
+  const offenders = [];
+  lines.forEach((line, index) => {
+    if (!/State\.score \+=/.test(line)) return;
+    // La ventana debe cubrir la expresión completa y su ternario de respaldo,
+    // que en la convergencia ocupa una docena de líneas por encima del `+=`.
+    const nearby = lines.slice(Math.max(0, index - 14), index + 3).join('\n');
+    if (!/GameCore\.(core|ready)/.test(nearby)) offenders.push(`${index + 1}: ${line.trim()}`);
+  });
+  assert.deepEqual(offenders, [], 'puntos añadidos sin pasar por el núcleo');
 });
 
 test('las constantes de Contrarreloj siguen viviendo en Config para los otros caminos', () => {

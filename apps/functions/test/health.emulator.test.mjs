@@ -83,5 +83,14 @@ test('callable health acepta Auth + App Check válidos en el emulador', async ()
     },
   );
   assert.equal(Number.isInteger(body?.result?.serverTime), true);
-  assert.ok(body.result.serverTime >= before && body.result.serverTime <= after);
+  // Tolerancia de un segundo: `Date.now()` en Windows avanza a saltos de ~15 ms,
+  // así que en una llamada de 12-17 ms `before` y `after` caen en el mismo tick
+  // y el reloj del emulador puede quedar un tick fuera de la ventana. Sin
+  // margen, este test falla la mitad de las veces sin que nada esté roto.
+  const CLOCK_TOLERANCE_MS = 1_000;
+  assert.ok(
+    body.result.serverTime >= before - CLOCK_TOLERANCE_MS
+    && body.result.serverTime <= after + CLOCK_TOLERANCE_MS,
+    `serverTime ${body.result.serverTime} fuera de [${before}, ${after}]`,
+  );
 });

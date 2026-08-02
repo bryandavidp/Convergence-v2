@@ -71,10 +71,6 @@ export function reduceGameStateV2(
       nextState.combo += 1;
       const points = converging.length * 10 * nextState.combo;
       nextState.score += points;
-
-      if (!hasAvailableMoves(nextState.board) && nextState.iconCount > 0) {
-        // tablero bloqueado sin movimientos
-      }
     } else {
       nextState.combo = 0;
     }

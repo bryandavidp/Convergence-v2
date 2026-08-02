@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import './config/runtime.js';
 import { legacyProgressImportService } from './legacy-progress.js';
-import { verifyTimeAttackClaim } from './time-attack-score.js';
+import { verifyRunClaim } from './run-score.js';
 import { userProfileService } from './user-profile.js';
 
 initializeApp();
@@ -79,14 +79,14 @@ export const getUserBestRecords = onCall(
 );
 
 /**
- * Recalcula una partida de Contrarreloj con el mismo núcleo que ejecuta el
- * cliente. El score que llega nunca se acepta como dato: se compara con el
- * recalculado. Es el cimiento de la verificación de la fase 6.
+ * Recalcula una partida de **cualquiera de los seis modos** con el mismo núcleo
+ * que ejecuta el cliente. El score que llega nunca se acepta como dato: se
+ * compara con el recalculado. Es el cimiento de la verificación de la fase 6.
  */
-export const verifyTimeAttackRun = onCall(
+export const verifyRun = onCall(
   { enforceAppCheck: true },
   (request) => {
     authenticatedUid(request);
-    return verifyTimeAttackClaim(request.data);
+    return verifyRunClaim(request.data);
   },
 );

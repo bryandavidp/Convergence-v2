@@ -1344,3 +1344,53 @@ contaminación en vez del enrutado.
 El backend solo recalcula Contrarreloj; faltan los otros cinco modos. Y siguen
 sin extraer los sistemas que puntúan fuera de la convergencia (efectos de
 baldosa, recompensas de oleada y de jefe).
+
+## 2026-08-02 — Fase 4 cerrada: el núcleo puntúa en cliente y backend
+
+### Completado
+
+- El backend recalcula ya **los seis modos**, no solo Contrarreloj.
+  `run-score.ts` sustituye a `time-attack-score.ts` con una reclamación
+  etiquetada por modo.
+- Principio de diseño del contrato: el cliente envía **hechos acotados** (combo,
+  oleada, potenciadores activos) y el servidor **deriva** los multiplicadores con
+  el núcleo. Aceptar los multiplicadores ya calculados permitiría enviar un
+  `tempMultiplier` de 1000 y que el recálculo lo bendijera. Hay un test que lo
+  fija explícitamente.
+- El nivel declarado solo se respeta donde el modo lo tiene: en Supervivencia se
+  deriva de la oleada y en Contrarreloj, Zen y Tutorial es siempre 1, aunque el
+  cliente mande otra cosa. Zen ignora una Fiebre declarada porque el modo no
+  puede tenerla.
+- Se extrajeron las últimas fuentes de puntuación fuera de la convergencia:
+  limpieza por área, cristales y baldosa de bonus. **Las oleadas y los jefes no
+  suman puntuación** —dan monedas y recursos—, así que la nota anterior del
+  roadmap era incorrecta y no había nada que extraer ahí.
+- Los hitos de combo también pasan ya por el núcleo; seguían leyendo `Config`.
+- Eliminado el `if` sin cuerpo de `reducer.ts`.
+
+### El test que cierra la fase
+
+`game-core-wiring.test.js` recorre `game.js` y falla si encuentra **cualquier**
+`State.score +=` que no pase por el núcleo. Es lo que convierte "creo que están
+todos" en una garantía: fue el que descubrió que los hitos de combo se habían
+quedado fuera.
+
+### Flake preexistente corregido
+
+`health.emulator.test.mjs` fallaba una de cada dos ejecuciones. La causa no era
+contención: `Date.now()` en Windows avanza a saltos de ~15 ms, así que en una
+llamada de 12-17 ms `before` y `after` caen en el mismo tick y el reloj del
+emulador puede quedar un tick fuera de la ventana. Se añadió una tolerancia de un
+segundo, suficiente para la granularidad y aún estrecha para detectar una marca
+de tiempo realmente equivocada. Verificado con cuatro pasadas seguidas.
+
+### Evidencia
+
+- `npm run validate:full`: **605/605** = 558 del gate normal + 47 de backend.
+- Triple bump a **2.37.6**.
+
+### Criterio de salida de la fase 4
+
+Semilla, estado y comandos producen el mismo resultado sin DOM, y pueden
+validarse en servidor **con la puntuación que el jugador vio**. Cumplido para los
+seis modos.

@@ -25,9 +25,9 @@ menor riesgo funcional.
 | 1. Toolchain reproducible | `validate:full` verde desde shell limpio; falta CI | 2–4 días | Node 22, lockfile y `npm run validate` verde |
 | 2. Shell nativo inicial | APK debug 2.37.3 reproducible; faltan matriz manual, dispositivo real e iOS | 3–5 días | PWA + Android instalado + proyecto iOS generado |
 | 3. Capa de plataforma y storage | Hardening automatizado verde; faltan lectura dual y matriz manual | 1–2 semanas | mismo perfil sobre web/Preferences, migración reversible |
-| 4. Núcleo determinista y RunSave v2 | Los seis modos extraídos y **enrutados en el cliente**; falta el backend y lo que puntúa fuera de la convergencia | 2–4 semanas | reglas puras, estado RNG y replays reproducibles |
+| 4. Núcleo determinista y RunSave v2 | **Completada**: seis modos con paridad, ejecutados en cliente y backend | 2–4 semanas | reglas puras, estado RNG y replays reproducibles |
 | 5. Firebase local, Auth y progreso | Perfil en nube con CAS validado contra emulador; faltan UI de conflicto, App Check y despliegue | 2–3 semanas | emuladores, cuenta y sincronización offline segura |
-| 6. Rankings por modo | Desbloqueada para Contrarreloj; el resto espera a que cliente y backend ejecuten el núcleo | 1–2 semanas | tablas verificadas por modo/periodo |
+| 6. Rankings por modo | **Desbloqueada** para los seis modos | 1–2 semanas | tablas verificadas por modo/periodo |
 | 7. Salas y lobby en tiempo real | Pendiente | 2–3 semanas | crear/unirse/listo/presencia/reconexión |
 | 8. Partida multijugador | Pendiente | 3–6 semanas | comandos ordenados, snapshots, rejoin y cierre |
 | 9. Servicios nativos y hardening | Pendiente | 2–4 semanas | push, App Check, observabilidad y seguridad |
@@ -39,25 +39,17 @@ un árbitro persistente en Cloud Run; se decidirá con métricas del prototipo.
 
 ## Próximo hito activo
 
-**Terminar la fase 4**: los seis modos ya tienen sus reglas en el núcleo con
-paridad verificada contra partidas reales del motor. Quedan dos cosas para
-cerrarla: extraer los sistemas que puntúan fuera de la convergencia (efectos de
-baldosa, recompensas de oleada y de jefe) y enrutar por el núcleo los cuatro
-modos que en el cliente siguen usando la expresión histórica. El backend solo
-recalcula Contrarreloj.
+**Fase 6 — rankings.** La fase 4 queda cerrada: los seis modos tienen sus reglas
+en `@convergence/game-core`, con paridad verificada contra partidas reales del
+motor, y tanto el cliente como el backend las ejecutan. Un test recorre
+`game.js` y falla si alguien añade puntuación sin pasar por el núcleo.
 
-El perfil en nube ya está cerrado de punta a punta y verificado contra Emulator
-Suite: revisión autoritativa, compare-and-set, recibos idempotentes, fusión
-monótona de marcas y conflicto explícito que nunca sobrescribe. Contrarreloj
-puntúa desde el núcleo compartido en cliente y backend.
+Decidido el 2026-08-02: la fase 6 se ataca como **vertical de un solo modo** y con
+**replay completo siempre**. Con el núcleo cerrado, esa política ya es posible.
 
-**Nada está desplegado en cloud** salvo las Firestore Rules. Las siete callables
-existen solo en el repositorio. Antes del primer despliegue de Functions hacen
-falta presupuesto y alertas, TTL verificado y App Check en monitor.
-
-La APK 2.37.3 es debug-signed para pruebas: no es beta ni release de tienda.
-Siguen pendientes la matriz manual en dispositivo real y todo iOS, bloqueado por
-falta de acceso a macOS.
+**Nada está desplegado en cloud** salvo las Firestore Rules. Antes del primer
+despliegue de Functions hacen falta presupuesto y alertas, TTL verificado y App
+Check en monitor.
 
 ## Fase 0 — Aislamiento y baseline
 
@@ -146,9 +138,7 @@ conoce directamente si corre en navegador, Android o iOS.
 
 ## Fase 4 — Núcleo determinista y RunSave v2
 
-Estado: **casi completada** — los seis modos tienen sus reglas extraídas y
-verificadas contra el motor. Falta lo que puntúa fuera de la convergencia y que
-cliente y backend ejecuten el núcleo en todos los modos, no solo en dos.
+Estado: **completada**
 
 - [x] Extraer Mulberry32 compatible y añadir snapshot/restore del stream.
       Verificado contra la secuencia del runtime 2.37.1.
@@ -165,16 +155,13 @@ cliente y backend ejecuten el núcleo en todos los modos, no solo en dos.
 - [x] Crear fixtures legacy ↔ core de verdad: los tests de paridad conducen
       partidas reales del motor con reloj virtual y semilla fija en las tres
       dificultades y comparan toque a toque contra el núcleo, en los seis modos.
-- [ ] Extraer los sistemas que puntúan **fuera** de la convergencia: efectos de
-      baldosa (bomba/área), recompensas de oleada y de jefe. Hoy los tests de
-      paridad excluyen esos toques en vez de predecirlos.
-- [~] Ejecutar el mismo core en cliente y validador de backend. El cliente
-      puntúa **los seis modos** desde el núcleo (convergencia, bono de tablero
-      vacío y perfecto, penalización por fallo y limpieza por área), verificado
-      con partidas idénticas con y sin núcleo. El backend solo recalcula
-      Contrarreloj: faltan los otros cinco.
-- [ ] Eliminar el `if` sin cuerpo de `reducer.ts:75`, que detecta tablero
-      bloqueado tras un tap y no hace nada.
+- [x] Extraer los sistemas que puntúan **fuera** de la convergencia: limpieza
+      por área, cristales y baldosa de bonus. Las oleadas y los jefes resultaron
+      no sumar puntuación —dan monedas y recursos—, así que no había nada que
+      extraer ahí.
+- [x] Ejecutar el mismo core en cliente y validador de backend, en **los seis
+      modos**. Un test recorre `game.js` y falla si aparece cualquier suma de
+      puntuación que no pase por el núcleo.
 
 Criterio de salida: semilla + estado + comandos producen el mismo resultado sin
 DOM y pueden validarse/reproducirse en servidor **con la puntuación que el

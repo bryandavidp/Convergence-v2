@@ -16,7 +16,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.37.5';
+  const VERSION = '2.37.6';
 
   /* Núcleo de reglas compartido con el backend (`packages/game-core`). Llega
    * como script clásico cargado antes que game.js, porque el cliente es vanilla
@@ -7857,7 +7857,10 @@
         // Estallido: todos los cristales del tablero puntúan y desaparecen.
         for (let i = 0; i < State.tiles.length; i++) {
           const t = State.tiles[i];
-          if (t && t.type === 'crystal') { State.score += 50; State.tiles[i] = null; cleared.push(i); }
+          if (t && t.type === 'crystal') {
+            State.score += GameCore.ready() ? GameCore.core.CRYSTAL_POINTS : 50;
+            State.tiles[i] = null; cleared.push(i);
+          }
         }
         Render.bump($('#hud-score'));
       } else if (e.id === 'void') {
@@ -9677,9 +9680,12 @@
       if (!State.bestPlay || points > State.bestPlay.points) {
         State.bestPlay = { points, combo: State.combo, removed, wave: State.mode === 'supervivencia' ? Survival.wave : 0, level: State.level };
       }
-      if (Config.MILESTONES[State.combo]) {
-        State.score += Config.MILESTONES[State.combo];
-        Render.scoreFeedback(`Combo ×${State.combo} · +${Config.MILESTONES[State.combo]}`, color, 'combo');
+      const milestone = GameCore.ready()
+        ? GameCore.core.milestoneBonusFor(State.combo)
+        : (Config.MILESTONES[State.combo] || 0);
+      if (milestone) {
+        State.score += milestone;
+        Render.scoreFeedback(`Combo ×${State.combo} · +${milestone}`, color, 'combo');
         Sound.milestone(); Haptics.milestone();
       }
 
@@ -9718,7 +9724,13 @@
         const t = State.tiles[idx];
         // Cristal: +50 base; la reliquia de Aventura (GM-07) añade +30.
         if (t) {
-          if (t.type === 'crystal') State.score += 50 + (State.mode === 'aventura' && Adventure.hasRelic('crystal') ? 30 : 0);
+          if (t.type === 'crystal') {
+            State.score += GameCore.ready()
+              ? (State.mode === 'aventura'
+                ? GameCore.core.adventureCrystalPoints(Adventure.hasRelic('crystal'))
+                : GameCore.core.CRYSTAL_POINTS)
+              : 50 + (State.mode === 'aventura' && Adventure.hasRelic('crystal') ? 30 : 0);
+          }
           // Ancla de jefe (JF-02): converger el icono que vive encima = 1 golpe al
           // jefe. Las blindadas nunca llegan aquí: su solid=true las excluye de conv.
           if (t.type === 'boss') Bosses.onAnchorHit(idx);
@@ -9877,7 +9889,8 @@
       let touched = [i];
       State.tiles[i] = null;
       if (eff === 'bonus') {
-        State.score += 30; Render.popup(i, '+30', 'var(--good)'); Render.bump($('#hud-score'));
+        const bonusPoints = GameCore.ready() ? GameCore.core.BONUS_TILE_POINTS : 30;
+        State.score += bonusPoints; Render.popup(i, `+${bonusPoints}`, 'var(--good)'); Render.bump($('#hud-score'));
         Sound.milestone(); Haptics.milestone();
       } else if (eff === 'portal') {
         const filled = [], empties = [];
