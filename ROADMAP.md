@@ -22,12 +22,12 @@ menor riesgo funcional.
 | Fase | Estado | Duración orientativa | Salida verificable |
 |---|---|---:|---|
 | 0. Aislamiento y baseline | Completada | 1–2 días | Repo independiente y 343/343 tests |
-| 1. Toolchain reproducible | Gate local verde; falta CI | 2–4 días | Node 22, lockfile y `npm run validate` verde |
-| 2. Shell nativo inicial | Primer APK debug verificado; falta paridad manual/iOS | 3–5 días | PWA + Android instalado + proyecto iOS generado |
-| 3. Capa de plataforma y storage | Hardening automatizado verde; falta matriz manual | 1–2 semanas | mismo perfil sobre web/Preferences, migración reversible |
-| 4. Núcleo determinista y RunSave v2 | Iniciada | 2–4 semanas | reglas puras, estado RNG y replays reproducibles |
-| 5. Firebase local, Auth y progreso | Importación/perfil local E2E; faltan UI, App Check y cloud | 2–3 semanas | emuladores, cuenta y sincronización offline segura |
-| 6. Rankings por modo | Pendiente | 1–2 semanas | tablas verificadas por modo/periodo |
+| 1. Toolchain reproducible | `validate:full` verde desde shell limpio; falta CI | 2–4 días | Node 22, lockfile y `npm run validate` verde |
+| 2. Shell nativo inicial | APK debug 2.37.3 reproducible; faltan matriz manual, dispositivo real e iOS | 3–5 días | PWA + Android instalado + proyecto iOS generado |
+| 3. Capa de plataforma y storage | Hardening automatizado verde; faltan lectura dual y matriz manual | 1–2 semanas | mismo perfil sobre web/Preferences, migración reversible |
+| 4. Núcleo determinista y RunSave v2 | **Reabierta**: Contrarreloj extraído con paridad real; faltan 6 modos | 2–4 semanas | reglas puras, estado RNG y replays reproducibles |
+| 5. Firebase local, Auth y progreso | Perfil en nube con CAS validado contra emulador; faltan UI de conflicto, App Check y despliegue | 2–3 semanas | emuladores, cuenta y sincronización offline segura |
+| 6. Rankings por modo | **Bloqueada por la fase 4** (desbloqueada solo para Contrarreloj) | 1–2 semanas | tablas verificadas por modo/periodo |
 | 7. Salas y lobby en tiempo real | Pendiente | 2–3 semanas | crear/unirse/listo/presencia/reconexión |
 | 8. Partida multijugador | Pendiente | 3–6 semanas | comandos ordenados, snapshots, rejoin y cierre |
 | 9. Servicios nativos y hardening | Pendiente | 2–4 semanas | push, App Check, observabilidad y seguridad |
@@ -39,16 +39,23 @@ un árbitro persistente en Cloud Run; se decidirá con métricas del prototipo.
 
 ## Próximo hito activo
 
-La pantalla visible de importación legacy ya existe y está conectada al
-coordinador. El hito activo pasa a ser el perfil en nube con revisión,
-idempotencia y resolución de conflictos, activar App Check en monitor sobre un
-bootstrap real y preparar presupuesto/alertas antes del primer despliegue de
-Functions.
-Auth anónima funciona local/cloud-dev, Web/Android están registrados y
-Firestore aplica el ruleset cerrado. El cliente productivo continúa intacto.
-La primera APK funcional está validada únicamente como debug sobre un AVD API
-36: todavía no es una beta ni una release de tienda. En paralelo siguen la
-matriz Android y la preparación de iOS desde macOS.
+**Cerrar la fase 4**: extraer los seis modos que faltan con fixtures de paridad
+contra el motor legacy, igual que se hizo con Contrarreloj, y hacer que cliente
+y backend ejecuten ese mismo núcleo. Es el cuello de botella del roadmap: bloquea
+los rankings de la fase 6 y la validación determinista de la fase 8.
+
+El perfil en nube ya está cerrado de punta a punta y verificado contra Emulator
+Suite: revisión autoritativa, compare-and-set, recibos idempotentes, fusión
+monótona de marcas y conflicto explícito que nunca sobrescribe. Contrarreloj
+puntúa desde el núcleo compartido en cliente y backend.
+
+**Nada está desplegado en cloud** salvo las Firestore Rules. Las siete callables
+existen solo en el repositorio. Antes del primer despliegue de Functions hacen
+falta presupuesto y alertas, TTL verificado y App Check en monitor.
+
+La APK 2.37.3 es debug-signed para pruebas: no es beta ni release de tienda.
+Siguen pendientes la matriz manual en dispositivo real y todo iOS, bloqueado por
+falta de acceso a macOS.
 
 ## Fase 0 — Aislamiento y baseline
 
