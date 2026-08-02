@@ -24,8 +24,8 @@ test('hub views: las secciones de metajuego ya no tienen semántica de modal', (
   }
 
   const transient = [...html.matchAll(/<div class="[^"]*\bmodal\b[^"]*" id="([^"]+)" role="dialog"/g)].map((m) => m[1]).sort();
-  assert.deepEqual(transient, ['modal-icon-pack', 'modal-level', 'modal-mode-launch', 'modal-over', 'modal-pause', 'modal-revive'],
-    'solo el lanzador de modos, el visor de pack de iconos y los diálogos propios de partida pueden seguir siendo modales');
+  assert.deepEqual(transient, ['modal-icon-pack', 'modal-legacy-import', 'modal-level', 'modal-mode-launch', 'modal-over', 'modal-pause', 'modal-revive'],
+    'solo el lanzador de modos, el visor de pack de iconos, la importación de progreso y los diálogos propios de partida pueden seguir siendo modales');
 });
 
 test('hub views: todos los lanzadores cambian de vista sin abrir overlays', () => {

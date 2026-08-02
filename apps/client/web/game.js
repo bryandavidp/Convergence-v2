@@ -16,7 +16,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.37.1';
+  const VERSION = '2.37.2';
   const Platform = window.ConvergencePlatform || {
     runtime: 'web', isNative: false,
     mirrorStorage() { }, removeStorage() { }, haptic() { },
@@ -972,6 +972,15 @@
         level_done: '¡Nivel completado!', perfect_done: '¡Tablero perfecto!', level_sub: 'Nivel {n} superado', perfect_sub: 'Tablero limpio · bonus +{b}', level_reason_score: 'Objetivo cumplido: {n} pts', level_reason_clear: 'Tablero vaciado', level_reason_boss: 'Cristales del jefe destruidos', level_reason_survive: 'Has resistido {n}s', boss_next: '¡Jefe a la vista!',
         over_victory: '🏆 ¡Victoria!', over_surv: '🛡️ Fin de la supervivencia', over_fail: '¡Misión fallida!', over_time: 'Contrarreloj terminado',
         reason_time: '¡Se acabó el tiempo!', reason_nomoves: 'Sin movimientos posibles · {n}% del tablero ocupado.', reason_full: 'El tablero se ha llenado.', reason_end: 'Fin de la partida.', reason_surv: 'Sobreviviste {s}s', ach_unlocked: '🏅 Logro: {n}',
+        legacy_import_title: 'Sincronizar progreso', legacy_import_sub: 'Se ha detectado una partida local previa. Revisa los datos proyectados antes de vincular tu cuenta.',
+        legacy_import_confirm: 'Confirmar e importar', legacy_import_cancel: 'Mantener solo local',
+        legacy_import_warning_text: 'Monedas y cofres locales no verificados se guardan en cuarentena y se verificarán por servidor.',
+        legacy_import_done: 'Importación enviada', legacy_import_kept_local: 'Tu progreso sigue solo en este dispositivo', legacy_import_unavailable: 'La sincronización no está disponible ahora mismo',
+        adventure_level: 'Aventura', xp: 'XP',
+        sync_action_review: 'Revisar sincronización',
+        sync_status_local_only: 'Solo local', sync_status_queued: 'En cola', sync_status_syncing: 'Sincronizando…',
+        sync_status_awaiting: 'Requiere confirmación', sync_status_synced: 'Sincronizado', sync_status_offline: 'Sin conexión',
+        sync_status_conflict: 'Conflicto', sync_status_identity_mismatch: 'Otra cuenta', sync_status_invalid_local: 'Datos locales no válidos', sync_status_error: 'Error de sincronización',
       },
       en: {
         welcome_sub: 'Match equal icons across space', name_q: "What's your name?", optional: '(optional)',
@@ -1406,6 +1415,15 @@
         m_contrarreloj_n: 'Time Attack', m_contrarreloj_d: 'Each convergence adds time; combos add even more. Do not let the clock hit zero!', m_contrarreloj_g: 'Combos = more time',
         m_supervivencia_n: 'Survival', m_supervivencia_d: 'Endure rising waves with lives, traps, bosses and boosters. How long will you last?',
         m_zen_n: 'Zen', m_zen_d: 'Relaxed pace, no penalties or game over. Play and breathe.', m_zen_g: 'No mistakes, no rush',
+        legacy_import_title: 'Sync your progress', legacy_import_sub: 'We found a previous local game. Review the projected data before linking your account.',
+        legacy_import_confirm: 'Confirm and import', legacy_import_cancel: 'Keep local only',
+        legacy_import_warning_text: 'Unverified local coins and chests are quarantined and will be checked by the server.',
+        legacy_import_done: 'Import submitted', legacy_import_kept_local: 'Your progress stays on this device only', legacy_import_unavailable: 'Sync is not available right now',
+        adventure_level: 'Adventure', xp: 'XP',
+        sync_action_review: 'Review sync',
+        sync_status_local_only: 'Local only', sync_status_queued: 'Queued', sync_status_syncing: 'Syncing…',
+        sync_status_awaiting: 'Needs confirmation', sync_status_synced: 'Synced', sync_status_offline: 'Offline',
+        sync_status_conflict: 'Conflict', sync_status_identity_mismatch: 'Different account', sync_status_invalid_local: 'Invalid local data', sync_status_error: 'Sync error',
       },
     };
     const FIELD = { name: 'n', desc: 'd', goal: 'g' };
@@ -14255,6 +14273,15 @@
       else if (a === 'buy-gems') { Sound.ensure(); openResourceShop('gems'); }
       else if (a === 'buy-energy') { Sound.ensure(); openResourceShop('xp'); }
       else if (a === 'bell') { Sound.ui(); Toasts.show(I18n.t('coming_soon'), 'info', 1400); }
+      else if (a === 'legacy-import-confirm') { Sound.ui(); confirmLegacyImport(); }
+      else if (a === 'legacy-import-cancel') {
+        // Solo cierra: la reclamación sigue pendiente y caduca por expiresAt.
+        Sound.ui(); Modal.close(); Toasts.show(I18n.t('legacy_import_kept_local'), 'info', 2000);
+      }
+      else if (a === 'review-sync') {
+        Sound.ui();
+        if (lastSyncState && lastSyncState.preview) showLegacyImportModal(lastSyncState.preview);
+      }
       else if (a === 'home-play-now') {
         Sound.ensure();
         if (el.dataset.route === 'daily') openDailyInfo();
@@ -14409,6 +14436,64 @@
     });
 
     window.addEventListener('convergence:back', () => handleBackNavigation(true));
+
+    /* ===================== Importación de progreso legacy =====================
+     * Carril paralelo: el coordinador TS (dist-profile-emulator) publica
+     * ProfileSyncPublicState por evento y game.js solo pinta y confirma. El
+     * detail.preview es un resumen presentacional -sin economía- porque la
+     * autoridad sobre monedas y cofres es siempre del backend.
+     */
+    let lastSyncState = null;
+
+    function syncStatusKey(status) {
+      if (status === 'awaiting-confirmation') return 'sync_status_awaiting';
+      return 'sync_status_' + String(status).replace(/-/g, '_');
+    }
+
+    function showLegacyImportModal(preview) {
+      if (!preview || !$('#modal-legacy-import')) return;
+      const num = (value, fallback) => (typeof value === 'number' && isFinite(value) ? value : fallback);
+      const lvlEl = $('#import-stat-level'); if (lvlEl) lvlEl.textContent = num(preview.level, 1);
+      const xpEl = $('#import-stat-xp'); if (xpEl) xpEl.textContent = num(preview.xp, 0);
+      const advEl = $('#import-stat-adventure'); if (advEl) advEl.textContent = num(preview.adventureMaxLevel, 1);
+      const trophyEl = $('#import-stat-trophies'); if (trophyEl) trophyEl.textContent = num(preview.achievements, 0);
+      const banner = $('#legacy-import-warning-banner');
+      if (banner) banner.hidden = preview.economyQuarantined === false;
+      Modal.open('modal-legacy-import');
+    }
+
+    function handleProfileSyncState(event) {
+      const state = (event && event.detail) || event;
+      if (!state || !state.status) return;
+      lastSyncState = state;
+      const syncBar = $('#profile-sync-bar');
+      const syncBadge = $('#profile-sync-badge');
+      const syncBtn = $('#btn-profile-sync-review');
+      if (syncBar && syncBadge) {
+        syncBar.hidden = false;
+        syncBadge.setAttribute('data-status', state.status);
+        syncBadge.textContent = I18n.t(syncStatusKey(state.status));
+        if (syncBtn) syncBtn.hidden = !state.canConfirm;
+      }
+      if (state.canConfirm && state.preview) showLegacyImportModal(state.preview);
+    }
+
+    // Puente hacia el coordinador: si el carril no está montado (PWA normal),
+    // la UI se cierra sin prometer una importación que nadie va a ejecutar.
+    function confirmLegacyImport() {
+      const migration = window.ConvergenceProfileMigration;
+      Modal.close();
+      if (!migration || typeof migration.confirm !== 'function') {
+        Toasts.show(I18n.t('legacy_import_unavailable'), 'warn', 2200);
+        return;
+      }
+      window.dispatchEvent(new CustomEvent('convergence:legacy-import-confirm'));
+      Toasts.show(I18n.t('legacy_import_done'), 'good', 1800);
+    }
+
+    window.addEventListener('convergence:profile-emulator-state', handleProfileSyncState);
+    window.addEventListener('convergence:profile-sync-state', handleProfileSyncState);
+
 
     // Lifecycle Capacitor explícito. Background pausa, guarda y libera audio;
     // foreground refresca metajuego pero no reanuda nunca la partida solo.

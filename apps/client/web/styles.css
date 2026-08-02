@@ -16202,3 +16202,21 @@ body.reduced-fx #screen-start #view-how .how-float-token { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   #screen-start #view-how .how-float-token { animation: none; }
 }
+
+/* UI Importación Legacy / Perfil Sync (Convergence v2) */
+.legacy-import-modal .modal-body { display: flex; flex-direction: column; gap: 12px; }
+.legacy-import-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 4px 0; }
+.import-stat-item { display: flex; flex-direction: column; background: rgba(0, 0, 0, .28); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; text-align: center; }
+.import-stat-item .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.import-stat-item .stat-val { font-size: 1.1rem; color: var(--gold); font-weight: 900; margin-top: 2px; }
+.legacy-import-warning-banner { display: flex; align-items: flex-start; gap: 8px; background: rgba(255, 170, 0, 0.1); border: 1px solid var(--warn); border-radius: 10px; padding: 10px 12px; font-size: 0.8rem; line-height: 1.35; color: #ffda70; }
+.legacy-import-warning-banner .warning-ic { font-size: 1.1rem; flex: 0 0 auto; }
+
+.profile-sync-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; margin-bottom: 10px; }
+.sync-status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 800; }
+.sync-status-badge[data-status="local-only"] { background: rgba(255, 255, 255, 0.1); color: var(--muted); }
+.sync-status-badge[data-status="awaiting-confirmation"] { background: rgba(255, 170, 0, 0.2); color: var(--warn); border: 1px solid var(--warn); }
+.sync-status-badge[data-status="syncing"] { background: rgba(11, 182, 224, 0.2); color: var(--accent-2); border: 1px solid var(--accent-2); }
+.sync-status-badge[data-status="synced"] { background: rgba(38, 222, 129, 0.2); color: var(--good); border: 1px solid var(--good); }
+.sync-status-badge[data-status="error"], .sync-status-badge[data-status="conflict"], .sync-status-badge[data-status="identity-mismatch"] { background: rgba(255, 77, 77, 0.2); color: #ff6b6b; border: 1px solid #ff6b6b; }
+

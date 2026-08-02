@@ -185,6 +185,14 @@ test('preview queda pendiente de confirmación y commit incrementa una sola revi
 
   assert.equal(harness.coordinator.snapshot().status, 'awaiting-confirmation');
   assert.equal(harness.coordinator.snapshot().canConfirm, true);
+  // La UI solo recibe el resumen presentacional: nunca economía ni cofres.
+  assert.deepEqual(harness.coordinator.snapshot().preview, {
+    level: 7,
+    xp: 120,
+    adventureMaxLevel: 2,
+    achievements: 0,
+    economyQuarantined: true,
+  });
   assert.equal(harness.calls.preview, 1);
   assert.equal(harness.calls.commit, 0);
   assert.equal((await harness.outbox.list('anonymous-owner-001'))[0]?.status, 'awaiting-confirmation');
@@ -196,6 +204,7 @@ test('preview queda pendiente de confirmación y commit incrementa una sola revi
     serverRevision: 1,
     canConfirm: false,
     lastError: null,
+    preview: null,
   });
   assert.equal(harness.calls.commit, 1);
   assert.deepEqual(await harness.outbox.list('anonymous-owner-001'), []);

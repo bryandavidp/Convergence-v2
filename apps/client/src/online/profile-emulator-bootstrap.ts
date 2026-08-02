@@ -36,6 +36,7 @@ function publishFatal(error: unknown): void {
     serverRevision: 0,
     canConfirm: false,
     lastError: (error instanceof Error ? error.message : String(error)).slice(0, 300),
+    preview: null,
   });
   console.error('[Convergence Profile Emulator] Carril no disponible:', error);
 }

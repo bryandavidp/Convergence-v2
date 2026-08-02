@@ -43,11 +43,26 @@ export interface ProfileReplicaV1 {
   updatedAt: number;
 }
 
+/**
+ * Resumen exclusivamente presentacional del preview. Es un subconjunto
+ * deliberado de la proyección: solo lo que la UI necesita enseñar para que el
+ * jugador decida. Nunca transporta economía, cofres ni el payload en
+ * cuarentena, que siguen siendo decisión de Functions.
+ */
+export interface ProfilePreviewSummaryV1 {
+  level: number;
+  xp: number;
+  adventureMaxLevel: number;
+  achievements: number;
+  economyQuarantined: boolean;
+}
+
 export interface ProfileSyncPublicState {
   status: ProfileSyncStatus;
   serverRevision: number;
   canConfirm: boolean;
   lastError: string | null;
+  preview: ProfilePreviewSummaryV1 | null;
 }
 
 export interface LegacyProgressSyncOptions {
@@ -152,12 +167,27 @@ function freshReplica(uid: string, now: number): ProfileReplicaV1 {
   };
 }
 
+function previewSummary(
+  preview: LegacyProgressPreviewResultV1 | null,
+): ProfilePreviewSummaryV1 | null {
+  if (preview === null) return null;
+  const { progress, claimCounts } = preview.projection;
+  return Object.freeze({
+    level: progress.level,
+    xp: progress.xp,
+    adventureMaxLevel: progress.adventureMaxLevel,
+    achievements: claimCounts.achievements,
+    economyQuarantined: preview.warnings.includes('economy-quarantined'),
+  });
+}
+
 function publicState(replica: ProfileReplicaV1): ProfileSyncPublicState {
   return Object.freeze({
     status: replica.status,
     serverRevision: replica.serverRevision,
     canConfirm: replica.status === 'awaiting-confirmation' && replica.preview !== null,
     lastError: replica.lastError,
+    preview: previewSummary(replica.preview),
   });
 }
 

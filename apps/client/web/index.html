@@ -12,7 +12,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌌</text></svg>" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <meta name="convergence-legacy-script" content="game.js?v=2.37.1" />
+  <meta name="convergence-legacy-script" content="game.js?v=2.37.2" />
   <!-- PWA -->
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -25,7 +25,7 @@
   <meta property="og:description" content="Junta iconos iguales y encadena combos. Aventura infinita, supervivencia, contrarreloj y más." />
   <meta property="og:image" content="icon-512.png" />
   <meta name="twitter:card" content="summary" />
-  <link rel="stylesheet" href="styles.css?v=2.37.1" />
+  <link rel="stylesheet" href="styles.css?v=2.37.2" />
 </head>
 <body data-screen="login">
   <!-- ============ PANTALLA DE CARGA INICIAL (BOOT) ============
@@ -773,6 +773,32 @@
       </div>
     </div>
 
+    <!-- Importación de progreso legacy (cv_meta v10) -->
+    <div class="modal legacy-import-modal" id="modal-legacy-import" role="dialog" aria-modal="true" aria-labelledby="legacy-import-title" aria-describedby="legacy-import-sub" hidden>
+      <div class="m-head">
+        <span class="m-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/trophy.png" alt=""></span>
+        <h2 id="legacy-import-title" data-i18n="legacy_import_title">Sincronizar progreso</h2>
+      </div>
+      <div class="modal-body legacy-import-body">
+        <p class="modal-sub" id="legacy-import-sub" data-i18n="legacy_import_sub">Se ha detectado una partida local previa. Revisa los datos proyectados antes de vincular tu cuenta.</p>
+        <div class="legacy-import-stats" id="legacy-import-stats">
+          <div class="import-stat-item"><span class="stat-label" data-i18n="lvl">Nivel</span><strong class="stat-val" id="import-stat-level">1</strong></div>
+          <div class="import-stat-item"><span class="stat-label" data-i18n="xp">XP</span><strong class="stat-val" id="import-stat-xp">0</strong></div>
+          <div class="import-stat-item"><span class="stat-label" data-i18n="adventure_level">Aventura</span><strong class="stat-val" id="import-stat-adventure">1</strong></div>
+          <div class="import-stat-item"><span class="stat-label" data-i18n="achievements">Trofeos</span><strong class="stat-val" id="import-stat-trophies">0</strong></div>
+        </div>
+        <div class="legacy-import-warning-banner" id="legacy-import-warning-banner">
+          <span class="warning-ic" aria-hidden="true">⚠️</span>
+          <p class="warning-text" id="legacy-import-warning-text" data-i18n="legacy_import_warning_text">Monedas y cofres locales no verificados se guardan en cuarentena y se verificarán por servidor.</p>
+        </div>
+      </div>
+      <div class="modal-actions modal-buttons">
+        <button class="btn btn-primary btn-lg" id="btn-legacy-import-confirm" type="button" data-act="legacy-import-confirm" data-i18n="legacy_import_confirm">Confirmar e importar</button>
+        <button class="btn btn-ghost" id="btn-legacy-import-cancel" type="button" data-act="legacy-import-cancel" data-i18n="legacy_import_cancel">Mantener solo local</button>
+      </div>
+    </div>
+
+
     <!-- Nivel completado -->
     <div class="modal modal-win" id="modal-level" role="dialog" aria-modal="true" aria-labelledby="level-title" hidden>
       <div class="m-head"><span class="m-emblem" id="level-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/star.png" alt=""></span><h2 id="level-title">¡Nivel completado!</h2></div>
@@ -1096,6 +1122,10 @@
     <section class="hub-view view-profile" id="view-medals" data-hub-view="medals" aria-labelledby="medals-title" hidden>
       <div class="m-head"><span class="m-emblem" aria-hidden="true"><img decoding="async" class="ic" src="img/ui/player.png" alt=""></span><h2 id="medals-title" data-i18n="profile_title">Perfil</h2></div>
       <div class="modal-body view-body profile-view-body">
+        <div class="profile-sync-bar" id="profile-sync-bar" hidden>
+          <span class="sync-status-badge" id="profile-sync-badge" data-i18n="sync_status_local_only">Solo local</span>
+          <button class="btn btn-ghost btn-xs" id="btn-profile-sync-review" type="button" data-act="review-sync" data-i18n="sync_action_review" hidden>Revisar sincronización</button>
+        </div>
         <div class="profile-player-card profile-only" id="profile-player-card"></div>
         <button class="profile-edit-name btn btn-ghost btn-sm profile-only" type="button" data-act="edit-name" data-i18n="edit_name_action">Editar nombre</button>
         <section class="profile-customizer profile-only" aria-labelledby="profile-loadout-title">
