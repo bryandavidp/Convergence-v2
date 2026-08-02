@@ -1,5 +1,6 @@
 export * from './board.js';
 export * from './engine.js';
+export * from './modes/time-attack.js';
 export * from './reducer.js';
 export * from './rng.js';
 export * from './run-save-migration.js';

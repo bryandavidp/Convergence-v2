@@ -1057,3 +1057,54 @@ solo entonces construir la vertical de ranking.
 
 
 
+
+## 2026-08-02 — Fase 4: Contrarreloj extraído con paridad real contra el motor
+
+### Completado
+
+- `packages/game-core/src/modes/time-attack.ts` reproduce las reglas de
+  Contrarreloj del motor 2.37.2, no una simplificación:
+  - Puntuación con los siete factores: `removed*10*level` por multiplicador de
+    combo, dificultad, modo (1.2), fiebre, temporal y sprint final.
+  - Tabla de combo por tramos, ventana de continuidad por dificultad y bonos de
+    hito en 10/20/30.
+  - Fiebre a partir de combo 10, que entra **antes** de puntuar: el toque que la
+    activa ya cobra ×1.25.
+  - Sprint final ×1.5, que lee el reloj **antes** de sumar el tiempo ganado.
+  - Tiempo por convergencia con decaimiento hasta el 8 % y tope duro de 90 s.
+  - Bono de tablero vacío, que se cobra en el mismo toque y lee el reloj **ya**
+    actualizado.
+  - Cristal (+50) y cápsula de tiempo (+5 s con tope), penalización de 3 s.
+
+### Fixtures de paridad de verdad
+
+`packages/game-core/test/time-attack-parity.test.mjs` instala un reloj virtual,
+carga el motor legacy con `dom-stub`, juega partidas completas de Contrarreloj
+con semilla fija en las tres dificultades y compara **toque a toque** la
+puntuación y el reloj del motor contra la predicción del núcleo. Es la
+comprobación que faltaba: hasta ahora los tests del núcleo solo lo validaban
+contra sí mismo. Se añade además una comparación directa de cada constante
+contra el `Config` legacy, que hace fallar el gate si alguna se desvía.
+
+### Reglas que aparecieron al perseguir la paridad
+
+Dos diferencias solo se descubrieron porque el test compara contra el motor real,
+y ninguna estaba en el plan inicial de extracción:
+
+1. El **bono de tablero vacío** entra dentro del delta de puntuación del toque
+   que vacía el tablero (`chain` es 1-based y el combo se capa a 12).
+2. La **cápsula de tiempo** detona por adyacencia y sube el reloj +5 s después
+   del tiempo de la convergencia, lo que llevaba al tope duro y descuadraba la
+   predicción.
+
+### Evidencia
+
+- `packages/game-core`: **21/21**, con paridad en fácil, normal y difícil.
+- `npm run validate:full`: **528/528** = 481 del gate normal + 47 de backend.
+
+### Pendiente
+
+- Los otros seis modos siguen sin extraer, y `reducer.ts` conserva su fórmula
+  simplificada y el `if` sin cuerpo de la línea 75.
+- Nadie ejecuta todavía el núcleo en producción: el cliente sigue con `game.js` y
+  Functions no lo importa. Hasta cerrar eso, la fase 6 sigue bloqueada.

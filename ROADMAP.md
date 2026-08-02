@@ -148,17 +148,16 @@ no reproduce las reglas del juego y que no usa nadie. Ver la entrada del
 - [x] Diseñar `GameStateV2` serializable, estricto y versionado (`runSaveV2Schema`).
 - [x] Migrar RunSave v1 a v2 incluyendo estado RNG (`migrateRunSaveV1ToV2`).
 - [~] Extraer reglas por verticales pequeñas. Hecho: tablero (`board.ts`),
-      convergencia y spawn asistido por PRNG (`spawn.ts`). **Falta** la
-      puntuación real y **faltan por completo objetivos y modos**: el reductor
-      no conoce oleadas, temporizador, vidas ni objetivos, y `state.mode` solo
-      viaja en el hash.
-- [ ] Reproducir la fórmula de puntuación real. El juego calcula
-      `removed * 10 * level` multiplicado por combo, dificultad, modo, fiebre,
-      multiplicador temporal, sprint y supervivencia (`game.js:9616`); el núcleo
-      hace `celdas * 10 * combo`, sin nivel ni ninguno de los otros factores.
-- [ ] Crear fixtures legacy ↔ core de verdad. Los tests actuales comparan el
-      núcleo consigo mismo (determinismo y hash propio); no existe ninguna
-      comparación contra el motor legacy.
+      convergencia, spawn asistido por PRNG (`spawn.ts`) y **Contrarreloj
+      completo** (`modes/time-attack.ts`). Faltan los otros seis modos.
+- [~] Reproducir la fórmula de puntuación real. Hecha para Contrarreloj con los
+      siete factores, hitos, sprint, fiebre, bono de tablero vacío, cristales,
+      cápsulas de tiempo y penalización por fallo. El reductor genérico
+      (`reducer.ts`) sigue con su fórmula simplificada.
+- [~] Crear fixtures legacy ↔ core de verdad. Hecho para Contrarreloj:
+      `time-attack-parity.test.mjs` conduce partidas reales del motor legacy con
+      reloj virtual y semilla fija en las tres dificultades, y compara toque a
+      toque puntuación y reloj. Faltan los demás modos.
 - [ ] Ejecutar el mismo core en cliente y validador de backend. Hoy **nadie**
       importa `@convergence/game-core`: el cliente sigue con el motor de
       `game.js` y Functions no lo usa.
