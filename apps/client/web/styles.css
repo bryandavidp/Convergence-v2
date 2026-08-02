@@ -16258,3 +16258,45 @@ body.reduced-fx #screen-start #view-how .how-float-token { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .ranks-scope { transition:none; }
 }
+
+/* ===================== Alias público de clasificación =====================
+ * Hereda toda la carcasa del coach de jefes (.boss-coach): fondo, tarjeta,
+ * retrato, cabecera y animaciones. Aquí solo vive lo que ese modal no tiene,
+ * que es un campo de texto y dos acciones en vez de una.
+ */
+.rank-alias .boss-coach-portrait img { object-fit: contain; padding: 14%; }
+
+.rank-alias-field { display: block; margin-top: 14px; }
+.rank-alias-field input {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--coach-border);
+  background: rgba(8, 12, 30, .72);
+  color: var(--txt);
+  font: inherit;
+  font-size: 1.02rem;
+  text-align: center;
+}
+.rank-alias-field input::placeholder { color: var(--txt-2); opacity: .8; }
+.rank-alias-field input:focus-visible {
+  outline: 2px solid var(--coach-hot);
+  outline-offset: 2px;
+  border-color: var(--coach-hot);
+}
+
+/* El error se anuncia por role="alert" y además se ve: un mensaje que solo
+   cambia de color no lo percibe todo el mundo. */
+.rank-alias-error {
+  margin: 8px 0 0;
+  color: #ff8a8a;
+  font-size: .9rem;
+  text-align: center;
+}
+
+.rank-alias-actions { gap: 10px; flex-wrap: wrap; }
+.rank-alias-actions .btn { width: min(180px, 42vw); }
+
+@media (max-width: 380px) {
+  .rank-alias-actions .btn { width: min(240px, 78vw); }
+}

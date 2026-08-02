@@ -239,28 +239,59 @@ test('si el transporte llega tarde, la tabla se recarga sola', async () => {
   clearTransport();
 });
 
-test('sin prompt disponible se publica con alias neutro, nunca con el nombre del jugador', async () => {
-  const previousPrompt = window.prompt;
-  delete window.prompt;
-  Storage.rankAlias = '';
-  try {
-    const alias = await Ranks.ensureAlias();
-    assert.match(alias, /^Jugador#\d{4}$/, 'debe generarse un alias neutro y editable');
-    assert.equal(Storage.rankAlias, alias, 'queda guardado para poder cambiarlo');
-  } finally {
-    if (previousPrompt) window.prompt = previousPrompt;
-    Storage.rankAlias = '';
+test('el alias se pide con el modal del juego, no con window.prompt', () => {
+  // Un dialogo del sistema rompe la presentacion y algunos WebView lo ignoran.
+  const source = fs.readFileSync(path.join(__dirname, '..', 'game.js'), 'utf8');
+  const ranksBlock = source
+    .slice(source.indexOf('const Ranks = {'), source.indexOf('const HubViews = {'))
+    .split(/\r?\n/)
+    .filter((line) => !line.trim().startsWith('//') && !line.trim().startsWith('*'))
+    .join('\n');
+  assert.doesNotMatch(ranksBlock, /window\.prompt\s*\(/, 'la vista no debe llamar a window.prompt');
+
+  assert.match(html, /id="rank-alias"[^>]*role="dialog"[^>]*aria-modal="true"/);
+  // Reutiliza la carcasa del coach de jefes en vez de inventar otro modal.
+  assert.match(html, /class="boss-coach rank-alias"/);
+  for (const id of ['rank-alias-input', 'rank-alias-save', 'rank-alias-cancel', 'rank-alias-error']) {
+    assert.ok(html.includes(`id="${id}"`), `falta ${id}`);
   }
+  assert.match(html, /id="rank-alias-error"[^>]*role="alert"/);
+  assert.match(html, /id="rank-alias-input"[^>]*maxlength="24"/);
+  assert.match(css, /\.rank-alias-field input\s*\{/);
 });
 
-test('si el jugador cancela el prompt, no se publica nada', async () => {
-  const previousPrompt = window.prompt;
-  window.prompt = () => null;
+test('publicar con el modal guarda el alias escrito', async () => {
   Storage.rankAlias = '';
-  try {
-    assert.equal(await Ranks.ensureAlias(), null);
-    assert.equal(Storage.rankAlias, '', 'cancelar no puede dejar alias guardado');
-  } finally {
-    if (previousPrompt) window.prompt = previousPrompt; else delete window.prompt;
-  }
+  const pending = Ranks.ensureAlias();
+  document.querySelector('#rank-alias-input').value = '  Nova  ';
+  document.querySelector('#rank-alias-save').__click();
+  assert.equal(await pending, 'Nova', 'el alias se recorta y se guarda');
+  assert.equal(Storage.rankAlias, 'Nova');
+  assert.equal(document.querySelector('#rank-alias').hidden, true, 'el modal debe cerrarse');
+  Storage.rankAlias = '';
+});
+
+test('cancelar el modal no publica ni guarda alias', async () => {
+  Storage.rankAlias = '';
+  const pending = Ranks.ensureAlias();
+  document.querySelector('#rank-alias-cancel').__click();
+  assert.equal(await pending, null);
+  assert.equal(Storage.rankAlias, '', 'cancelar no puede dejar alias guardado');
+  assert.equal(document.querySelector('#rank-alias').hidden, true);
+});
+
+test('un alias vacio no cierra el modal: avisa y espera', async () => {
+  Storage.rankAlias = '';
+  const pending = Ranks.ensureAlias();
+  document.querySelector('#rank-alias-input').value = '   ';
+  document.querySelector('#rank-alias-save').__click();
+
+  const error = document.querySelector('#rank-alias-error');
+  assert.equal(error.hidden, false, 'debe explicarse por que no se publica');
+  assert.equal(error.textContent, I18n.t('ranks_alias_invalid'));
+  assert.equal(document.querySelector('#rank-alias').hidden, false, 'el modal sigue abierto');
+
+  document.querySelector('#rank-alias-cancel').__click();
+  await pending;
+  Storage.rankAlias = '';
 });

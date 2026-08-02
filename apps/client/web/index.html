@@ -12,8 +12,8 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌌</text></svg>" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <meta name="convergence-core-script" content="game-core.js?v=2.37.9" />
-  <meta name="convergence-legacy-script" content="game.js?v=2.37.9" />
+  <meta name="convergence-core-script" content="game-core.js?v=2.37.10" />
+  <meta name="convergence-legacy-script" content="game.js?v=2.37.10" />
   <!-- PWA -->
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -26,7 +26,7 @@
   <meta property="og:description" content="Junta iconos iguales y encadena combos. Aventura infinita, supervivencia, contrarreloj y más." />
   <meta property="og:image" content="icon-512.png" />
   <meta name="twitter:card" content="summary" />
-  <link rel="stylesheet" href="styles.css?v=2.37.9" />
+  <link rel="stylesheet" href="styles.css?v=2.37.10" />
 </head>
 <body data-screen="login">
   <!-- ============ PANTALLA DE CARGA INICIAL (BOOT) ============
@@ -444,6 +444,46 @@
 
           <div class="boss-coach-actions">
             <button class="btn boss-coach-ok" id="boss-coach-ok" data-i18n="understood">¡Entendido!</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alias público de clasificación. Reutiliza la carcasa del coach de jefes
+           (.boss-coach) para heredar fondo, tarjeta, tipografía y animaciones. -->
+      <div class="boss-coach rank-alias" id="rank-alias" hidden role="dialog" aria-modal="true" aria-labelledby="rank-alias-title" aria-describedby="rank-alias-text">
+        <div class="boss-coach-card">
+          <span class="boss-coach-spark boss-coach-spark-a" aria-hidden="true">✦</span>
+          <span class="boss-coach-spark boss-coach-spark-b" aria-hidden="true">✦</span>
+
+          <div class="boss-coach-frame">
+            <div class="boss-coach-standard">
+              <div class="boss-coach-portrait" aria-hidden="true">
+                <span class="boss-coach-portrait-ring"></span>
+                <img decoding="async" src="img/ui/trophy.png" alt="">
+                <span class="boss-coach-icon">🏆</span>
+              </div>
+
+              <header class="boss-coach-head">
+                <strong class="boss-coach-title" id="rank-alias-title" data-i18n="ranks_alias_title">Elige tu alias público</strong>
+                <span class="boss-coach-title-rule" aria-hidden="true"><i></i></span>
+              </header>
+
+              <section class="boss-coach-copy">
+                <p class="boss-coach-text" id="rank-alias-text" data-i18n="ranks_alias_sub">Aparecerá en la clasificación junto a tu puntuación. No uses tu nombre real.</p>
+                <label class="rank-alias-field">
+                  <span class="sr-only" data-i18n="ranks_alias_ph">Alias (máx. 24)</span>
+                  <input id="rank-alias-input" type="text" maxlength="24" autocomplete="off"
+                         spellcheck="false" enterkeyhint="done"
+                         data-i18n-ph="ranks_alias_ph" placeholder="Alias (máx. 24)">
+                </label>
+                <p class="rank-alias-error" id="rank-alias-error" role="alert" hidden></p>
+              </section>
+            </div>
+          </div>
+
+          <div class="boss-coach-actions rank-alias-actions">
+            <button class="btn btn-ghost" id="rank-alias-cancel" type="button" data-i18n="ranks_alias_cancel">Ahora no</button>
+            <button class="btn boss-coach-ok" id="rank-alias-save" type="button" data-i18n="ranks_alias_save">Publicar</button>
           </div>
         </div>
       </div>

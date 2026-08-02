@@ -36,6 +36,7 @@ function makeEl(tag = 'div') {
     innerHTML: '',
     textContent: '',
     isConnected: true,
+    __listeners: {},
     scrollTop: 0,
     offsetWidth: 100, offsetHeight: 100, clientWidth: 100, clientHeight: 100,
     attributes: {},
@@ -61,13 +62,33 @@ function makeEl(tag = 'div') {
     matches: () => false,
     focus(opts) { if (globalThis.document) globalThis.document.activeElement = el; el._lastFocusOptions = opts || null; },
     blur() { if (globalThis.document && globalThis.document.activeElement === el) globalThis.document.activeElement = null; },
-    click() {},
+    click() { el.__fire('click'); },
     setAttribute(k, v) { el.attributes[k] = String(v); if (k === 'id') el.id = String(v); },
     getAttribute(k) { return k in el.attributes ? el.attributes[k] : null; },
     removeAttribute(k) { delete el.attributes[k]; },
     hasAttribute(k) { return k in el.attributes; },
-    addEventListener() {}, removeEventListener() {},
-    dispatchEvent() { return true; },
+    /* Eventos de elemento de verdad. Eran no-ops, así que cualquier botón mal
+       cableado pasaba los tests: registrar el listener y "pulsar" no hacía nada.
+       `__fire`/`__click` permiten a un test simular la interacción real. */
+    addEventListener(type, listener) {
+      if (typeof listener !== 'function') return;
+      if (!el.__listeners[type]) el.__listeners[type] = [];
+      el.__listeners[type].push(listener);
+    },
+    removeEventListener(type, listener) {
+      const list = el.__listeners[type];
+      if (!list) return;
+      const index = list.indexOf(listener);
+      if (index !== -1) list.splice(index, 1);
+    },
+    __fire(type, extra = {}) {
+      const event = { type, target: el, currentTarget: el, preventDefault() {}, stopPropagation() {}, ...extra };
+      // Copia: un listener puede desregistrarse a sí mismo durante el reparto.
+      for (const listener of [...(el.__listeners[type] || [])]) listener(event);
+      return true;
+    },
+    __click() { return el.__fire('click'); },
+    dispatchEvent(event) { return el.__fire(event && event.type, event || {}); },
     querySelector: (s) => getMemoEl('q:' + s),
     querySelectorAll: () => [],
     getBoundingClientRect: () => ({ x: 0, y: 0, top: 0, left: 0, right: 100, bottom: 100, width: 100, height: 100 }),

@@ -16,7 +16,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.37.9';
+  const VERSION = '2.37.10';
 
   /* Núcleo de reglas compartido con el backend (`packages/game-core`). Llega
    * como script clásico cargado antes que game.js, porque el cliente es vanilla
@@ -3368,22 +3368,68 @@
     async ensureAlias() {
       const stored = Storage.rankAlias;
       if (stored) return stored;
-      // `window.prompt` no existe o se ignora en algunos WebView (Capacitor entre
-      // ellos, según versión). Si no se puede preguntar NO se cae al nombre del
-      // jugador: se asigna un alias neutro y editable. Publicar bajo el nombre
-      // que dio como privado sería justo lo que se quiso evitar.
-      let raw = null;
-      try {
-        if (typeof window.prompt === 'function') {
-          raw = window.prompt(`${I18n.t('ranks_alias_title')}\n${I18n.t('ranks_alias_sub')}`, '');
-          if (raw === null) return null;   // el jugador declinó: no se publica
-        }
-      } catch (_) { raw = null; }
-
-      const alias = String(raw == null ? '' : raw).trim().slice(0, 24)
-        || `Jugador#${String(1000 + Math.floor(Math.random() * 9000))}`;
+      // Modal propio, no `window.prompt`: algunos WebView lo ignoran, y además
+      // un diálogo del sistema rompe la presentación del juego. Reutiliza la
+      // carcasa del coach de jefes.
+      const alias = await this.askAlias();
+      if (!alias) return null;            // el jugador declinó: no se publica
       Storage.rankAlias = alias;
       return alias;
+    },
+
+    /**
+     * Pide el alias en el modal y resuelve con él, o con `null` si el jugador
+     * cancela. Si el modal no existe en el DOM (arranque parcial, test), cae a
+     * un alias neutro antes que impedir publicar — pero **nunca** al nombre del
+     * jugador, que se dio como privado.
+     */
+    askAlias() {
+      const host = $('#rank-alias');
+      const input = $('#rank-alias-input');
+      const save = $('#rank-alias-save');
+      const cancel = $('#rank-alias-cancel');
+      const error = $('#rank-alias-error');
+      if (!host || !input || !save || !cancel) {
+        return Promise.resolve(`Jugador#${String(1000 + Math.floor(Math.random() * 9000))}`);
+      }
+
+      return new Promise((resolve) => {
+        let done = false;
+        const close = (value) => {
+          if (done) return;
+          done = true;
+          host.hidden = true;
+          save.removeEventListener('click', onSave);
+          cancel.removeEventListener('click', onCancel);
+          input.removeEventListener('keydown', onKey);
+          resolve(value);
+        };
+        const onSave = () => {
+          const value = String(input.value || '').trim().slice(0, 24);
+          if (!value) {
+            if (error) { error.textContent = I18n.t('ranks_alias_invalid'); error.hidden = false; }
+            input.focus();
+            return;
+          }
+          Sound.ui();
+          close(value);
+        };
+        const onCancel = () => { Sound.ui(); close(null); };
+        // Enter publica: en móvil el teclado muestra "hecho" y esperar un toque
+        // extra sobre el botón es fricción gratuita.
+        const onKey = (event) => {
+          if (event.key === 'Enter') { event.preventDefault(); onSave(); }
+          else if (event.key === 'Escape') onCancel();
+        };
+
+        input.value = '';
+        if (error) { error.textContent = ''; error.hidden = true; }
+        host.hidden = false;
+        save.addEventListener('click', onSave);
+        cancel.addEventListener('click', onCancel);
+        input.addEventListener('keydown', onKey);
+        if (typeof input.focus === 'function') input.focus();
+      });
     },
 
     /**
