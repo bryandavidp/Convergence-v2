@@ -27,7 +27,7 @@ menor riesgo funcional.
 | 3. Capa de plataforma y storage | Hardening automatizado verde; faltan lectura dual y matriz manual | 1–2 semanas | mismo perfil sobre web/Preferences, migración reversible |
 | 4. Núcleo determinista y RunSave v2 | **Completada**: seis modos con paridad, ejecutados en cliente y backend | 2–4 semanas | reglas puras, estado RNG y replays reproducibles |
 | 5. Firebase local, Auth y progreso | Perfil en nube con CAS validado contra emulador; faltan UI de conflicto, App Check y despliegue | 2–3 semanas | emuladores, cuenta y sincronización offline segura |
-| 6. Rankings por modo | Contratos y periodos cerrados; falta claim, materialización y consulta | 1–2 semanas | tablas verificadas por modo/periodo |
+| 6. Rankings por modo | Claim verificado y publicando; faltan Top N, consulta paginada y moderación | 1–2 semanas | tablas verificadas por modo/periodo |
 | 7. Salas y lobby en tiempo real | Pendiente | 2–3 semanas | crear/unirse/listo/presencia/reconexión |
 | 8. Partida multijugador | Pendiente | 3–6 semanas | comandos ordenados, snapshots, rejoin y cierre |
 | 9. Servicios nativos y hardening | Pendiente | 2–4 semanas | push, App Check, observabilidad y seguridad |
@@ -39,14 +39,14 @@ un árbitro persistente en Cloud Run; se decidirá con métricas del prototipo.
 
 ## Próximo hito activo
 
-**Fase 6 — rankings de Contrarreloj.** Los contratos y los cuatro periodos están
-cerrados. Lo siguiente es la transacción idempotente de claim —que verifica con
-`recomputeRun` antes de publicar—, la materialización del Top N y la consulta
-paginada con la posición del jugador.
+**Fase 6 — rankings de Contrarreloj.** Contratos, periodos y publicación de
+claims están cerrados: `submitRunClaim` recalcula con el núcleo y solo publica
+lo que cuadra. Quedan la materialización del Top N, la consulta paginada con la
+posición del jugador, y alias/moderación.
 
-**Nada está desplegado en cloud** salvo las Firestore Rules. Antes del primer
-despliegue de Functions hacen falta presupuesto y alertas, TTL verificado y App
-Check en monitor.
+**Nada está desplegado en cloud** salvo las Firestore Rules. El proyecto `dev`
+ya está en plan Blaze con presupuesto de 5 €; siguen faltando App Check en
+monitor y la verificación de TTL antes del primer despliegue de Functions.
 
 ## Fase 0 — Aislamiento y baseline
 
@@ -277,8 +277,15 @@ jugador.
       cerrado de punta a punta.
 - [x] Definir el contrato de claim: idempotente, con seed, versión de juego y
       hash final, **sin `userId`** —la identidad sale de Auth— y sin periodo.
-- [ ] Implementar el envío y la transacción idempotente de claims.
-- [ ] Validar runs deterministas en backend; rechazar versiones desconocidas.
+- [x] Implementar el envío y la transacción idempotente de claims
+      (`submitRunClaim`): recalcula con el núcleo, publica solo si coincide,
+      guarda la mejor marca por tabla y limita ráfagas por usuario.
+- [x] Validar runs en backend y rechazar versiones desconocidas. La allowlist de
+      versiones es explícita —no un mínimo— porque las reglas de puntuación
+      pueden cambiar entre versiones, y un test exige que la VERSION del cliente
+      esté en ella para que un release no rechace en silencio a todos.
+- [ ] Reproducir además tablero y spawn: hoy se recalcula desde la bitácora de
+      eventos, así que un cliente aún podría mentir sobre cuántos iconos convergió.
 - [ ] Materializar Top N y posición alrededor del jugador.
 - [ ] Añadir paginación, alias seguro, moderación y borrado de cuenta.
 - [x] Modelar la separación provisional/verificado/rechazado en el contrato.

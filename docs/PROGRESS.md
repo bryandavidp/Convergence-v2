@@ -1438,3 +1438,46 @@ pública falla en vez de pasar desapercibido.
 Transacción idempotente de claim que verifique con `recomputeRun` antes de
 publicar, materialización del Top N y consulta paginada con la posición del
 jugador.
+
+## 2026-08-02 — Fase 6: publicación de claims verificados
+
+### Completado
+
+- `submitRunClaim` recalcula la partida con `@convergence/game-core` y **solo
+  publica si el score recalculado coincide exactamente** con el reclamado. Una
+  reclamación que no cuadra deja recibo de rechazo y no toca ninguna tabla.
+- Las entradas viven en `leaderboards/{boardId}/entries/{uid}`, que **ya tenía
+  reglas verificadas**: lectura pública y escritura de cliente denegada. Las
+  escrituras entran por la callable con Admin SDK, que no pasa por reglas, así
+  que no hizo falta desplegar ninguna regla nueva.
+- Transacción idempotente por recibo: un reintento devuelve el resultado ya
+  guardado, y la misma clave con otra partida se rechaza en vez de sobrescribir.
+- Solo se conserva la mejor marca del jugador en cada tabla, y hay cuota por
+  usuario y ventana para cortar ráfagas.
+- Se rechazan versiones de juego desconocidas. La allowlist es **explícita y no
+  un mínimo**, porque las reglas de puntuación pueden cambiar entre versiones y
+  una partida antigua no sería comparable.
+
+### El guardarraíl que evita el fallo silencioso
+
+Un test lee la `VERSION` del cliente en `game.js` y exige que esté en
+`ACCEPTED_GAME_VERSIONS`. Sin él, publicar una versión y olvidar añadirla
+rechazaría en silencio las puntuaciones de todos los jugadores, y el síntoma
+—"nadie aparece en las tablas"— no apuntaría a la causa.
+
+### Evidencia
+
+- `apps/functions`: **44/44**, con 14 nuevos de tabla.
+- `packages/contracts`: **36/36**. `packages/game-core`: **47/47**. Legacy: **385/385**.
+- **No se pudo ejecutar `validate:full`**: otra sesión estaba construyendo sobre
+  los mismos directorios `dist-*` y tres tests de build fallaban de forma
+  intermitente por colisión, incluido un `ENOENT` copiando un asset que sí
+  existe. Aislados, todos pasan. Queda pendiente una pasada limpia del gate
+  completo cuando no haya builds concurrentes.
+
+### Pendiente
+
+Materialización del Top N, consulta paginada con la posición del jugador, y
+alias seguro con moderación. La verificación actual recalcula desde la bitácora
+de eventos: todavía no reproduce tablero ni spawn, así que un cliente podría
+mentir sobre cuántos iconos convergió.
