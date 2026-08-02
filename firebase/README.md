@@ -70,7 +70,7 @@ modifican. Consultar los README de raíz y frontend para el paso de confirmació
 | Functions | **Desplegadas** (2026-08-02): 9 callables v2, `europe-west1`, Node 22 |
 | Hosting | **Desplegado** (2026-08-02): `dist-cloud-dev` en `convergence-d1a35.web.app` |
 | Índices | **Desplegados** (2026-08-02) desde `firebase/firestore.indexes.json` |
-| Storage | Sin inicializar en el proyecto; el ruleset cerrado sigue sin desplegar |
+| Storage | **Desplegado** (2026-08-02): ruleset cerrado a lectura y escritura |
 
 `.firebaserc` está ignorado y conserva:
 
@@ -122,9 +122,10 @@ npm exec -- firebase deploy --only functions          --project dev --non-intera
 npm exec -- firebase deploy --only hosting            --project dev --non-interactive
 ```
 
-`--only storage` falló: Firebase Storage no está inicializado en el proyecto y
-la consola exige un "Get Started" manual para crear el bucket. El ruleset
-cerrado de este directorio sigue sin desplegar.
+`--only storage` falló al principio porque Firebase Storage no estaba
+inicializado en el proyecto: la consola exige un "Get Started" manual para crear
+el bucket. El propietario lo activó y el ruleset —cerrado a lectura y escritura—
+se desplegó a continuación.
 
 El primer intento de Functions desplegó los nueve contenedores y **los nueve
 murieron al arrancar** con `Cannot find module '@firebase/app'`.

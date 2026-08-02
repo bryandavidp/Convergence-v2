@@ -46,9 +46,9 @@ posición del jugador, y alias/moderación.
 
 Desplegado en cloud el 2026-08-02, con `validate:full` verde y autorización del
 propietario: Firestore Rules e índices, las 9 callables v2 en `europe-west1` y
-Hosting sirviendo `dist-cloud-dev`. Fuera quedan las RTDB Rules (instancia
-deny-all) y Storage, que ni siquiera está inicializado en el proyecto. El
-proyecto `dev` está en plan Blaze con presupuesto de 5 €.
+Hosting sirviendo `dist-cloud-dev` y las reglas de Storage. Fuera quedan solo
+las RTDB Rules (instancia deny-all). El proyecto `dev` está en plan Blaze con
+presupuesto de 5 €.
 
 ⚠️ **App Check sigue sin configurar en la nube y las callables llevan
 `enforceAppCheck: true`**, así que rechazarán toda llamada hasta registrarlo.

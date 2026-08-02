@@ -6,9 +6,9 @@ gestiona presencia/lobby caliente y Storage permanece cerrado hasta definir
 límites y validación.
 
 El proyecto `dev` (`convergence-d1a35`) está enlazado. Desde el 2026-08-02 hay
-desplegados Functions, Hosting, reglas de Firestore e índices. Siguen sin
-desplegar las RTDB Rules (la instancia cloud es deny-all) y Storage, que ni
-siquiera está inicializado en el proyecto.
+desplegados Functions, Hosting, reglas de Firestore, índices y reglas de Storage.
+Solo siguen sin desplegar las RTDB Rules: la instancia cloud es deny-all y así
+se queda hasta que entren presence/salas.
 
 ## Estado operativo
 
@@ -18,10 +18,10 @@ siquiera está inicializado en el proyecto.
 | Auth/App Check | Las tres callables exigen ambos; App Check cloud pendiente |
 | Firestore | Ruleset e índices desplegados en `dev`; escrituras cliente cerradas |
 | RTDB | Cloud deny-all; ruleset granular de presence/rooms solo local |
-| Storage | Lectura y escritura completamente cerradas |
+| Storage | Ruleset desplegado; lectura y escritura completamente cerradas |
 | Emuladores | Suite completa validada con Node 22/JDK 21 y smoke reproducible |
 | Tests | 9 handler + 10 Functions Emulator + 6 Auth E2E + 22 reglas/TTL |
-| Nube | Alias `dev` activo; Functions, Hosting, reglas e índices desplegados; RTDB/Storage no |
+| Nube | Alias `dev` activo; Functions, Hosting, reglas, índices y Storage desplegados; RTDB no |
 
 El backend sigue aislado de `web/index.html` y del build productivo. La variante
 `dist-profile-emulator` prueba identidad, preview, confirmación y commit contra
