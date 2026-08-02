@@ -64,6 +64,12 @@ function createStore({ revision = 0, ownerHash = null } = {}) {
     async putRecords() {
       throw new Error('no usado en este test');
     },
+    async getProfile() {
+      return state.body === null ? null : { revision: state.revision, profile: state.body };
+    },
+    async getRecords() {
+      return null;
+    },
   };
 }
 
@@ -149,6 +155,19 @@ test('un payload que no cumple el contrato se rechaza antes de tocar el store', 
     (error) => error.code === 'invalid-argument',
   );
   assert.equal(store.calls.putProfile, 0);
+});
+
+test('la lectura devuelve null mientras no exista documento y el estado tras escribir', async () => {
+  const store = createStore();
+  const svc = service(store);
+
+  assert.equal(await svc.getProfile(UID), null, 'sin documento no es un error');
+
+  await svc.putProfile(UID, write());
+  const stored = await svc.getProfile(UID);
+
+  assert.equal(stored.revision, 1);
+  assert.equal(stored.profile.displayName, 'Jugador');
 });
 
 test('la operación se deriva del uid autenticado y del carril', () => {

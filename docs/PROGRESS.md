@@ -956,6 +956,47 @@ filtra esa carpeta concreta.
 Queda sin explicar **qué** filtra `%TEMP%`. El síntoma sigue latente para
 cualquier otra herramienta Java del sistema que no pase por estos scripts.
 
+## 2026-08-02 — Fase 5: perfil en nube validado contra emulador y transporte real
+
+### Completado
+
+- Con los emuladores desbloqueados, las callables de perfil quedan verificadas
+  contra Firestore real, no solo contra un store en memoria: CAS efectivo,
+  reintento idempotente, clave reutilizada con otro contenido, revisión
+  caducada, cuerpo con uid ajeno, carriles perfil/marcas separados con la misma
+  clave, y aislamiento de lectura por UID.
+- Se añadieron `getUserProfile` y `getUserBestRecords`. Las lecturas pasan
+  también por Functions para que el cliente no necesite el SDK de Firestore ni
+  una regla de lectura por colección; el bundle del cliente sigue sin Firestore.
+- `user-profile-transport.ts` implementa `ProfileSyncTransport` sobre las cuatro
+  callables, valida cada respuesta contra el contrato y traduce «documento
+  inexistente» a `null` en vez de a un error, que es lo que el coordinador
+  necesita para subir lo local como revisión 0.
+- **El UID no viaja en la petición**: el servidor lo deriva de Auth. Aceptarlo
+  del cliente permitiría pedir el perfil de otra persona; hay un test que lo fija.
+
+### Defecto corregido: intermitencia en el gate de emulador
+
+Al añadir un tercer fichero `*.emulator.test.mjs` empezó a fallar un test
+**preexistente** de `health`. No era una regresión: `node --test` ejecuta los
+ficheros en paralelo y tres golpeando a la vez el mismo Functions Emulator
+provocaban contención. Se añadió `--test-concurrency=1`, la misma convención que
+ya usaba `test:rules:run`. Verificado con tres pasadas consecutivas en verde.
+
+### Evidencia
+
+- `npm run validate:full`: **521/521** = 474 del gate normal (350 legacy, 68
+  plataforma, 24 contratos, 14 game-core, 18 handlers) + 47 de backend (6 Auth
+  Emulator, 19 Functions Emulator, 22 reglas e invariantes).
+- **No se desplegó nada.** Las cuatro callables existen solo en el repositorio.
+
+### Pendiente inmediato
+
+- Montar coordinador y transporte en un bootstrap real: las dos mitades existen
+  y están probadas, pero nada las conecta en arranque.
+- UI para resolver un conflicto de perfil y recuperación de `identity-mismatch`.
+- Activar App Check en monitor sobre un bootstrap real.
+
 
 
 

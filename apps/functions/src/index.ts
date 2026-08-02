@@ -64,3 +64,15 @@ export const putUserBestRecords = onCall(
   { enforceAppCheck: true },
   (request) => userProfileService.putRecords(authenticatedUid(request), request.data),
 );
+
+/** Devuelve el perfil con su revisión, o null si el usuario aún no tiene. */
+export const getUserProfile = onCall(
+  { enforceAppCheck: true },
+  (request) => userProfileService.getProfile(authenticatedUid(request)),
+);
+
+/** Devuelve las marcas con su revisión, o null si aún no hay ninguna. */
+export const getUserBestRecords = onCall(
+  { enforceAppCheck: true },
+  (request) => userProfileService.getRecords(authenticatedUid(request)),
+);

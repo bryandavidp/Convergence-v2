@@ -55,6 +55,8 @@ export interface UserProfileStore {
   Promise<UserProfileDocumentV1>;
   putRecords(input: PreparedProfileWrite<UserBestRecordsWriteV1['records']>):
   Promise<UserBestRecordsDocumentV1>;
+  getProfile(uid: string): Promise<UserProfileDocumentV1 | null>;
+  getRecords(uid: string): Promise<UserBestRecordsDocumentV1 | null>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -139,6 +141,38 @@ class FirestoreUserProfileStore implements UserProfileStore {
       revision,
       records: body,
     }));
+  }
+
+  async getProfile(uid: string): Promise<UserProfileDocumentV1 | null> {
+    return this.get(uid, 'profile', (revision, body) => userProfileDocumentV1Schema.parse({
+      revision,
+      profile: body,
+    }));
+  }
+
+  async getRecords(uid: string): Promise<UserBestRecordsDocumentV1 | null> {
+    return this.get(uid, 'records', (revision, body) => userBestRecordsDocumentV1Schema.parse({
+      revision,
+      records: body,
+    }));
+  }
+
+  private async get<TDocument>(
+    uid: string,
+    lane: UserProfileLane,
+    build: (revision: number, body: unknown) => TDocument,
+  ): Promise<TDocument | null> {
+    const snapshot = await getFirestore()
+      .collection('users').doc(uid)
+      .collection(LANE_COLLECTION[lane]).doc(LANE_DOCUMENT)
+      .get();
+    if (!snapshot.exists) return null;
+    const data = snapshot.data();
+    if (!isRecord(data)) {
+      throw new HttpsError('internal', 'El documento existe sin datos.');
+    }
+    assertOwner(data, sha256(uid));
+    return build(assertRevision(data.revision), data.body);
   }
 
   private async put<TBody, TDocument>(
@@ -256,6 +290,16 @@ export function createUserProfileService(
         data,
       ) as UserBestRecordsWriteV1;
       return store.putRecords(prepare(uid, 'records', write, write.records));
+    },
+
+    // Las lecturas también pasan por Functions para que el cliente no necesite
+    // el SDK de Firestore ni una regla de lectura propia por colección.
+    async getProfile(uid: string): Promise<UserProfileDocumentV1 | null> {
+      return store.getProfile(uid);
+    },
+
+    async getRecords(uid: string): Promise<UserBestRecordsDocumentV1 | null> {
+      return store.getRecords(uid);
     },
   };
 }

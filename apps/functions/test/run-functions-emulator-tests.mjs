@@ -22,7 +22,10 @@ const child = spawn(
     projectId,
     '--config',
     'firebase.json',
-    'node --test apps/functions/test/*.emulator.test.mjs',
+    // Serie, no paralelo: varios ficheros golpeando a la vez el mismo Functions
+    // Emulator provocaban fallos intermitentes por contención. `test:rules:run`
+    // ya sigue esta convención.
+    'node --test --test-concurrency=1 apps/functions/test/*.emulator.test.mjs',
   ],
   {
     cwd: repositoryRoot,

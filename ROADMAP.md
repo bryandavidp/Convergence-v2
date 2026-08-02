@@ -210,10 +210,14 @@ de confirmación pendientes**
       `putUserBestRecords` con transacción CAS, incremento de revisión y recibo
       por operación para deduplicar reintentos. Los documentos cuelgan de
       `users/{uid}` para reutilizar reglas ya verificadas.
-- [ ] Añadir el test de Emulator Suite de las dos callables nuevas; hoy solo
-      tienen cobertura de handler con store en memoria (bloqueado por `AF_UNIX`).
-- [ ] Conectar el transporte real del cliente contra esas callables; el
-      coordinador todavía habla con un servidor de pruebas en memoria.
+- [x] Añadir el test de Emulator Suite de las callables de perfil: CAS,
+      idempotencia, clave reutilizada, revisión caducada, uid ajeno, carriles
+      separados y aislamiento de lectura por UID.
+- [x] Añadir callables de lectura `getUserProfile` / `getUserBestRecords` y el
+      transporte real del cliente sobre las cuatro. El UID nunca viaja en la
+      petición: el servidor lo deriva de Auth.
+- [ ] Montar el coordinador con el transporte real en un bootstrap: hoy las dos
+      mitades existen y están probadas, pero nada las conecta en arranque.
 - [ ] Diseñar la resolución de conflicto de perfil de cara al jugador: hoy se
       señala el conflicto y se conserva lo local, pero no hay UI para elegir.
 - [x] Implementar repositorio validado y outbox durable por UID con leases,
