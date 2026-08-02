@@ -768,10 +768,11 @@ gate no podía detectarlo porque la feature no tenía test de cobertura i18n.
 
 ### Bloqueos encontrados
 
-- `test:functions:emulator` y `test:rules` **no se pudieron ejecutar**. El JBR de
-  Android Studio se actualizó a Java 25 y el Firestore Emulator v1.22.0 falla al
-  arrancar (`failed to create a child event loop`, netty). Los docs registran
-  21/21 reglas con JDK 21: hace falta reinstalar un JDK 21 accesible.
+- `test:functions:emulator` y `test:rules` **no se pudieron ejecutar**: el
+  Firestore Emulator falla al arrancar con `failed to create a child event loop`
+  (netty). La causa se corrigió al día siguiente, ver la entrada del 2026-08-02
+  sobre `AF_UNIX`: **no** era la versión del JDK, como se anotó aquí en primera
+  instancia.
 - `npm run check:node` aborta en shells que no activan fnm: heredan Node 23.
 
 ### Pendiente inmediato
@@ -834,8 +835,87 @@ test que fija la propiedad: sincronizar dos veces seguidas no escribe otra vez.
 - El lado servidor no existe: falta el callable de Functions que aplique el CAS,
   incremente la revisión y deduplique por `idempotencyKey`.
 - Falta el transporte real contra Firestore/Functions y su validación en
-  Emulator Suite, hoy bloqueada por el JDK 21 ausente.
+  Emulator Suite, hoy bloqueada por el fallo de `AF_UNIX` descrito abajo.
 - Falta UI para resolver un conflicto de perfil: se señala, pero no se elige.
+
+## 2026-08-02 — Diagnóstico corregido: el bloqueo de emuladores es `AF_UNIX`, no el JDK
+
+### Qué se creía y qué es
+
+Se anotó que el Firestore Emulator no arrancaba porque el JBR de Android Studio
+se había actualizado a Java 25. **Era incorrecto.** Al instalar el JDK 21 el
+fallo se reprodujo idéntico.
+
+La causa real es de la máquina, no del proyecto: `connect` sobre un socket de
+dominio Unix devuelve `Invalid argument` (EINVAL) en cualquier proceso Java. Como
+`Selector.open()` de Java NIO crea internamente un `Pipe` sobre `AF_UNIX`, **todo
+programa Java que abra un selector falla**, y con él cualquier emulador.
+
+### Evidencia del diagnóstico
+
+- Un programa mínimo con solo `Selector.open()` falla igual: no es cosa de
+  Firebase ni de netty.
+- Reproducido con **JBR 21.0.11 y con 25.0.2**: no depende de la versión.
+- Reproducido en **Git Bash y en PowerShell**, dentro y fuera del sandbox de
+  herramientas: no depende del shell ni del aislamiento.
+- Un `bind` de `AF_UNIX` **sí** funciona; falla el `connect` siguiente. Descarta
+  que falte el soporte del sistema.
+- Reproducido con `java.io.tmpdir` en ruta corta 8.3 (`BRYAND~1`) y en ruta
+  larga: no es la ruta del socket. El `.sock` queda además sin poder borrarse
+  («El sistema no tiene acceso al archivo»).
+
+### Qué hacer
+
+Primer remedio a probar: **reiniciar Windows**, que suele restaurar el estado del
+driver `afunix`. Si persiste, revisar antivirus/EDR que intercepte sockets de
+dominio Unix. El JDK 21 homologado está en `~/.jdks/jbr-21.0.11` y funciona
+correctamente como JDK: no hay que instalar nada.
+
+Mientras dure el bloqueo, el trabajo de backend puede avanzar con
+`test:functions:unit`, que **no** usa emuladores.
+
+## 2026-08-02 — Fase 5: lado servidor del perfil en nube (CAS idempotente)
+
+### Completado
+
+- Dos callables nuevas en Functions, `putUserProfile` y `putUserBestRecords`,
+  siguiendo el patrón ya establecido por la importación legacy: interfaz `Store`
+  inyectable, `createUserProfileService(store, now)` y `HttpsError` tipados.
+- La transacción aplica compare-and-set real: si la revisión almacenada no
+  coincide con `baseRevision` se responde `aborted` y **no se escribe nada**.
+- Cada operación deja un recibo. Un reintento con la misma `idempotencyKey`
+  devuelve la revisión ya aplicada en vez de aplicar el cambio dos veces; la
+  misma clave con otro contenido se rechaza con `already-exists` en lugar de
+  sobrescribir.
+- El `operationId` se deriva de `sha256(uid + carril + idempotencyKey)`: dos
+  usuarios con la misma clave no pueden compartir operación, y perfil y marcas
+  son operaciones distintas. La identidad siempre sale de Auth: un cuerpo cuyo
+  `uid` no coincide con el autenticado se rechaza con `permission-denied` sin
+  llegar siquiera al store.
+- Los documentos cuelgan de `users/{uid}/cloudProfile|cloudRecords|cloudReceipts`
+  **a propósito**: ese subárbol ya tiene reglas verificadas (lectura solo del
+  propietario, escritura de cliente denegada). Colecciones nuevas de primer nivel
+  habrían obligado a desplegar reglas sin poder validarlas mientras el emulador
+  está bloqueado.
+
+### Evidencia
+
+- `apps/functions/test/user-profile.handler.test.mjs`: **8/8**, sobre un store en
+  memoria que aplica el CAS igual que la transacción real. Cubre escritura
+  válida, reintento idempotente, clave reutilizada con otro contenido, revisión
+  caducada, uid ajeno, contrato inválido y derivación del `operationId`.
+- `npm run test:functions:unit`: **17/17**.
+- `npm run validate`: **468/468** verde = 350 legacy + 63 plataforma + 24
+  contratos + 14 game-core + 17 handlers Functions, más typecheck, builds y smoke.
+- **No se desplegó nada.** Las callables existen en el repositorio y no se han
+  publicado en ningún proyecto cloud.
+
+### Pendiente inmediato
+
+- Test de Emulator Suite de ambas callables, bloqueado por `AF_UNIX`.
+- Transporte real del cliente contra estas callables: el coordinador todavía
+  habla con un servidor de pruebas en memoria.
+- UI para resolver un conflicto de perfil: se señala, pero no se elige.
 
 
 

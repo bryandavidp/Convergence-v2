@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import './config/runtime.js';
 import { legacyProgressImportService } from './legacy-progress.js';
+import { userProfileService } from './user-profile.js';
 
 initializeApp();
 
@@ -50,4 +51,16 @@ export const commitLegacyProgressImport = onCall(
     authenticatedUid(request),
     request.data,
   ),
+);
+
+/** Escribe el perfil solo si `baseRevision` sigue vigente (compare-and-set). */
+export const putUserProfile = onCall(
+  { enforceAppCheck: true },
+  (request) => userProfileService.putProfile(authenticatedUid(request), request.data),
+);
+
+/** Escribe las marcas personales bajo el mismo compare-and-set idempotente. */
+export const putUserBestRecords = onCall(
+  { enforceAppCheck: true },
+  (request) => userProfileService.putRecords(authenticatedUid(request), request.data),
 );

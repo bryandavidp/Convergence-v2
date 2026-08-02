@@ -82,9 +82,14 @@ Estado: **gate local completado; CI pendiente**
 - [ ] Confirmar tras reiniciar la sesión que PowerShell hereda fnm/Node 22. En
       shells no interactivos hay que activar fnm a mano: sin ello `check:node`
       encuentra Node 23 y aborta el gate.
-- [ ] Restaurar un JDK 21 accesible: el JBR de Android Studio se actualizó a
-      Java 25 y el Firestore Emulator v1.22.0 (netty) ya no arranca ahí, lo que
-      bloquea `test:functions:emulator` y `test:rules`.
+- [ ] Reparar `AF_UNIX` en la máquina de desarrollo: `connect` devuelve
+      `Invalid argument` (EINVAL) para cualquier proceso Java, así que
+      `Selector.open()` falla y **ningún** emulador Java arranca. Bloquea
+      `test:functions:emulator` y `test:rules`. No depende del JDK (reproducido
+      con JBR 21.0.11 y 25.0.2), ni del shell, ni de la ruta del socket: `bind`
+      funciona y `connect` falla. Primer remedio a probar: reiniciar Windows;
+      si persiste, revisar antivirus/EDR que intercepte sockets de dominio Unix.
+      El JDK 21 homologado sigue disponible en `~/.jdks/jbr-21.0.11`.
 - [ ] Añadir CI para Windows/Linux con artefactos de test.
 
 Criterio de salida: una instalación limpia reproduce el mismo build y todas las
@@ -203,11 +208,14 @@ de confirmación pendientes**
       fusión monótona de marcas que no puede perder récords, conflicto explícito
       de perfil que nunca sobrescribe, y clasificación de errores que solo encola
       lo transitorio.
-- [ ] Implementar el lado servidor en Functions: aplicar el CAS, incrementar la
-      revisión y deduplicar por `idempotencyKey`.
-- [ ] Conectar el transporte real contra Firestore/Functions y validarlo en
-      Emulator Suite; hoy el coordinador solo se ejercita contra un servidor de
-      pruebas en memoria.
+- [x] Implementar el lado servidor en Functions: callables `putUserProfile` y
+      `putUserBestRecords` con transacción CAS, incremento de revisión y recibo
+      por operación para deduplicar reintentos. Los documentos cuelgan de
+      `users/{uid}` para reutilizar reglas ya verificadas.
+- [ ] Añadir el test de Emulator Suite de las dos callables nuevas; hoy solo
+      tienen cobertura de handler con store en memoria (bloqueado por `AF_UNIX`).
+- [ ] Conectar el transporte real del cliente contra esas callables; el
+      coordinador todavía habla con un servidor de pruebas en memoria.
 - [ ] Diseñar la resolución de conflicto de perfil de cara al jugador: hoy se
       señala el conflicto y se conserva lo local, pero no hay UI para elegir.
 - [x] Implementar repositorio validado y outbox durable por UID con leases,
