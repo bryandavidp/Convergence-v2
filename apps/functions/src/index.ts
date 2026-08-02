@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase-admin/app';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import './config/runtime.js';
+import { leaderboardService } from './leaderboard.js';
 import { legacyProgressImportService } from './legacy-progress.js';
 import { verifyRunClaim } from './run-score.js';
 import { userProfileService } from './user-profile.js';
@@ -89,4 +90,14 @@ export const verifyRun = onCall(
     authenticatedUid(request);
     return verifyRunClaim(request.data);
   },
+);
+
+/**
+ * Publica una partida en sus cuatro tablas. El score del cliente nunca se
+ * guarda: se recalcula y solo se publica si coincide. Una reclamación que no
+ * cuadra deja recibo de rechazo y no toca ninguna tabla.
+ */
+export const submitRunClaim = onCall(
+  { enforceAppCheck: true },
+  (request) => leaderboardService.submit(authenticatedUid(request), request.data),
 );
