@@ -9,6 +9,7 @@
   // importación relativa entre ellos devuelve ese mismo objeto.
   function require() { return exports; }
 // --- packages/game-core/src/scoring.ts ---
+(function (exports, require) {
 "use strict";
 /**
  * Puntuación compartida por todos los modos, extraída del motor de `game.js`.
@@ -158,7 +159,9 @@ function emptyBoardBonusPoints(factors) {
         * (factors.sprintMultiplier ?? 1)));
 }
 
+})(exports, require);
 // --- packages/game-core/src/modes/adventure.ts ---
+(function (exports, require) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RELIC_CRYSTAL_BONUS = exports.RELIC_COMBO_WINDOW_BONUS_MS = exports.ADVENTURE_CALM_ROUTE_MULT = exports.ADVENTURE_DENSE_ROUTE_MULT = exports.ADVENTURE_MODE_MULT = void 0;
@@ -215,7 +218,9 @@ function adventurePenalizedSpawnRate(difficulty, spawnRate) {
     return (0, scoring_js_1.penalizedSpawnRate)(difficulty, spawnRate);
 }
 
+})(exports, require);
 // --- packages/game-core/src/modes/classic.ts ---
+(function (exports, require) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CLASSIC_MAX_LEVEL = exports.CLASSIC_MIN_LEVEL = exports.CLASSIC_MODE_MULT = void 0;
@@ -254,7 +259,9 @@ function classicPenalizedSpawnRate(difficulty, spawnRate) {
     return (0, scoring_js_1.penalizedSpawnRate)(difficulty, spawnRate);
 }
 
+})(exports, require);
 // --- packages/game-core/src/modes/survival.ts ---
+(function (exports, require) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.X2_BOOSTER_MULT = exports.GOLDEN_WAVE_MULT = exports.SURVIVAL_MIN_FEVER_COMBO = exports.FRENZY_FEVER_STEP = exports.FRENZY_TIER_STEP = exports.FRENZY_BASE_MULT = exports.FRENZY_WAVES_PER_TIER = exports.FRENZY_MAX_TIER = exports.SURVIVAL_VAR_EVERY = exports.SURVIVAL_MODE_MULT = void 0;
@@ -366,7 +373,9 @@ function survivalPenalizedSpawnRate(difficulty, spawnRate) {
     return (0, scoring_js_1.penalizedSpawnRate)(difficulty, spawnRate);
 }
 
+})(exports, require);
 // --- packages/game-core/src/modes/time-attack.ts ---
+(function (exports, require) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TIME_CAPSULE_SECONDS = exports.TIME_ATTACK_LEVEL = exports.TIME_ATTACK_INITIAL_ICONS = exports.TIME_ATTACK_MODE_MULT = exports.SPRINT_MULT = exports.SPRINT_WINDOW = exports.TIMED_GAIN = exports.TIMED_MISTAKE_S = exports.TIMED_CAP = exports.TIMED_START = void 0;
@@ -454,7 +463,9 @@ function applyTimeCapsule(timeLeftSeconds) {
     return Math.min(exports.TIMED_CAP, timeLeftSeconds + exports.TIME_CAPSULE_SECONDS);
 }
 
+})(exports, require);
 // --- packages/game-core/src/modes/tutorial.ts ---
+(function (exports, require) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TUTORIAL_LEVEL = exports.TUTORIAL_MODE_MULT = void 0;
@@ -487,7 +498,9 @@ function tutorialMistakeCost() {
     return 0;
 }
 
+})(exports, require);
 // --- packages/game-core/src/modes/zen.ts ---
+(function (exports, require) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ZEN_FEVER_BOOST = exports.ZEN_SOFT_CLEAR_FRACTION = exports.ZEN_LEVEL = exports.ZEN_MODE_MULT = void 0;
@@ -540,5 +553,6 @@ function zenMistakeCost() {
     return 0;
 }
 
+})(exports, require);
   window.ConvergenceGameCore = Object.freeze(exports);
 })();

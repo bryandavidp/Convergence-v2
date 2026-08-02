@@ -25,7 +25,7 @@ menor riesgo funcional.
 | 1. Toolchain reproducible | `validate:full` verde desde shell limpio; falta CI | 2–4 días | Node 22, lockfile y `npm run validate` verde |
 | 2. Shell nativo inicial | APK debug 2.37.3 reproducible; faltan matriz manual, dispositivo real e iOS | 3–5 días | PWA + Android instalado + proyecto iOS generado |
 | 3. Capa de plataforma y storage | Hardening automatizado verde; faltan lectura dual y matriz manual | 1–2 semanas | mismo perfil sobre web/Preferences, migración reversible |
-| 4. Núcleo determinista y RunSave v2 | Los **seis modos** extraídos con paridad real; faltan los sistemas que puntúan fuera de la convergencia | 2–4 semanas | reglas puras, estado RNG y replays reproducibles |
+| 4. Núcleo determinista y RunSave v2 | Los seis modos extraídos y **enrutados en el cliente**; falta el backend y lo que puntúa fuera de la convergencia | 2–4 semanas | reglas puras, estado RNG y replays reproducibles |
 | 5. Firebase local, Auth y progreso | Perfil en nube con CAS validado contra emulador; faltan UI de conflicto, App Check y despliegue | 2–3 semanas | emuladores, cuenta y sincronización offline segura |
 | 6. Rankings por modo | Desbloqueada para Contrarreloj; el resto espera a que cliente y backend ejecuten el núcleo | 1–2 semanas | tablas verificadas por modo/periodo |
 | 7. Salas y lobby en tiempo real | Pendiente | 2–3 semanas | crear/unirse/listo/presencia/reconexión |
@@ -168,9 +168,11 @@ cliente y backend ejecuten el núcleo en todos los modos, no solo en dos.
 - [ ] Extraer los sistemas que puntúan **fuera** de la convergencia: efectos de
       baldosa (bomba/área), recompensas de oleada y de jefe. Hoy los tests de
       paridad excluyen esos toques en vez de predecirlos.
-- [ ] Ejecutar el mismo core en cliente y validador de backend. Hoy **nadie**
-      importa `@convergence/game-core`: el cliente sigue con el motor de
-      `game.js` y Functions no lo usa.
+- [~] Ejecutar el mismo core en cliente y validador de backend. El cliente
+      puntúa **los seis modos** desde el núcleo (convergencia, bono de tablero
+      vacío y perfecto, penalización por fallo y limpieza por área), verificado
+      con partidas idénticas con y sin núcleo. El backend solo recalcula
+      Contrarreloj: faltan los otros cinco.
 - [ ] Eliminar el `if` sin cuerpo de `reducer.ts:75`, que detecta tablero
       bloqueado tras un tap y no hace nada.
 

@@ -68,13 +68,15 @@ test('el núcleo generado expone todo lo que game.js le pide', () => {
 function installSpyCore() {
   const calls = [];
   globalThis.window.ConvergenceGameCore = {
-    timeAttackConvergencePoints(input) { calls.push(['timeAttackConvergencePoints', input]); return 777; },
+    PERFECT_BOARD_BONUS: 321,
+    convergencePoints(input) { calls.push(['convergencePoints', input]); return 777; },
+    emptyBoardBonusPoints(input) { calls.push(['emptyBoardBonusPoints', input]); return 999; },
+    iconPenaltyCount() { calls.push(['iconPenaltyCount']); return 4; },
+    penalizedSpawnRate() { calls.push(['penalizedSpawnRate']); return 1234; },
+    areaClearPoints() { calls.push(['areaClearPoints']); return 66; },
     timeGainFor() { calls.push(['timeGainFor']); return 0; },
     applyTimeGain() { calls.push(['applyTimeGain']); return 42; },
     applyMistakePenalty() { calls.push(['applyMistakePenalty']); return 11; },
-    timeAttackEmptyBoardBonus() { calls.push(['timeAttackEmptyBoardBonus']); return 999; },
-    zenConvergencePoints(input) { calls.push(['zenConvergencePoints', input]); return 555; },
-    zenEmptyBoardBonus() { calls.push(['zenEmptyBoardBonus']); return 888; },
   };
   return calls;
 }
@@ -106,13 +108,15 @@ test('Contrarreloj puntúa y ajusta el reloj a través del núcleo', () => {
     assert.equal(State.score - scoreBefore, 777, 'los puntos salen del núcleo');
     assert.equal(State.timeLeft, 42, 'el reloj sale del núcleo');
     const names = calls.map((call) => call[0]);
-    assert.ok(names.includes('timeAttackConvergencePoints'));
+    assert.ok(names.includes('convergencePoints'));
     assert.ok(names.includes('applyTimeGain'));
 
-    const input = calls.find((call) => call[0] === 'timeAttackConvergencePoints')[1];
+    const input = calls.find((call) => call[0] === 'convergencePoints')[1];
     assert.equal(input.difficulty, 'normal');
+    assert.equal(input.mode, 'contrarreloj');
     assert.equal(typeof input.removed, 'number');
-    assert.equal(typeof input.fever, 'boolean');
+    assert.equal(typeof input.level, 'number');
+    assert.equal(typeof input.feverBoost, 'number');
   } finally {
     delete globalThis.window.ConvergenceGameCore;
   }
@@ -147,34 +151,42 @@ test('sin núcleo el juego sigue puntuando con la expresión histórica', () => 
   assert.notEqual(State.score - scoreBefore, 777);
 });
 
-test('los demás modos no pasan por el núcleo mientras no estén extraídos', () => {
-  const calls = installSpyCore();
-  try {
-    Game.start('supervivencia', 'normal', undefined, 4242);
-    const cell = firstConvergingCell();
-    if (cell !== -1) Game.activate(cell);
-    assert.deepEqual(calls, [], 'Supervivencia aún no está extraída (ROADMAP fase 4)');
-  } finally {
-    delete globalThis.window.ConvergenceGameCore;
+test('los seis modos puntúan a través del núcleo, cada uno con su identidad', () => {
+  const modes = ['tutorial', 'clasico', 'aventura', 'contrarreloj', 'supervivencia', 'zen'];
+  for (const mode of modes) {
+    const calls = installSpyCore();
+    try {
+      Game.start(mode, 'normal', undefined, 4242);
+      const cell = firstConvergingCell();
+      assert.notEqual(cell, -1, `${mode}: el tablero inicial debe ofrecer una convergencia`);
+
+      const scoreBefore = State.score;
+      Game.activate(cell);
+
+      assert.equal(State.score - scoreBefore, 777, `${mode}: los puntos salen del núcleo`);
+      const input = calls.find((call) => call[0] === 'convergencePoints')[1];
+      assert.equal(input.mode, mode, `${mode}: el modo debe viajar al núcleo`);
+      // El Tutorial fuerza `facil`: la dificultad que viaja es la efectiva.
+      assert.equal(input.difficulty, State.diff);
+    } finally {
+      delete globalThis.window.ConvergenceGameCore;
+    }
   }
 });
 
-test('Zen también puntúa a través del núcleo', () => {
+test('el fallo con penalización usa el núcleo para iconos y ritmo de spawn', () => {
   const calls = installSpyCore();
   try {
-    Game.start('zen', 'normal', undefined, 4242);
-    const cell = firstConvergingCell();
+    Game.start('clasico', 'normal', undefined, 4242);
+    const cell = firstNonConvergingCell();
     assert.notEqual(cell, -1);
 
-    const scoreBefore = State.score;
     Game.activate(cell);
 
-    assert.equal(State.score - scoreBefore, 555, 'los puntos de Zen salen del núcleo');
-    const input = calls.find((call) => call[0] === 'zenConvergencePoints')[1];
-    assert.equal(input.difficulty, 'normal');
-    // Zen no tiene reloj ni fiebre: su entrada no puede arrastrarlos.
-    assert.equal(input.timeLeftSeconds, undefined);
-    assert.equal(input.fever, undefined);
+    const names = calls.map((call) => call[0]);
+    assert.ok(names.includes('iconPenaltyCount'), 'los iconos de castigo salen del núcleo');
+    assert.ok(names.includes('penalizedSpawnRate'), 'el ritmo tras fallar sale del núcleo');
+    assert.equal(State.spawnRate, 1234);
   } finally {
     delete globalThis.window.ConvergenceGameCore;
   }

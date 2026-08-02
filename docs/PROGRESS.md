@@ -1291,3 +1291,56 @@ Falta extraer los sistemas que puntúan fuera de la convergencia: efectos de
 baldosa, recompensas de oleada y de jefe. Y el cliente enruta por el núcleo solo
 Contrarreloj y Zen; los otros cuatro modos tienen ya sus reglas en el núcleo pero
 `game.js` sigue calculándolas con su expresión histórica.
+
+## 2026-08-02 — Los seis modos puntúan desde el núcleo en el cliente
+
+### Completado
+
+- `game.js` ya no encadena un ternario por modo: llama a la **fórmula común**
+  `convergencePoints` pasándole los factores vivos que el motor ya conoce
+  (nivel, fiebre, temporal, sprint, bendiciones). Es exactamente la expresión
+  histórica, y cubre los seis modos con un solo camino.
+- También pasan por el núcleo el bono de tablero vacío, el bono plano de tablero
+  perfecto, los iconos de penalización, la aceleración del spawn tras fallar y
+  los puntos de limpieza por área.
+- Los envoltorios por modo (`timeAttackConvergencePoints`, `zenConvergencePoints`,
+  …) siguen existiendo para el **backend**, que no tiene motor y debe derivar
+  esos factores desde una reclamación.
+
+### Bug encontrado: el núcleo de navegador no parseaba
+
+`game-core.js` llevaba roto desde que se añadió Zen. Al transpilar a CommonJS,
+dos módulos que importan el mismo fichero declaran el mismo identificador
+(`scoring_js_1`), y el generador los concatenaba en un ámbito común: el fichero
+**no parseaba**. En el navegador eso habría dejado `window.ConvergenceGameCore`
+sin definir y el juego habría caído silenciosamente a la expresión histórica.
+
+No se detectó antes porque los tests de cableado usaban un núcleo espía y solo
+comprobaban el fichero generado por texto, sin ejecutarlo nunca. Ahora cada
+módulo va en su propio ámbito y comparte `exports` por parámetro.
+
+### La prueba que lo cazó
+
+`game-core-equivalence.test.js` juega la **misma partida seedeada dos veces** —con
+el núcleo real cargado y sin él— y exige que score, combo máximo, eliminados,
+fallos y nivel sean idénticos, en los seis modos y las tres dificultades. Es lo
+único que demuestra que enrutar no cambió el comportamiento del juego completo;
+los tests de paridad validan fórmulas por separado.
+
+De paso obligó a aislar Aventura entre partidas: `advMax` persiste en el proceso,
+así que la segunda run arrancaba en otro nivel y la comparación medía
+contaminación en vez del enrutado.
+
+### Evidencia
+
+- `game-core-equivalence.test.js`: **19/19**.
+- `game-core-wiring.test.js`: **9/9**, con un test que recorre los seis modos y
+  comprueba que cada uno viaja al núcleo con su identidad y su dificultad efectiva.
+- `npm run validate:full`: **591/591** = 544 del gate normal + 47 de backend.
+- Triple bump a **2.37.5**.
+
+### Pendiente
+
+El backend solo recalcula Contrarreloj; faltan los otros cinco modos. Y siguen
+sin extraer los sistemas que puntúan fuera de la convergencia (efectos de
+baldosa, recompensas de oleada y de jefe).

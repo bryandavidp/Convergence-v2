@@ -47,7 +47,13 @@ for (const relativePath of MODULES) {
       removeComments: false,
     },
   });
-  chunks.push(`// --- ${relativePath} ---\n${outputText}`);
+  // Cada módulo va en su propio ámbito. Al transpilar a CommonJS, dos módulos
+  // que importan el mismo fichero declaran el mismo identificador
+  // (`scoring_js_1`), así que concatenarlos en un ámbito común ni siquiera
+  // parsea. Comparten `exports` por parámetro, que es lo único que los une.
+  chunks.push(
+    `// --- ${relativePath} ---\n(function (exports, require) {\n${outputText}\n})(exports, require);`,
+  );
 }
 
 const banner = `/* GENERADO por scripts/build-game-core-browser.mjs — no editar a mano.

@@ -16,7 +16,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.37.4';
+  const VERSION = '2.37.5';
 
   /* Núcleo de reglas compartido con el backend (`packages/game-core`). Llega
    * como script clásico cargado antes que game.js, porque el cliente es vanilla
@@ -25,12 +25,12 @@
    * `time-attack-parity.test.mjs`. */
   const GameCore = {
     get core() { return window.ConvergenceGameCore || null; },
+    ready() { return !!window.ConvergenceGameCore; },
     timeAttack() { return State.mode === 'contrarreloj' && !!window.ConvergenceGameCore; },
-    zen() { return State.mode === 'zen' && !!window.ConvergenceGameCore; },
   };
   const Platform = window.ConvergencePlatform || {
-    runtime: 'web', isNative: false,
-    mirrorStorage() { }, removeStorage() { }, haptic() { },
+    runtime: 'web', isNative: false, hapticsAvailable: false,
+    mirrorStorage() { }, removeStorage() { }, haptic() { return false; },
     async share() { return false; }, exitApp() { },
   };
 
@@ -9626,19 +9626,23 @@
       const d = Config.DIFFICULTY[State.diff], m = Config.MODES[State.mode];
       const base = removed * 10 * State.level;
       const survMult = (State.mode === 'supervivencia') ? Survival.scoreMult() : 1;
-      // Contrarreloj puntúa con @convergence/game-core, el mismo módulo que
+      // Los seis modos puntúan con @convergence/game-core, el mismo módulo que
       // reejecuta el backend al verificar una partida. Si cliente y servidor
       // calcularan por separado, cualquier deriva convertiría un score legítimo
-      // en un rechazo. El resto de modos sigue en la expresión de siempre hasta
-      // que se extraigan (ver ROADMAP fase 4).
-      const points = GameCore.timeAttack()
-        ? GameCore.core.timeAttackConvergencePoints({
-          removed, combo: State.combo, difficulty: State.diff,
-          timeLeftSeconds: State.timeLeft, fever: State.fever,
-        })
-        : GameCore.zen()
-        ? GameCore.core.zenConvergencePoints({
-          removed, combo: State.combo, difficulty: State.diff,
+      // en un rechazo.
+      //
+      // Se llama a la fórmula común y no al envoltorio de cada modo: el motor ya
+      // conoce sus factores vivos (nivel, fiebre, temporal, sprint, bendiciones)
+      // y pasárselos es exactamente la expresión histórica. Los envoltorios por
+      // modo existen para el backend, que no tiene motor y debe derivarlos.
+      const points = GameCore.ready()
+        ? GameCore.core.convergencePoints({
+          removed, level: State.level, combo: State.combo,
+          difficulty: State.diff, mode: State.mode,
+          feverBoost: this.feverBoost(),
+          tempMultiplier: State.tempMult || 1,
+          sprintMultiplier: this.sprintMult(),
+          survivalMultiplier: survMult,
         })
         : Math.floor(base * State.comboMult * d.scoreMult * m.mult * this.feverBoost() * (State.tempMult || 1) * this.sprintMult() * survMult);
       State.score += points;
@@ -9781,11 +9785,15 @@
       if (State.mode === 'supervivencia') Render.boardEvent('surv-penalty', 520);
       // Añadir iconos de penalización (escala con dificultad y nivel)
       const d = Config.DIFFICULTY[State.diff];
-      const n = clamp(d.penaltyBase + Math.floor((State.level - 1) / 3), 1, 5);
+      const n = GameCore.ready()
+        ? GameCore.core.iconPenaltyCount(State.diff, State.level)
+        : clamp(d.penaltyBase + Math.floor((State.level - 1) / 3), 1, 5);
       const placed = Engine.addPenalty(n);
       if (placed.length) Render.penalty(placed);
       // Subir velocidad de aparición
-      State.spawnRate = Math.max(d.spawnMin, Math.round(State.spawnRate * 0.95));
+      State.spawnRate = GameCore.ready()
+        ? GameCore.core.penalizedSpawnRate(State.diff, State.spawnRate)
+        : Math.max(d.spawnMin, Math.round(State.spawnRate * 0.95));
       Toasts.show(`Error · +${placed.length} iconos · más rápido`, 'bad', 1800);
       Render.hud();
       this.evaluate();
@@ -9865,7 +9873,9 @@
       } else if (eff === 'bomb') {
         touched = this._area(i, 1);
         const cells = touched.filter((j) => State.board[j] !== null && !(State.tiles[j] && State.tiles[j].solid));
-        const pts = cells.length * 10 * State.level;
+        const pts = GameCore.ready()
+          ? GameCore.core.areaClearPoints(cells.length, State.level)
+          : cells.length * 10 * State.level;
         this._removeCells(cells); State.score += pts; State.removedTotal += cells.length;
         if (State.mode === 'supervivencia') Survival.addFrenzy(Math.min(28, 8 + cells.length * 2));
         if (cells.length) Render.popup(i, '+' + pts, 'var(--warn)');
@@ -10080,13 +10090,13 @@
       const wave = State.mode === 'supervivencia' ? Survival.wave : 1;
       const combo = Math.min(State.combo || 1, 12);
       const raw = Config.EMPTY_BOARD_BONUS + chain * 90 + combo * 28 + (State.mode === 'supervivencia' ? wave * 45 : 0);
-      const points = GameCore.timeAttack()
-        ? GameCore.core.timeAttackEmptyBoardBonus({
-          chain, combo, difficulty: State.diff,
-          timeLeftSeconds: State.timeLeft, fever: State.fever,
+      const points = GameCore.ready()
+        ? GameCore.core.emptyBoardBonusPoints({
+          chain, combo, difficulty: State.diff, mode: State.mode, wave,
+          feverBoost: this.feverBoost(),
+          tempMultiplier: State.tempMult || 1,
+          sprintMultiplier: this.sprintMult(),
         })
-        : GameCore.zen()
-        ? GameCore.core.zenEmptyBoardBonus({ chain, combo, difficulty: State.diff })
         : Math.max(250, Math.round(raw * d.scoreMult * m.mult * this.feverBoost() * (State.tempMult || 1) * this.sprintMult()));
       const coins = clamp(Math.round(points / 220), 3, 16);
       const extra = [];
@@ -10172,7 +10182,12 @@
 
     levelComplete(perfect) {
       State.status = 'levelComplete'; this.clearHintHighlight();
-      if (perfect) { State.perfectEver = true; State.score += Config.EMPTY_BOARD_BONUS; Toasts.show(`¡Tablero limpio! +${Config.EMPTY_BOARD_BONUS}`, 'good'); Render.flash(); }
+      if (perfect) {
+        // Bono plano de tablero perfecto: lo cobran los modos sin bono escalado.
+        const bonus = GameCore.ready() ? GameCore.core.PERFECT_BOARD_BONUS : Config.EMPTY_BOARD_BONUS;
+        State.perfectEver = true; State.score += bonus;
+        Toasts.show(`¡Tablero limpio! +${bonus}`, 'good'); Render.flash();
+      }
       this.saveBest(); Render.hud(); Render.fever(false); State.fever = false;
       const m = Config.MODES[State.mode];
       if (m.single) { this.win(perfect ? '¡Tutorial completado con tablero perfecto!' : '¡Tutorial completado!'); return; }

@@ -11,8 +11,8 @@
   // que documenta el bump. Antes se leía solo esta constante, así que quedó en
   // 2.37.1 mientras el resto del proyecto ya iba por 2.37.2 y los usuarios
   // seguían cargando el game.js viejo desde caché.
-  const LEGACY_SCRIPT = 'game.js?v=2.37.4';
-  const CORE_SCRIPT = 'game-core.js?v=2.37.4';
+  const LEGACY_SCRIPT = 'game.js?v=2.37.5';
+  const CORE_SCRIPT = 'game-core.js?v=2.37.5';
   const PERSISTED_KEYS = ['cv_meta', 'cv_run'];
   const LEGACY_STORAGE_EVENT = 'convergence:legacy-storage-changed';
   const capacitor = window.Capacitor;
@@ -26,6 +26,42 @@
 
   function report(kind, error) {
     try { console.warn(`[ConvergencePlatform:${kind}]`, error); } catch (_) { }
+  }
+
+  /* Háptica nativa.
+   *
+   * El plugin dispara formas de onda ya diseñadas —`impact` (LIGHT/MEDIUM/HEAVY)
+   * y `notification` (SUCCESS/WARNING/ERROR)— con duración *y* amplitud. Eso es
+   * lo que de verdad se siente en el motor de un móvil: `vibrate` a pelo con las
+   * duraciones del patrón web (8, 12, 14 ms) queda por debajo del umbral de un
+   * LRA moderno y no se nota. Antes el bridge mandaba siempre `impact LIGHT`, así
+   * que los catorce patrones del juego se sentían iguales, y si el plugin no
+   * estaba disponible `haptic()` salía en silencio sin avisar a game.js, que ya
+   * había descartado `navigator.vibrate`: la partida se quedaba sin vibración de
+   * ningún tipo. Ahora se devuelve si la llamada salió o no, para que el runtime
+   * legacy pueda caer a la API del WebView.
+   */
+  const HAPTIC_IMPACT = { light: 'LIGHT', medium: 'MEDIUM', heavy: 'HEAVY' };
+  const HAPTIC_NOTIFY = { success: 'SUCCESS', warning: 'WARNING', error: 'ERROR' };
+  const hapticsPlugin = isNative && NativeHaptics ? NativeHaptics : null;
+  const canImpact = !!hapticsPlugin && typeof hapticsPlugin.impact === 'function';
+  const canNotify = !!hapticsPlugin && typeof hapticsPlugin.notification === 'function';
+  const canVibrate = !!hapticsPlugin && typeof hapticsPlugin.vibrate === 'function';
+  // Un rechazo del puente (plugin sin sincronizar en el APK, dispositivo sin
+  // motor de vibración) desarma la vía nativa para el resto de la sesión: a
+  // partir de ahí `haptic()` devuelve false y el juego usa navigator.vibrate.
+  let hapticsBroken = false;
+
+  function nativeHaptic(kind, durationMs) {
+    if (hapticsBroken) return null;
+    if (canNotify && HAPTIC_NOTIFY[kind]) return hapticsPlugin.notification({ type: HAPTIC_NOTIFY[kind] });
+    if (canImpact && HAPTIC_IMPACT[kind]) return hapticsPlugin.impact({ style: HAPTIC_IMPACT[kind] });
+    // `notification` sin `impact` (o al revés) sigue siendo mejor que nada: se
+    // degrada al primitivo que exista antes de recurrir a la duración cruda.
+    if (canImpact) return hapticsPlugin.impact({ style: HAPTIC_NOTIFY[kind] ? 'HEAVY' : 'MEDIUM' });
+    if (canNotify) return hapticsPlugin.notification({ type: 'SUCCESS' });
+    if (canVibrate) return hapticsPlugin.vibrate({ duration: Math.min(400, Math.max(20, Math.round(durationMs) || 30)) });
+    return null;
   }
 
   function dispatch(name, detail) {
@@ -190,9 +226,18 @@
     flushStorage() {
       return storageTail;
     },
-    haptic() {
-      if (!isNative || !NativeHaptics || typeof NativeHaptics.impact !== 'function') return;
-      void NativeHaptics.impact({ style: 'LIGHT' }).catch((error) => report('haptic', error));
+    // ¿Puede vibrar el dispositivo por la vía nativa? Lo consulta el ajuste de
+    // vibración, que en nativo no puede fiarse de `navigator.vibrate`.
+    get hapticsAvailable() { return (canImpact || canNotify || canVibrate) && !hapticsBroken; },
+    // `kind`: light | medium | heavy | success | warning | error.
+    // Devuelve true si la vibración quedó en manos del plugin nativo.
+    haptic(kind, durationMs) {
+      const call = nativeHaptic(kind, durationMs);
+      if (!call) return false;
+      if (typeof call.catch === 'function') {
+        call.catch((error) => { hapticsBroken = true; report('haptic', error); });
+      }
+      return true;
     },
     async share(data) {
       if (!isNative || !NativeShare || typeof NativeShare.share !== 'function') return false;
