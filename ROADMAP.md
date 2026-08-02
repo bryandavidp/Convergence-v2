@@ -25,9 +25,9 @@ menor riesgo funcional.
 | 1. Toolchain reproducible | `validate:full` verde desde shell limpio; falta CI | 2–4 días | Node 22, lockfile y `npm run validate` verde |
 | 2. Shell nativo inicial | APK debug 2.37.3 reproducible; faltan matriz manual, dispositivo real e iOS | 3–5 días | PWA + Android instalado + proyecto iOS generado |
 | 3. Capa de plataforma y storage | Hardening automatizado verde; faltan lectura dual y matriz manual | 1–2 semanas | mismo perfil sobre web/Preferences, migración reversible |
-| 4. Núcleo determinista y RunSave v2 | **Reabierta**: Contrarreloj extraído con paridad real; faltan 6 modos | 2–4 semanas | reglas puras, estado RNG y replays reproducibles |
+| 4. Núcleo determinista y RunSave v2 | Los **seis modos** extraídos con paridad real; faltan los sistemas que puntúan fuera de la convergencia | 2–4 semanas | reglas puras, estado RNG y replays reproducibles |
 | 5. Firebase local, Auth y progreso | Perfil en nube con CAS validado contra emulador; faltan UI de conflicto, App Check y despliegue | 2–3 semanas | emuladores, cuenta y sincronización offline segura |
-| 6. Rankings por modo | **Bloqueada por la fase 4** (desbloqueada solo para Contrarreloj) | 1–2 semanas | tablas verificadas por modo/periodo |
+| 6. Rankings por modo | Desbloqueada para Contrarreloj; el resto espera a que cliente y backend ejecuten el núcleo | 1–2 semanas | tablas verificadas por modo/periodo |
 | 7. Salas y lobby en tiempo real | Pendiente | 2–3 semanas | crear/unirse/listo/presencia/reconexión |
 | 8. Partida multijugador | Pendiente | 3–6 semanas | comandos ordenados, snapshots, rejoin y cierre |
 | 9. Servicios nativos y hardening | Pendiente | 2–4 semanas | push, App Check, observabilidad y seguridad |
@@ -39,10 +39,12 @@ un árbitro persistente en Cloud Run; se decidirá con métricas del prototipo.
 
 ## Próximo hito activo
 
-**Cerrar la fase 4**: extraer los seis modos que faltan con fixtures de paridad
-contra el motor legacy, igual que se hizo con Contrarreloj, y hacer que cliente
-y backend ejecuten ese mismo núcleo. Es el cuello de botella del roadmap: bloquea
-los rankings de la fase 6 y la validación determinista de la fase 8.
+**Terminar la fase 4**: los seis modos ya tienen sus reglas en el núcleo con
+paridad verificada contra partidas reales del motor. Quedan dos cosas para
+cerrarla: extraer los sistemas que puntúan fuera de la convergencia (efectos de
+baldosa, recompensas de oleada y de jefe) y enrutar por el núcleo los cuatro
+modos que en el cliente siguen usando la expresión histórica. El backend solo
+recalcula Contrarreloj.
 
 El perfil en nube ya está cerrado de punta a punta y verificado contra Emulator
 Suite: revisión autoritativa, compare-and-set, recibos idempotentes, fusión
@@ -144,9 +146,9 @@ conoce directamente si corre en navegador, Android o iOS.
 
 ## Fase 4 — Núcleo determinista y RunSave v2
 
-Estado: **reabierta** — se marcó completada el 2026-08-01 sobre un esqueleto que
-no reproduce las reglas del juego y que no usa nadie. Ver la entrada del
-2026-08-02 en `docs/PROGRESS.md`.
+Estado: **casi completada** — los seis modos tienen sus reglas extraídas y
+verificadas contra el motor. Falta lo que puntúa fuera de la convergencia y que
+cliente y backend ejecuten el núcleo en todos los modos, no solo en dos.
 
 - [x] Extraer Mulberry32 compatible y añadir snapshot/restore del stream.
       Verificado contra la secuencia del runtime 2.37.1.
