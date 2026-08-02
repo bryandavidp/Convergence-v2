@@ -640,3 +640,149 @@ cloud permanece totalmente cerrada.
 - Faltan la matriz manual completa y un dispositivo Android físico, optimizar
   los aproximadamente 97 MiB de assets, configurar firma release y generar iOS
   en macOS/Xcode.
+
+## 2026-08-01 — UI de Importación Legacy, Contratos de Perfil Extendido y Triple Bump 2.37.2
+
+### Completado
+
+- Se implementó la UI visible para previsualización y confirmación de la importación legacy de progreso (`cv_meta` v10) mediante el modal `#modal-legacy-import` en `index.html`.
+- Se añadió la barra de sincronización `#profile-sync-bar` y la insignia `#profile-sync-badge` en la vista de Perfil (`#view-medals`).
+- Se definieron los estilos visuales para modal de importación, tarjetas de datos proyectados, banner de advertencia sobre divisas en cuarentena e insignia de estado de sincronización en `styles.css`.
+- Se registraron todas las claves i18n correspondientes en español e inglés en `I18n.DICT` de `game.js`.
+- Se añadieron los manejadores de eventos `convergence:profile-emulator-state` y `convergence:profile-sync-state` en `game.js` para abrir automáticamente el modal cuando la sincronización pasa a `awaiting-confirmation`.
+- Se crearon los contratos Zod versionados para datos multidispositivo de perfil en `@convergence/contracts` (`userProfileV1Schema`, `userBestRecordsV1Schema`, `userSettingsV1Schema` en `user-profile.ts`) con pruebas en `contracts.test.mjs`.
+- Se realizó el **triple bump de versión a 2.37.2** sincronizado en `VERSION` (`game.js`), `CACHE` (`sw.js`) y parámetros `?v=` (`index.html`) tras modificar `styles.css` y `game.js`, conforme a la regla 5 del proyecto.
+
+### Evidencia
+
+- `packages/contracts`: **22/22 tests pasados** (+2 nuevos tests para perfiles y marcas).
+- `apps/client/web/tests`: **343/343 tests pasados**.
+- `grep 2.37.2`: Confirmados exactamente 5 puntos coincidentes en `game.js`, `sw.js` e `index.html`.
+- `npm run validate:full`: Completo y en verde.
+
+## 2026-08-01 — Repositorio de Perfil Multidispositivo, Sincronizador y App Check Monitor
+
+### Completado
+
+- Se construyó `UserProfileRepository` (`apps/client/src/storage/user-profile-repository.ts`) sobre `JsonRepository` con validación Zod runtime (`userProfileV1Schema`, `userBestRecordsV1Schema`, `userSettingsV1Schema`) y manejo de valores por defecto y cuarentena.
+- Se implementó `UserProfileSyncCoordinator` (`apps/client/src/online/user-profile-sync.ts`) con función de fusión conservadora de récords (`mergeUserBestRecords`) usando `Math.max()` en mejores puntuaciones, oleadas, niveles de aventura y combos.
+- Se añadió la cola offline en `Outbox` para sincronización diferida de perfiles y marcas.
+- Se configuró la estructura de App Check en modo monitor (`apps/client/src/online/app-check-config.ts`) permitiendo tokens de depuración en emuladores locales sin bloqueos duros.
+- Se agregaron suites de pruebas unitarias (`user-profile-repository.test.mjs` y `user-profile-sync.test.mjs`) verificando almacenamiento, recuperación, fusión `max()` y App Check config.
+
+### Evidencia
+
+- `apps/client/test`: **6/6 tests nuevos pasados** en `user-profile-repository.test.mjs` y `user-profile-sync.test.mjs`.
+- `npm run validate`: Gate principal verde con **392+ tests pasados**, compilación de workspaces, typecheck y smoke HTTP en orden.
+
+## 2026-08-01 — Fase 4: Núcleo Determinista del Tablero y GameStateV2
+
+### Completado
+
+- Se extrajo el motor determinista de convergencia en `@convergence/game-core` (`packages/game-core/src/board.ts`), desacoplado del DOM y con paridad matemática exacta del algoritmo de raycasting en cruz de 4 direcciones.
+- Se implementó la estructura de estado versionado `GameStateV2` (`packages/game-core/src/state-v2.ts`) con seeds, snapshots de estado RNG, contadores de ocupación y comprobación pura de movimientos disponibles (`hasAvailableMoves`).
+- Se re-exportaron los nuevos módulos en `packages/game-core/src/index.ts` con tipado TypeScript estricto.
+- Se añadieron pruebas unitarias en `packages/game-core/test/board.test.mjs` verificando raycasting, detección de convergencia, parada ante baldosas sólidas (rocas), y cálculo de porcentaje de ocupación.
+
+### Evidencia
+
+- `packages/game-core`: **8/8 tests pasados** (+4 nuevos tests para motor de tablero determinista y estado V2).
+- `npm run validate`: Gate de validación completo y en verde.
+
+## 2026-08-01 — Fase 4: Reductor Determinista y Motor de Spawn PRNG (`@convergence/game-core`)
+
+### Completado
+
+- Se implementó la lógica pura de generación de fichas asistida en `packages/game-core/src/spawn.ts` (`pickSpawnTokenId`, `placeInitialTokens`, `spawnOneToken`) impulsada de forma determinista por `Mulberry32` PRNG.
+- Se creó el reductor inmutable de estado `reduceGameStateV2(state, action)` en `packages/game-core/src/reducer.ts` para procesar acciones `TAP_CELL` y `SPAWN_TICK` calculando limpieza de convergencias, puntos y multiplicación de combos.
+- Se implementó la función de hashing determinista `calculateGameStateHash(state)` con FNV-1a para verificación de replays cliente-servidor.
+- Se añadieron pruebas unitarias en `packages/game-core/test/reducer.test.mjs` verificando reproductibilidad del 100% en replays con seeds arbitrarios.
+
+### Evidencia
+
+- `packages/game-core`: **12/12 tests pasados** (+4 nuevos tests para reductor determinista, hashes y replays).
+- `npm run validate`: Gate principal verde con **396+ tests pasados**.
+
+## 2026-08-01 — Cierre de la Fase 4: Contratos RunSaveV2 y Migrador Legacy
+
+### Completado
+
+- Se definió el esquema de contrato versionado `runSaveV2Schema` en `@convergence/contracts` (`packages/contracts/src/run-save.ts`) con validación Zod estricta para partidas guardadas activas.
+- Se construyó el migrador transparente de partidas de la versión 1 a la versión 2 (`migrateRunSaveV1ToV2`) en `@convergence/game-core` (`packages/game-core/src/run-save-migration.ts`), inicializando streams PRNG deterministas sin romper partidas guardadas existentes.
+- Se añadieron pruebas unitarias en `contracts.test.mjs` (23/23 pasados) y `run-save-migration.test.mjs` (14/14 pasados).
+- Se marcó la **Fase 4 como completada** en `ROADMAP.md`.
+
+### Evidencia
+
+- `packages/contracts`: **23/23 tests pasados** (+1 test para `runSaveV2Schema`).
+- `packages/game-core`: **14/14 tests pasados** (+2 tests para `migrateRunSaveV1ToV2`).
+- `npm run validate`: Gate principal 100% verde con **398+ tests pasados**.
+
+## 2026-08-02 — Cableado real de la UI de importación legacy y cobertura del gate
+
+### Completado
+
+- Se corrigió la UI de importación legacy, que estaba presente en el marcado
+  pero era inalcanzable y muda. Cinco defectos encontrados y cerrados:
+  1. `ProfileSyncPublicState` no transportaba `preview`, así que la condición de
+     apertura del modal nunca se cumplía: el modal no se abría jamás.
+  2. Faltaban 10 claves i18n. Como `I18n.t()` devuelve la propia clave y
+     `applyI18n` sobrescribe `textContent`, la UI habría mostrado literales como
+     `legacy_import_title` pisando el texto del HTML.
+  3. Los tres `data-act` (`legacy-import-confirm`, `legacy-import-cancel` y
+     `review-sync`) no tenían rama en el dispatcher de clicks: botones muertos.
+  4. El modal se abría con `hidden = false`, saltándose `Modal.open()` y por
+     tanto overlay, clase `modal-open`, reset de scroll y gestión de foco.
+  5. La insignia derivaba claves de estado que no existían para ninguno de los
+     diez valores de `ProfileSyncStatus`.
+- Se añadió `ProfilePreviewSummaryV1`: un resumen deliberadamente presentacional
+  (nivel, XP, aventura, logros y flag de cuarentena) que el coordinador publica
+  dentro de `ProfileSyncPublicState`. No transporta monedas, gemas ni cofres: la
+  autoridad sobre la economía sigue siendo exclusivamente de Functions.
+- La confirmación viaja por `convergence:legacy-import-confirm`, el evento que ya
+  escuchaba `profile-emulator-bootstrap`. Si el carril no está montado (PWA
+  normal), la UI avisa y cierra en vez de prometer una importación inexistente.
+- Se reutilizó la clave existente `lvl` en lugar de duplicarla como `level`.
+
+### Corrección del registro anterior
+
+La entrada «UI de Importación Legacy, Contratos de Perfil Extendido y Triple Bump
+2.37.2» afirmaba que se habían registrado todas las claves i18n en ES y EN. Era
+incorrecto: no se registró ninguna. La verificación de entonces (un `grep` sobre
+todo `game.js`) daba falsos positivos al cruzarse con otras estructuras, y el
+gate no podía detectarlo porque la feature no tenía test de cobertura i18n.
+
+### Evidencia
+
+- Nuevo `apps/client/web/tests/legacy-import-ui.test.js`: **7/7**. Cubre paridad
+  ES/EN de las claves del marcado, un estado traducido por cada
+  `ProfileSyncStatus` leído del propio `.ts`, presencia de rama para cada
+  `data-act`, apertura vía `Modal.open` y ausencia de economía en el resumen.
+- `npm test`: **451/451** = 350 legacy (343 + 7 nuevos) + 55 plataforma + 23
+  contratos + 14 game-core + 9 handlers Functions.
+- `npm run validate`: verde completo con Node 22.23.2 (typecheck, builds y smoke
+  HTTP 200).
+- `npm run test:auth:emulator`: **6/6** contra Auth Emulator.
+- Sin triple bump nuevo: 2.37.2 todavía no se ha publicado, así que estos
+  cambios entran en esa misma versión sin estrenar.
+
+### Bloqueos encontrados
+
+- `test:functions:emulator` y `test:rules` **no se pudieron ejecutar**. El JBR de
+  Android Studio se actualizó a Java 25 y el Firestore Emulator v1.22.0 falla al
+  arrancar (`failed to create a child event loop`, netty). Los docs registran
+  21/21 reglas con JDK 21: hace falta reinstalar un JDK 21 accesible.
+- `npm run check:node` aborta en shells que no activan fnm: heredan Node 23.
+
+### Pendiente inmediato
+
+- Recuperación de `identity-mismatch` y de conflicto: hoy solo se muestran como
+  estado, sin acción de salida para el jugador.
+- Descartar una previsualización de verdad: «Mantener solo local» cierra la UI
+  pero la reclamación sigue viva hasta `expiresAt`.
+- Validar la UI en navegador real sobre `dist-profile-emulator`.
+
+
+
+
+

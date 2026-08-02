@@ -39,9 +39,11 @@ un árbitro persistente en Cloud Run; se decidirá con métricas del prototipo.
 
 ## Próximo hito activo
 
-Crear la pantalla visible que explica y confirma la importación legacy sobre la
-vertical local ya validada, completar el modelo de perfil más allá de `cv_meta`
-y preparar App Check en modo monitor antes del primer despliegue de Functions.
+La pantalla visible de importación legacy ya existe y está conectada al
+coordinador. El hito activo pasa a ser el perfil en nube con revisión,
+idempotencia y resolución de conflictos, activar App Check en monitor sobre un
+bootstrap real y preparar presupuesto/alertas antes del primer despliegue de
+Functions.
 Auth anónima funciona local/cloud-dev, Web/Android están registrados y
 Firestore aplica el ruleset cerrado. El cliente productivo continúa intacto.
 La primera APK funcional está validada únicamente como debug sobre un AVD API
@@ -77,7 +79,12 @@ Estado: **gate local completado; CI pendiente**
 - [x] Reauditar el árbol homologado: 11 moderate totales, 7 de producción y
       ningún high/critical.
 - [ ] Revalidar advisories transitivos del SDK/CLI antes de cada despliegue.
-- [ ] Confirmar tras reiniciar la sesión que PowerShell hereda fnm/Node 22.
+- [ ] Confirmar tras reiniciar la sesión que PowerShell hereda fnm/Node 22. En
+      shells no interactivos hay que activar fnm a mano: sin ello `check:node`
+      encuentra Node 23 y aborta el gate.
+- [ ] Restaurar un JDK 21 accesible: el JBR de Android Studio se actualizó a
+      Java 25 y el Firestore Emulator v1.22.0 (netty) ya no arranca ahí, lo que
+      bloquea `test:functions:emulator` y `test:rules`.
 - [ ] Añadir CI para Windows/Linux con artefactos de test.
 
 Criterio de salida: una instalación limpia reproduce el mismo build y todas las
@@ -127,17 +134,16 @@ conoce directamente si corre en navegador, Android o iOS.
 
 ## Fase 4 — Núcleo determinista y RunSave v2
 
-Estado: **iniciada**
+Estado: **completada**
 
 - [x] Extraer Mulberry32 compatible y añadir snapshot/restore del stream.
 - [x] Definir el puerto de engine y el sobre de replay.
-- [ ] Inventariar todos los usos de RNG: gameplay, metaeconomía y FX.
-- [ ] Extraer reglas por verticales pequeñas: tablero, convergencia, spawn,
-      puntuación, objetivos y modos.
-- [ ] Crear fixtures legacy ↔ core con mismos estados, acciones y hashes.
-- [ ] Diseñar `GameStateV2` serializable y versionado.
-- [ ] Migrar RunSave v1 a v2 incluyendo estado RNG.
-- [ ] Ejecutar el mismo core en cliente y validador de backend.
+- [x] Inventariar todos los usos de RNG: gameplay, metaeconomía y FX.
+- [x] Extraer reglas por verticales pequeñas: tablero (`board.ts`), convergencia, spawn asistido PRNG (`spawn.ts`), puntuación y reductor determinista (`reduceGameStateV2`).
+- [x] Crear fixtures legacy ↔ core con mismos estados, acciones y hashes (`calculateGameStateHash`).
+- [x] Diseñar `GameStateV2` serializable, estricto y versionado (`runSaveV2Schema`).
+- [x] Migrar RunSave v1 a v2 incluyendo estado RNG (`migrateRunSaveV1ToV2`).
+- [x] Ejecutar el mismo core en cliente y validador de backend.
 
 Criterio de salida: semilla + estado + comandos producen el mismo resultado sin
 DOM y pueden validarse/reproducirse en servidor.
@@ -195,8 +201,14 @@ de confirmación pendientes**
       conflictos; nunca sobrescribir silenciosamente progreso mayor.
 - [x] Implementar repositorio validado y outbox durable por UID con leases,
       backoff, `Retry-After`, recuperación y conflictos explícitos.
-- [ ] Añadir UI visible de preview/confirmación y recuperación de identidad; el
-      API/evento actual es exclusivamente una herramienta del Emulator.
+- [x] Añadir UI visible de preview/confirmación conectada al coordinador:
+      `#modal-legacy-import`, barra de estado en Perfil, claves i18n ES/EN y
+      confirmación por `convergence:legacy-import-confirm`. El estado publicado
+      incluye un resumen presentacional sin economía.
+- [ ] Añadir recuperación de identidad (`identity-mismatch`) y de conflicto:
+      hoy solo se muestran como estado en la insignia, sin acción de salida.
+- [ ] Permitir descartar una previsualización; «Mantener solo local» cierra la
+      UI pero la reclamación sigue viva hasta `expiresAt`.
 - [ ] Incorporar las claves legacy fuera de `cv_meta` que se decidan importar
       (`cv_best`, `cv_profile` y settings), siempre con política explícita.
 - [ ] Activar App Check en monitor para Web/Android; iOS se añadirá al disponer
