@@ -154,17 +154,18 @@ no reproduce las reglas del juego y que no usa nadie. Ver la entrada del
 - [x] Inventariar todos los usos de RNG: gameplay, metaeconomía y FX.
 - [x] Diseñar `GameStateV2` serializable, estricto y versionado (`runSaveV2Schema`).
 - [x] Migrar RunSave v1 a v2 incluyendo estado RNG (`migrateRunSaveV1ToV2`).
-- [~] Extraer reglas por verticales pequeñas. Hecho: tablero (`board.ts`),
-      convergencia, spawn asistido por PRNG (`spawn.ts`) y **Contrarreloj
-      completo** (`modes/time-attack.ts`). Faltan los otros seis modos.
-- [~] Reproducir la fórmula de puntuación real. Hecha para Contrarreloj con los
-      siete factores, hitos, sprint, fiebre, bono de tablero vacío, cristales,
-      cápsulas de tiempo y penalización por fallo. El reductor genérico
-      (`reducer.ts`) sigue con su fórmula simplificada.
-- [~] Crear fixtures legacy ↔ core de verdad. Hecho para Contrarreloj:
-      `time-attack-parity.test.mjs` conduce partidas reales del motor legacy con
-      reloj virtual y semilla fija en las tres dificultades, y compara toque a
-      toque puntuación y reloj. Faltan los demás modos.
+- [x] Extraer reglas por verticales pequeñas: tablero (`board.ts`), convergencia,
+      spawn asistido por PRNG (`spawn.ts`), puntuación común (`scoring.ts`) y
+      **los seis modos** en `modes/`.
+- [x] Reproducir la fórmula de puntuación real: los siete factores, tabla de
+      combo, hitos, fiebre, sprint, bonos de tablero vacío y perfecto, cristales,
+      cápsulas, penalización por fallo y limpieza por área.
+- [x] Crear fixtures legacy ↔ core de verdad: los tests de paridad conducen
+      partidas reales del motor con reloj virtual y semilla fija en las tres
+      dificultades y comparan toque a toque contra el núcleo, en los seis modos.
+- [ ] Extraer los sistemas que puntúan **fuera** de la convergencia: efectos de
+      baldosa (bomba/área), recompensas de oleada y de jefe. Hoy los tests de
+      paridad excluyen esos toques en vez de predecirlos.
 - [ ] Ejecutar el mismo core en cliente y validador de backend. Hoy **nadie**
       importa `@convergence/game-core`: el cliente sigue con el motor de
       `game.js` y Functions no lo usa.

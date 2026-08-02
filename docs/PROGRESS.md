@@ -1237,3 +1237,57 @@ Faltan cuatro modos: Tutorial, Clásico, Aventura y Supervivencia. Clásico y
 Aventura estrenan el factor `level` (hoy siempre 1); Aventura añade `tempMult`
 por ruta y Supervivencia es el más complejo —oleadas, bendiciones, frenesí y un
 `feverBoost` que crece con el tier—. El backend solo recalcula Contrarreloj.
+
+## 2026-08-02 — Fase 4: los seis modos extraídos con paridad real
+
+### Completado
+
+Tutorial, Clásico, Aventura y Supervivencia se suman a Contrarreloj y Zen. Los
+seis modos puntúan ya desde `@convergence/game-core`, con paridad verificada
+contra partidas reales del motor en las tres dificultades.
+
+Cada modo aportó un factor que ninguno anterior ejercitaba:
+
+- **Tutorial**: multiplicador 0.5 y `fixedDiff: 'facil'`, que ignora la dificultad
+  pedida. Sin él, la paridad se comparaba contra la dificultad equivocada.
+- **Clásico**: el primer modo donde **el nivel escala la puntuación**. Hasta
+  ahora ese factor había sido siempre 1.
+- **Aventura**: el primer multiplicador temporal (ruta densa ×1.25) y las
+  reliquias, que se ganan a mitad de partida.
+- **Supervivencia**: los tres multiplicadores variables a la vez —bendiciones,
+  frenesí y ×2— más una Fiebre que rinde más y entra antes según el tier.
+
+También se extrajeron al núcleo común la penalización por fallo (iconos añadidos
+y aceleración del spawn), el bono plano de tablero perfecto y los puntos de
+limpieza por área.
+
+### Lo que el arnés de paridad descubrió
+
+Cuatro cosas que no estaban en el plan y que solo aparecieron al comparar contra
+el motor real:
+
+1. **Supervivencia rechaza toques** cuando el tablero está bloqueado, y también
+   los rechazan las baldosas rompibles y los disparadores. El arnés los contaba
+   como convergencias. Ahora filtra por `comboAt`, que solo avanza si el motor
+   procesó el toque.
+2. **El bono de tablero perfecto lo decide el motor**, no se puede inferir del
+   estado: Aventura completa niveles sin que cuenten como perfectos. El arnés
+   envuelve `levelComplete` para leer su decisión real.
+3. **`perfectEver` es un flag de partida, no de nivel**, así que el segundo
+   tablero perfecto de una misma run no lo movía.
+4. **Los efectos de baldosa puntúan aparte** dentro del mismo toque:
+   `celdas * 10 * nivel`, sin ningún multiplicador. Su fórmula se extrajo, pero
+   atribuir qué celdas limpió cada efecto exige extraer el sistema entero, así
+   que esos toques se excluyen de la comparación en vez de predecirse a medias.
+
+### Evidencia
+
+- `packages/game-core`: **47/47**, con paridad de los seis modos.
+- `npm run validate:full`: **572/572** = 525 del gate normal + 47 de backend.
+
+### Pendiente de la fase 4
+
+Falta extraer los sistemas que puntúan fuera de la convergencia: efectos de
+baldosa, recompensas de oleada y de jefe. Y el cliente enruta por el núcleo solo
+Contrarreloj y Zen; los otros cuatro modos tienen ya sus reglas en el núcleo pero
+`game.js` sigue calculándolas con su expresión histórica.

@@ -17,7 +17,11 @@ import { repositoryRoot } from './emulator-temp.mjs';
  */
 const MODULES = [
   'packages/game-core/src/scoring.ts',
+  'packages/game-core/src/modes/adventure.ts',
+  'packages/game-core/src/modes/classic.ts',
+  'packages/game-core/src/modes/survival.ts',
   'packages/game-core/src/modes/time-attack.ts',
+  'packages/game-core/src/modes/tutorial.ts',
   'packages/game-core/src/modes/zen.ts',
 ];
 

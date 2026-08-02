@@ -81,8 +81,49 @@ export const EMPTY_BOARD_WAVE_STEP = 45;
 export const EMPTY_BOARD_COMBO_CAP = 12;
 export const EMPTY_BOARD_MIN_POINTS = 250;
 
+/**
+ * Bono plano por completar un nivel con el tablero perfecto. Lo cobran los modos
+ * **sin** bono escalado —Tutorial, Clásico y Aventura—, que no son endless ni
+ * score-attack. Se suma dentro del mismo toque que completa el nivel.
+ */
+export const PERFECT_BOARD_BONUS = 500;
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+export const PENALTY_MIN_ICONS = 1;
+export const PENALTY_MAX_ICONS = 5;
+/** Factor por el que se acelera el spawn tras un fallo en los modos con castigo. */
+export const PENALTY_SPAWN_FACTOR = 0.95;
+
+/**
+ * Iconos que añade un fallo en los modos con penalización (Clásico, Aventura y
+ * Supervivencia). Escala con la dificultad y con el nivel, y está acotado.
+ */
+export function iconPenaltyCount(difficulty: Difficulty, level: number): number {
+  return clamp(
+    DIFFICULTY[difficulty].penaltyBase + Math.floor((level - 1) / 3),
+    PENALTY_MIN_ICONS,
+    PENALTY_MAX_ICONS,
+  );
+}
+
+/** El fallo también acelera el ritmo de aparición, con suelo por dificultad. */
+export function penalizedSpawnRate(difficulty: Difficulty, spawnRate: number): number {
+  return Math.max(
+    DIFFICULTY[difficulty].spawnMin,
+    Math.round(spawnRate * PENALTY_SPAWN_FACTOR),
+  );
+}
+
+/**
+ * Puntos de una limpieza por área (bomba y baldosas similares). A diferencia de
+ * una convergencia, **no** pasa por combo, dificultad, modo ni fiebre: es la base
+ * desnuda `celdas * 10 * nivel`.
+ */
+export function areaClearPoints(cells: number, level: number): number {
+  return cells * 10 * level;
 }
 
 export function comboMultiplierFor(combo: number): number {
