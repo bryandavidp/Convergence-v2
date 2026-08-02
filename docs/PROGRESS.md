@@ -1160,3 +1160,32 @@ y ninguna estaba en el plan inicial de extracción:
 - La verificación actual recalcula a partir de los eventos que envía el cliente:
   todavía no reproduce tablero ni spawn, así que un cliente podría mentir sobre
   cuántos iconos convergió. El replay completo es trabajo de la fase 6.
+
+## 2026-08-02 — APK debug 2.37.3 con el núcleo compartido a bordo
+
+### Completado
+
+- `npm run native:apk` encadena gate nativo, `cap sync` y
+  `assembleDebug + testDebugUnitTest + lintDebug` en un solo comando.
+- El daemon de Gradle sufría **el mismo fallo de `%TEMP%`** que los emuladores
+  (`Unable to establish loopback connection`), así que `scripts/gradle.mjs`
+  reutiliza `emulatorEnv()`: temporal propio y localización del JDK. La build
+  nativa ya no depende de variables exportadas a mano.
+- Verificado que `game-core.js` viaja dentro del APK y que el `index.html`
+  empaquetado apunta a la versión 2.37.3 en ambos `<meta>`.
+
+### Evidencia
+
+- Gradle: `BUILD SUCCESSFUL` con `assembleDebug`, `testDebugUnitTest` y
+  `lintDebug`.
+- `aapt`: paquete `com.deploy21.convergence`, `minSdk 24`, `targetSdk 36`.
+- `apksigner`: firmado con el certificado Android Debug.
+- Artefacto: `artifacts/android/Convergence-v2-2.37.3-debug.apk`,
+  **102.190.083 bytes**, SHA-256
+  `7daf5f4f5057d9d7ec4c1f07e10727b04c5990a00da7a1cc15bc13f4e7cecb6f`.
+
+### Alcance
+
+Es debug-signed e instalable para probar; no es AAB, beta ni release de tienda.
+Contiene el juego con Contrarreloj puntuando desde el núcleo compartido. El
+carril de nube sigue aislado en `dist-profile-emulator` y **no** va en este APK.

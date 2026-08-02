@@ -54,6 +54,8 @@
     "native:doctor": "npm run native:doctor --workspace @convergence/client",
     "native:gate": "npm run build:web && npm run native:gate --workspace @convergence/client",
     "native:sync": "npm run native:sync --workspace @convergence/client",
+    "native:gradle": "node scripts/gradle.mjs",
+    "native:apk": "npm run native:gate && npm run native:sync && node scripts/gradle.mjs :app:assembleDebug :app:testDebugUnitTest :app:lintDebug",
     "native:smoke:android": "node scripts/smoke-android-runtime.mjs",
     "native:android": "npm run android --workspace @convergence/client",
     "native:ios": "npm run ios --workspace @convergence/client",
