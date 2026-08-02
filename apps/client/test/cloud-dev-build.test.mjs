@@ -21,7 +21,22 @@ const expectedAuthOrigins = [
   'https://identitytoolkit.googleapis.com',
   'https://securetoken.googleapis.com',
 ];
-const forbiddenFirebaseSdkInput = /(?:^|[/\\])(?:@firebase|firebase)[/\\](?:analytics|database|firestore|functions)(?:[/\\]|$)/i;
+// Rankings: callables, App Check y reCAPTCHA. reCAPTCHA aparece en connect-src y
+// tambien en script-src/frame-src, porque carga script propio y abre un iframe.
+const expectedFunctionsOrigins = [
+  'https://europe-west1-convergence-d1a35.cloudfunctions.net',
+];
+const expectedAppCheckOrigins = ['https://content-firebaseappcheck.googleapis.com'];
+const expectedRecaptchaOrigins = ['https://www.google.com', 'https://www.gstatic.com'];
+const expectedConnectOrigins = [
+  ...expectedAuthOrigins,
+  ...expectedFunctionsOrigins,
+  ...expectedAppCheckOrigins,
+  ...expectedRecaptchaOrigins,
+];
+// `functions` ya no esta prohibido: los rankings pasan por callables. Firestore,
+// Analytics y RTDB siguen fuera del bundle a proposito.
+const forbiddenFirebaseSdkInput = /(?:^|[/\\])(?:@firebase|firebase)[/\\](?:analytics|database|firestore)(?:[/\\]|$)/i;
 
 async function runBuild(script, env = {}) {
   return execFileAsync(process.execPath, [resolve(clientRoot, 'scripts', script)], {
@@ -104,14 +119,32 @@ test('build:cloud-dev crea Auth cloud aislado sin contaminar produccion', async 
 
   const cloudHtml = await readFile(resolve(cloudDevRoot, 'index.html'), 'utf8');
   const cloudCsp = extractCsp(cloudHtml);
-  const expectedCsp = productionCsp.replace(
-    "connect-src 'self'",
-    `connect-src 'self' ${expectedAuthOrigins.join(' ')}`,
-  );
+  const expectedCsp = productionCsp
+    .replace(
+      "connect-src 'self'",
+      `connect-src 'self' ${expectedConnectOrigins.join(' ')}`,
+    )
+    .replace(
+      "script-src 'self'",
+      `script-src 'self' ${expectedRecaptchaOrigins.join(' ')}; `
+      + `frame-src ${expectedRecaptchaOrigins.join(' ')}`,
+    );
   assert.equal(cloudCsp, expectedCsp);
   assert.equal((cloudCsp.match(/connect-src/g) ?? []).length, 1);
-  for (const origin of expectedAuthOrigins) {
+  assert.equal((cloudCsp.match(/script-src/g) ?? []).length, 1);
+  assert.equal((cloudCsp.match(/frame-src/g) ?? []).length, 1);
+  // Auth, Functions y App Check solo pintan en connect-src; los de reCAPTCHA
+  // aparecen en las tres directivas, y por eso se cuentan aparte.
+  const connectOnly = [
+    ...expectedAuthOrigins,
+    ...expectedFunctionsOrigins,
+    ...expectedAppCheckOrigins,
+  ];
+  for (const origin of connectOnly) {
     assert.equal((cloudCsp.match(new RegExp(origin.replaceAll('.', '\\.'), 'g')) ?? []).length, 1);
+  }
+  for (const origin of expectedRecaptchaOrigins) {
+    assert.equal((cloudCsp.match(new RegExp(origin.replaceAll('.', '\\.'), 'g')) ?? []).length, 3);
   }
   assert.doesNotMatch(cloudCsp, /firebaseapp\.com/);
   const connectDirective = cloudCsp
@@ -120,7 +153,7 @@ test('build:cloud-dev crea Auth cloud aislado sin contaminar produccion', async 
     .find((directive) => directive.startsWith('connect-src '));
   assert.equal(
     connectDirective,
-    `connect-src 'self' ${expectedAuthOrigins.join(' ')}`,
+    `connect-src 'self' ${expectedConnectOrigins.join(' ')}`,
   );
 
   const moduleScripts = [...cloudHtml.matchAll(
@@ -152,7 +185,11 @@ test('build:cloud-dev crea Auth cloud aislado sin contaminar produccion', async 
     bundle,
     /demo-convergence-v2|https?:\/\/(?:127\.0\.0\.1|localhost):9099|:9099/,
   );
-  assert.doesNotMatch(bundle, /firestore\.googleapis\.com|cloudfunctions\.net|google-analytics\.com/i);
+  // `cloudfunctions.net` ya es esperado: el SDK de Functions construye ahí la URL
+  // de las callables, que es como se leen y publican las tablas. Firestore y
+  // Analytics siguen sin poder aparecer.
+  assert.doesNotMatch(bundle, /firestore\.googleapis\.com|google-analytics\.com/i);
+  assert.match(bundle, /cloudfunctions\.net/i, 'las callables deben resolverse en el bundle');
   assert.doesNotMatch(bundle, /G-408MBD8NDD/);
   assert.doesNotMatch(bundle, /(?:from|import)\s*\(?["'](?:firebase|@firebase)(?:\/|["'])/);
   assert.doesNotMatch(bundle, /gstatic\.com\/firebasejs|sourceMappingURL/);
@@ -189,7 +226,7 @@ test('build:cloud-dev crea Auth cloud aislado sin contaminar produccion', async 
   assert.deepEqual(
     forbiddenInputs,
     [],
-    'El grafo del bundle Auth-only no debe importar Analytics, RTDB, Firestore ni Functions.',
+    'El bundle no debe importar Analytics, RTDB ni Firestore; las tablas pasan por callables.',
   );
 
   const cloudSw = await readFile(resolve(cloudDevRoot, 'sw.js'), 'utf8');

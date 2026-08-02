@@ -23,6 +23,26 @@ const authOrigins = Object.freeze([
   'https://securetoken.googleapis.com',
 ]);
 
+/* Rankings: callables y App Check.
+ *
+ * Hasta aquí el artefacto era Auth-only y su CSP lo reflejaba. Leer y publicar
+ * tablas exige hablar con Cloud Functions, y las callables exigen App Check, que
+ * en web se resuelve con reCAPTCHA v3 — y reCAPTCHA carga su propio script y abre
+ * un iframe. Es la contrapartida de tener App Check en web: no hay forma de
+ * obtener el token sin ejecutar código de Google en la página, así que la CSP
+ * deja de ser `script-src 'self'` a secas. Se acota a los orígenes exactos.
+ */
+const functionsOrigins = Object.freeze([
+  'https://europe-west1-convergence-d1a35.cloudfunctions.net',
+]);
+const appCheckOrigins = Object.freeze([
+  'https://content-firebaseappcheck.googleapis.com',
+]);
+const recaptchaOrigins = Object.freeze([
+  'https://www.google.com',
+  'https://www.gstatic.com',
+]);
+
 const expectedMetadata = Object.freeze({
   version: '2',
   projectId: 'convergence-d1a35',
@@ -45,7 +65,10 @@ const exactConfigKeys = Object.freeze([
   'apiKey',
 ].sort());
 
-const forbiddenFirebaseSdkInput = /(?:^|[/\\])(?:@firebase|firebase)[/\\](?:analytics|database|firestore|functions)(?:[/\\]|$)/i;
+// `functions` sale de la lista: los rankings pasan por callables. Firestore sigue
+// prohibido a propósito —las tablas se leen por la callable, que resuelve rango y
+// paginación—, igual que Analytics y RTDB, que no pintan nada en este artefacto.
+const forbiddenFirebaseSdkInput = /(?:^|[/\\])(?:@firebase|firebase)[/\\](?:analytics|database|firestore)(?:[/\\]|$)/i;
 
 function assertExactOutput(path, expectedPath) {
   if (path !== expectedPath) {
@@ -117,7 +140,18 @@ function validateAndSelectAuthConfig(value) {
 function injectCloudDevBootstrap(html, bundlePath) {
   const cspMeta = 'http-equiv="Content-Security-Policy"';
   const productionConnect = "connect-src 'self'";
-  const cloudConnect = `${productionConnect} ${authOrigins.join(' ')}`;
+  const cloudConnect = [
+    productionConnect,
+    ...authOrigins,
+    ...functionsOrigins,
+    ...appCheckOrigins,
+    ...recaptchaOrigins,
+  ].join(' ');
+  const productionScript = "script-src 'self'";
+  // reCAPTCHA carga script y abre un iframe; la CSP productiva no declara
+  // frame-src, así que se añade aquí en vez de sustituir nada.
+  const cloudScript = `script-src 'self' ${recaptchaOrigins.join(' ')}; `
+    + `frame-src ${recaptchaOrigins.join(' ')}`;
   const bridgePattern = /^(\s*)<script src="native-bridge\.js(?:\?[^\"]*)?" defer><\/script>$/gm;
   const bridgeMatches = [...html.matchAll(bridgePattern)];
 
@@ -134,7 +168,12 @@ function injectCloudDevBootstrap(html, bundlePath) {
     throw new Error('El build cloud-dev exige exactamente un script native-bridge como ancla.');
   }
 
-  const withCsp = html.replace(productionConnect, cloudConnect);
+  if (count(html, productionScript) !== 1) {
+    throw new Error('La directiva script-src productiva no coincide con el contrato esperado.');
+  }
+  const withCsp = html
+    .replace(productionConnect, cloudConnect)
+    .replace(productionScript, cloudScript);
   const bridge = bridgeMatches[0];
   const indentation = bridge[1] ?? '';
   const moduleScript = `${indentation}<script type="module" src="${bundlePath}"></script>`;

@@ -2,15 +2,26 @@ import { deleteApp } from 'firebase/app';
 import { deleteUser, signInAnonymously, type User } from 'firebase/auth';
 
 import { createAnonymousAuthSession } from './anonymous-auth-session.js';
+import { startAppCheck } from './app-check-client.js';
 import {
   createFirebaseCloudDevAuth,
   createFirebaseCloudDevSmokeAuth,
 } from './firebase-cloud-auth-client.js';
+import { createLeaderboardTransport } from './leaderboard-transport.js';
 
 declare const __CONVERGENCE_FIREBASE_CLOUD_DEV_CONFIG__: unknown;
 
 export const AUTH_CLOUD_DEV_STATE_EVENT =
   'convergence:auth-cloud-dev-state';
+
+/** Avisa al runtime legacy de que ya puede leer y publicar tablas. */
+export const LEADERBOARDS_READY_EVENT = 'convergence:leaderboards-ready';
+
+declare global {
+  interface Window {
+    ConvergenceLeaderboards?: ReturnType<typeof createLeaderboardTransport>;
+  }
+}
 
 type CloudDevAuthState =
   | { status: 'connecting' | 'signed-out' | 'deleted'; uid: null; isAnonymous: false }
@@ -127,6 +138,19 @@ async function startCloudDevAuthBootstrap(): Promise<void> {
     });
 
     await session.ensureSignedIn();
+
+    // App Check antes que nada que llame a una callable: el token viaja en la
+    // petición y pedirlo tarde deja las primeras llamadas sin certificar.
+    const appCheck = startAppCheck(auth.app);
+    if (appCheck.appCheck === null) {
+      console.warn(`[Convergence App Check] no disponible: ${appCheck.reason}`);
+    }
+
+    // El runtime legacy (game.js) es un IIFE sin imports: la única forma de
+    // darle acceso es publicar el transporte en window. Se hace DESPUÉS de tener
+    // sesión, de modo que si existe, ya se puede usar.
+    window.ConvergenceLeaderboards = createLeaderboardTransport(auth.app);
+    window.dispatchEvent(new CustomEvent(LEADERBOARDS_READY_EVENT));
   } catch (error) {
     const message = readableError(error);
     publishState({

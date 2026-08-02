@@ -9,6 +9,23 @@ import { userProfileService } from './user-profile.js';
 initializeApp();
 
 /**
+ * `enforceAppCheck: false` es la fase de despliegue, no una renuncia.
+ *
+ * Con App Check recién configurado, forzar desde el código bloquearía en seco a
+ * cualquiera cuyo navegador no consiga un token de reCAPTCHA —una extensión, un
+ * dominio sin autorizar, una región donde google.com no carga— y el síntoma
+ * llegaría como "no me aparecen los rankings", sin métrica que lo explique.
+ *
+ * En modo Monitor la consola registra qué proporción de llamadas traería token
+ * válido sin rechazar ninguna. Cuando las métricas estén limpias se activa
+ * Enforce **desde la consola**, sin tocar código ni redesplegar.
+ *
+ * Lo que NO se relaja: las callables siguen exigiendo sesión autenticada, y el
+ * uid autoritativo sale de Auth, nunca del payload.
+ */
+const APP_CHECK = { enforceAppCheck: false } as const;
+
+/**
  * Primera función deliberadamente mínima. Está protegida por Auth y App Check,
  * de modo que el scaffold no publique una API anónima por accidente.
  */
@@ -39,7 +56,7 @@ function authenticatedUid(request: { auth?: { uid: string } }): string {
 
 /** Previsualiza una reclamación legacy sin escribir perfil ni economía. */
 export const previewLegacyProgressImport = onCall(
-  { enforceAppCheck: true },
+  APP_CHECK,
   (request) => legacyProgressImportService.preview(
     authenticatedUid(request),
     request.data,
@@ -48,7 +65,7 @@ export const previewLegacyProgressImport = onCall(
 
 /** Guarda una única reclamación en cuarentena mediante transacción idempotente. */
 export const commitLegacyProgressImport = onCall(
-  { enforceAppCheck: true },
+  APP_CHECK,
   (request) => legacyProgressImportService.commit(
     authenticatedUid(request),
     request.data,
@@ -57,25 +74,25 @@ export const commitLegacyProgressImport = onCall(
 
 /** Escribe el perfil solo si `baseRevision` sigue vigente (compare-and-set). */
 export const putUserProfile = onCall(
-  { enforceAppCheck: true },
+  APP_CHECK,
   (request) => userProfileService.putProfile(authenticatedUid(request), request.data),
 );
 
 /** Escribe las marcas personales bajo el mismo compare-and-set idempotente. */
 export const putUserBestRecords = onCall(
-  { enforceAppCheck: true },
+  APP_CHECK,
   (request) => userProfileService.putRecords(authenticatedUid(request), request.data),
 );
 
 /** Devuelve el perfil con su revisión, o null si el usuario aún no tiene. */
 export const getUserProfile = onCall(
-  { enforceAppCheck: true },
+  APP_CHECK,
   (request) => userProfileService.getProfile(authenticatedUid(request)),
 );
 
 /** Devuelve las marcas con su revisión, o null si aún no hay ninguna. */
 export const getUserBestRecords = onCall(
-  { enforceAppCheck: true },
+  APP_CHECK,
   (request) => userProfileService.getRecords(authenticatedUid(request)),
 );
 
@@ -85,7 +102,7 @@ export const getUserBestRecords = onCall(
  * compara con el recalculado. Es el cimiento de la verificación de la fase 6.
  */
 export const verifyRun = onCall(
-  { enforceAppCheck: true },
+  APP_CHECK,
   (request) => {
     authenticatedUid(request);
     return verifyRunClaim(request.data);
@@ -98,7 +115,7 @@ export const verifyRun = onCall(
  * cuadra deja recibo de rechazo y no toca ninguna tabla.
  */
 export const submitRunClaim = onCall(
-  { enforceAppCheck: true },
+  APP_CHECK,
   (request) => leaderboardService.submit(authenticatedUid(request), request.data),
 );
 
@@ -108,6 +125,6 @@ export const submitRunClaim = onCall(
  * pasan por aquí: el cursor es opaco y el periodo en curso lo fija el servidor.
  */
 export const getLeaderboardPage = onCall(
-  { enforceAppCheck: true },
+  APP_CHECK,
   (request) => leaderboardService.page(authenticatedUid(request), request.data),
 );
