@@ -1008,6 +1008,51 @@ transporte real y expone `window.ConvergenceCloudProfile`. Dos decisiones:
 - UI para resolver un conflicto de perfil y recuperación de `identity-mismatch`.
 - Activar App Check en monitor sobre un bootstrap real.
 
+## 2026-08-02 — La fase 4 se reabre: el núcleo determinista no reproduce el juego
+
+### Qué se descubrió
+
+Al arrancar la fase 6 se eligió **replay completo siempre**: el backend reejecuta
+cada run y solo acepta el score si el hash coincide. Antes de construir las
+tablas se comprobó qué puede reproducir realmente `@convergence/game-core`, y la
+respuesta invalida tres de las casillas marcadas en la fase 4.
+
+1. **La puntuación no es la del juego.** El motor real calcula
+   `removed * 10 * State.level` y lo multiplica por siete factores —combo,
+   dificultad, modo, fiebre, multiplicador temporal, sprint y supervivencia—
+   (`apps/client/web/game.js:9616`). El núcleo hace `celdas * 10 * combo`: sin
+   nivel y sin ninguno de los otros factores.
+2. **No hay ninguna regla de modo.** El reductor solo entiende `TAP_CELL` y
+   `SPAWN_TICK`. No existen oleadas, temporizador, vidas ni objetivos, y
+   `state.mode` únicamente viaja dentro del hash.
+3. **No existen fixtures legacy ↔ core.** Los tests comparan el núcleo consigo
+   mismo: determinismo del replay y estabilidad de su propio hash. El assert de
+   puntuación (`score === 20`) fija la fórmula simplificada del núcleo, no la del
+   juego. Nada contrasta contra el motor legacy.
+4. **Nadie ejecuta el núcleo.** `grep` sobre `apps/` no encuentra un solo
+   consumidor de `@convergence/game-core`: el cliente sigue con el motor de
+   `game.js` y Functions no lo importa. La casilla «ejecutar el mismo core en
+   cliente y validador de backend» no describe el repositorio.
+
+También hay un `if` sin cuerpo en `packages/game-core/src/reducer.ts:75` que
+detecta tablero bloqueado tras un tap y no hace nada.
+
+### Qué sí es cierto de la fase 4
+
+Mulberry32 con snapshot/restore está verificado contra la secuencia del runtime
+2.37.1, el raycasting de convergencia y el spawn asistido por PRNG existen y
+están probados, `GameStateV2`/`runSaveV2Schema` están definidos y el migrador
+`migrateRunSaveV1ToV2` funciona. Es un esqueleto correcto; no es el juego.
+
+### Decisión
+
+La fase 4 se reabre y la fase 6 queda bloqueada tras ella. No se ha escrito ni
+una línea de rankings: publicar puntuaciones «verificadas» por un validador que
+calcula un número distinto al que vio el jugador sería peor que no tener tablas.
+El orden correcto es extraer puntuación y reglas de modo con fixtures reales
+contra el motor legacy, hacer que cliente y backend ejecuten ese mismo núcleo, y
+solo entonces construir la vertical de ranking.
+
 
 
 

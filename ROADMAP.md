@@ -137,19 +137,37 @@ conoce directamente si corre en navegador, Android o iOS.
 
 ## Fase 4 — Núcleo determinista y RunSave v2
 
-Estado: **completada**
+Estado: **reabierta** — se marcó completada el 2026-08-01 sobre un esqueleto que
+no reproduce las reglas del juego y que no usa nadie. Ver la entrada del
+2026-08-02 en `docs/PROGRESS.md`.
 
 - [x] Extraer Mulberry32 compatible y añadir snapshot/restore del stream.
+      Verificado contra la secuencia del runtime 2.37.1.
 - [x] Definir el puerto de engine y el sobre de replay.
 - [x] Inventariar todos los usos de RNG: gameplay, metaeconomía y FX.
-- [x] Extraer reglas por verticales pequeñas: tablero (`board.ts`), convergencia, spawn asistido PRNG (`spawn.ts`), puntuación y reductor determinista (`reduceGameStateV2`).
-- [x] Crear fixtures legacy ↔ core con mismos estados, acciones y hashes (`calculateGameStateHash`).
 - [x] Diseñar `GameStateV2` serializable, estricto y versionado (`runSaveV2Schema`).
 - [x] Migrar RunSave v1 a v2 incluyendo estado RNG (`migrateRunSaveV1ToV2`).
-- [x] Ejecutar el mismo core en cliente y validador de backend.
+- [~] Extraer reglas por verticales pequeñas. Hecho: tablero (`board.ts`),
+      convergencia y spawn asistido por PRNG (`spawn.ts`). **Falta** la
+      puntuación real y **faltan por completo objetivos y modos**: el reductor
+      no conoce oleadas, temporizador, vidas ni objetivos, y `state.mode` solo
+      viaja en el hash.
+- [ ] Reproducir la fórmula de puntuación real. El juego calcula
+      `removed * 10 * level` multiplicado por combo, dificultad, modo, fiebre,
+      multiplicador temporal, sprint y supervivencia (`game.js:9616`); el núcleo
+      hace `celdas * 10 * combo`, sin nivel ni ninguno de los otros factores.
+- [ ] Crear fixtures legacy ↔ core de verdad. Los tests actuales comparan el
+      núcleo consigo mismo (determinismo y hash propio); no existe ninguna
+      comparación contra el motor legacy.
+- [ ] Ejecutar el mismo core en cliente y validador de backend. Hoy **nadie**
+      importa `@convergence/game-core`: el cliente sigue con el motor de
+      `game.js` y Functions no lo usa.
+- [ ] Eliminar el `if` sin cuerpo de `reducer.ts:75`, que detecta tablero
+      bloqueado tras un tap y no hace nada.
 
 Criterio de salida: semilla + estado + comandos producen el mismo resultado sin
-DOM y pueden validarse/reproducirse en servidor.
+DOM y pueden validarse/reproducirse en servidor **con la puntuación que el
+jugador vio**.
 
 ## Fase 5 — Firebase local, Auth y progreso
 
@@ -243,7 +261,15 @@ conectividad y conservar un único progreso coherente en dos dispositivos.
 
 ## Fase 6 — Rankings por modo
 
-Estado: **pendiente**
+Estado: **bloqueada por la fase 4**
+
+Decisión tomada el 2026-08-02: se ataca como vertical de **un solo modo** y con
+**replay completo siempre** (el backend reejecuta cada run y solo acepta el score
+si el hash coincide). Esa política depende por completo de que el núcleo
+determinista reproduzca las reglas y la puntuación reales, que es justo lo que
+la fase 4 no entregó. Construir las tablas antes sería publicar puntuaciones
+«verificadas» por un validador que calcula un número distinto al que vio el
+jugador.
 
 - [ ] Definir boards para cada modo: all-time, temporada, semana y diario.
 - [ ] Enviar claims idempotentes con seed, versión y hash final.
