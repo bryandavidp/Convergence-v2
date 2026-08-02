@@ -68,11 +68,13 @@ test('el núcleo generado expone todo lo que game.js le pide', () => {
 function installSpyCore() {
   const calls = [];
   globalThis.window.ConvergenceGameCore = {
-    convergencePoints(input) { calls.push(['convergencePoints', input]); return 777; },
+    timeAttackConvergencePoints(input) { calls.push(['timeAttackConvergencePoints', input]); return 777; },
     timeGainFor() { calls.push(['timeGainFor']); return 0; },
     applyTimeGain() { calls.push(['applyTimeGain']); return 42; },
     applyMistakePenalty() { calls.push(['applyMistakePenalty']); return 11; },
-    emptyBoardBonusPoints() { calls.push(['emptyBoardBonusPoints']); return 999; },
+    timeAttackEmptyBoardBonus() { calls.push(['timeAttackEmptyBoardBonus']); return 999; },
+    zenConvergencePoints(input) { calls.push(['zenConvergencePoints', input]); return 555; },
+    zenEmptyBoardBonus() { calls.push(['zenEmptyBoardBonus']); return 888; },
   };
   return calls;
 }
@@ -104,10 +106,10 @@ test('Contrarreloj puntúa y ajusta el reloj a través del núcleo', () => {
     assert.equal(State.score - scoreBefore, 777, 'los puntos salen del núcleo');
     assert.equal(State.timeLeft, 42, 'el reloj sale del núcleo');
     const names = calls.map((call) => call[0]);
-    assert.ok(names.includes('convergencePoints'));
+    assert.ok(names.includes('timeAttackConvergencePoints'));
     assert.ok(names.includes('applyTimeGain'));
 
-    const input = calls.find((call) => call[0] === 'convergencePoints')[1];
+    const input = calls.find((call) => call[0] === 'timeAttackConvergencePoints')[1];
     assert.equal(input.difficulty, 'normal');
     assert.equal(typeof input.removed, 'number');
     assert.equal(typeof input.fever, 'boolean');
@@ -151,7 +153,28 @@ test('los demás modos no pasan por el núcleo mientras no estén extraídos', (
     Game.start('supervivencia', 'normal', undefined, 4242);
     const cell = firstConvergingCell();
     if (cell !== -1) Game.activate(cell);
-    assert.deepEqual(calls, [], 'solo Contrarreloj está extraído (ROADMAP fase 4)');
+    assert.deepEqual(calls, [], 'Supervivencia aún no está extraída (ROADMAP fase 4)');
+  } finally {
+    delete globalThis.window.ConvergenceGameCore;
+  }
+});
+
+test('Zen también puntúa a través del núcleo', () => {
+  const calls = installSpyCore();
+  try {
+    Game.start('zen', 'normal', undefined, 4242);
+    const cell = firstConvergingCell();
+    assert.notEqual(cell, -1);
+
+    const scoreBefore = State.score;
+    Game.activate(cell);
+
+    assert.equal(State.score - scoreBefore, 555, 'los puntos de Zen salen del núcleo');
+    const input = calls.find((call) => call[0] === 'zenConvergencePoints')[1];
+    assert.equal(input.difficulty, 'normal');
+    // Zen no tiene reloj ni fiebre: su entrada no puede arrastrarlos.
+    assert.equal(input.timeLeftSeconds, undefined);
+    assert.equal(input.fever, undefined);
   } finally {
     delete globalThis.window.ConvergenceGameCore;
   }

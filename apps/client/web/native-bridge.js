@@ -11,8 +11,8 @@
   // que documenta el bump. Antes se leía solo esta constante, así que quedó en
   // 2.37.1 mientras el resto del proyecto ya iba por 2.37.2 y los usuarios
   // seguían cargando el game.js viejo desde caché.
-  const LEGACY_SCRIPT = 'game.js?v=2.37.3';
-  const CORE_SCRIPT = 'game-core.js?v=2.37.3';
+  const LEGACY_SCRIPT = 'game.js?v=2.37.4';
+  const CORE_SCRIPT = 'game-core.js?v=2.37.4';
   const PERSISTED_KEYS = ['cv_meta', 'cv_run'];
   const LEGACY_STORAGE_EVENT = 'convergence:legacy-storage-changed';
   const capacitor = window.Capacitor;

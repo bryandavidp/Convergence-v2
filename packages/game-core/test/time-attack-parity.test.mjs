@@ -23,8 +23,8 @@ import {
   applyTimeGain,
   CRYSTAL_POINTS,
   comboMultiplierFor,
-  convergencePoints,
-  emptyBoardBonusPoints,
+  timeAttackConvergencePoints,
+  timeAttackEmptyBoardBonus,
   milestoneBonusFor,
   nextCombo,
   timeGainFor,
@@ -189,7 +189,7 @@ for (const difficulty of ['facil', 'normal', 'dificil']) {
       for (let n = 0; n < after.capsulesDetonated; n += 1) {
         expectedTimeLeft = applyTimeCapsule(expectedTimeLeft);
       }
-      const expectedPoints = before.crystals * CRYSTAL_POINTS + convergencePoints({
+      const expectedPoints = before.crystals * CRYSTAL_POINTS + timeAttackConvergencePoints({
         removed: before.removed,
         combo,
         difficulty,
@@ -198,7 +198,7 @@ for (const difficulty of ['facil', 'normal', 'dificil']) {
       })
         + milestoneBonusFor(combo)
         + (after.emptyBoardChain > 0
-          ? emptyBoardBonusPoints({
+          ? timeAttackEmptyBoardBonus({
             chain: after.emptyBoardChain,
             combo,
             difficulty,

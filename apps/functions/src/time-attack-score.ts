@@ -2,9 +2,9 @@ import {
   applyMistakePenalty,
   applyTimeCapsule,
   applyTimeGain,
-  convergencePoints,
+  timeAttackConvergencePoints,
   CRYSTAL_POINTS,
-  emptyBoardBonusPoints,
+  timeAttackEmptyBoardBonus,
   milestoneBonusFor,
   timeGainFor,
   TIMED_START,
@@ -158,7 +158,7 @@ export function recomputeTimeAttackRun(run: TimeAttackRun): TimeAttackOutcome {
 
     // El orden es el del motor: puntuar con el reloj previo, después sumar
     // tiempo, y solo entonces cobrar el bono de tablero vacío.
-    score += convergencePoints({
+    score += timeAttackConvergencePoints({
       removed: event.removed,
       combo: event.combo,
       difficulty: run.difficulty,
@@ -175,7 +175,7 @@ export function recomputeTimeAttackRun(run: TimeAttackRun): TimeAttackOutcome {
     for (let n = 0; n < (event.capsules ?? 0); n += 1) timeLeft = applyTimeCapsule(timeLeft);
 
     if ((event.emptyBoardChain ?? 0) > 0) {
-      score += emptyBoardBonusPoints({
+      score += timeAttackEmptyBoardBonus({
         chain: event.emptyBoardChain as number,
         combo: event.combo,
         difficulty: run.difficulty,

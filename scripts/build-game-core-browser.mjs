@@ -7,46 +7,64 @@ import { repositoryRoot } from './emulator-temp.mjs';
 
 /**
  * El cliente es vanilla y sin bundler a propósito, así que el núcleo no puede
- * llegar como módulo ES. Este script transpila el módulo de reglas a un script
+ * llegar como módulo ES. Este script transpila los módulos de reglas a un script
  * clásico que publica `window.ConvergenceGameCore`, para que `game.js` puntúe
  * con las mismas funciones que ejecuta el backend en vez de con una copia.
  *
- * Solo admite módulos sin imports: si alguien añade una dependencia al módulo
- * de reglas, este script falla en vez de emitir un `require` que el navegador
- * no sabe resolver.
+ * Todos los módulos comparten un único objeto `exports`, así que las importaciones
+ * relativas entre ellos se resuelven a ese mismo espacio. El orden de la lista es
+ * el de dependencia: un módulo solo puede usar lo que ya se declaró antes.
  */
-const SOURCE = resolve(repositoryRoot, 'packages/game-core/src/modes/time-attack.ts');
+const MODULES = [
+  'packages/game-core/src/scoring.ts',
+  'packages/game-core/src/modes/time-attack.ts',
+  'packages/game-core/src/modes/zen.ts',
+];
+
 const OUTPUT = resolve(repositoryRoot, 'apps/client/web/game-core.js');
 
-const source = await readFile(SOURCE, 'utf8');
-if (/^\s*import\s/m.test(source)) {
-  throw new Error(
-    'time-attack.ts declara imports: el núcleo de navegador debe ser autocontenido.',
-  );
-}
+const chunks = [];
+for (const relativePath of MODULES) {
+  const source = await readFile(resolve(repositoryRoot, relativePath), 'utf8');
 
-const { outputText } = ts.transpileModule(source, {
-  fileName: SOURCE,
-  compilerOptions: {
-    module: ts.ModuleKind.CommonJS,
-    target: ts.ScriptTarget.ES2020,
-    removeComments: false,
-  },
-});
+  // Solo se admiten importaciones relativas entre módulos del propio núcleo:
+  // cualquier dependencia externa no tendría cómo resolverse en el navegador.
+  for (const match of source.matchAll(/^\s*import[^;]*?from\s+'([^']+)'/gm)) {
+    if (!match[1].startsWith('.')) {
+      throw new Error(`${relativePath} importa '${match[1]}': el núcleo de navegador debe ser autocontenido.`);
+    }
+  }
 
-if (/\brequire\(/.test(outputText)) {
-  throw new Error('La transpilación emitió require(): el módulo no es autocontenido.');
+  const { outputText } = ts.transpileModule(source, {
+    fileName: resolve(repositoryRoot, relativePath),
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+      removeComments: false,
+    },
+  });
+  chunks.push(`// --- ${relativePath} ---\n${outputText}`);
 }
 
 const banner = `/* GENERADO por scripts/build-game-core-browser.mjs — no editar a mano.
- * Fuente: packages/game-core/src/modes/time-attack.ts
+ * Fuente: ${MODULES.join(', ')}
  * Regenerar con: npm run build:core:browser
  */`;
 
 await writeFile(
   OUTPUT,
-  `${banner}\n(function () {\n  'use strict';\n  var exports = {};\n${outputText}\n  window.ConvergenceGameCore = Object.freeze(exports);\n})();\n`,
+  `${banner}
+(function () {
+  'use strict';
+  var exports = {};
+  // Los módulos del núcleo comparten espacio de exportación, así que una
+  // importación relativa entre ellos devuelve ese mismo objeto.
+  function require() { return exports; }
+${chunks.join('\n')}
+  window.ConvergenceGameCore = Object.freeze(exports);
+})();
+`,
   'utf8',
 );
 
-console.log(`Núcleo de navegador generado: ${OUTPUT}`);
+console.log(`Núcleo de navegador generado (${MODULES.length} módulos): ${OUTPUT}`);

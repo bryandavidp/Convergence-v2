@@ -16,7 +16,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.37.3';
+  const VERSION = '2.37.4';
 
   /* Núcleo de reglas compartido con el backend (`packages/game-core`). Llega
    * como script clásico cargado antes que game.js, porque el cliente es vanilla
@@ -26,6 +26,7 @@
   const GameCore = {
     get core() { return window.ConvergenceGameCore || null; },
     timeAttack() { return State.mode === 'contrarreloj' && !!window.ConvergenceGameCore; },
+    zen() { return State.mode === 'zen' && !!window.ConvergenceGameCore; },
   };
   const Platform = window.ConvergencePlatform || {
     runtime: 'web', isNative: false,
@@ -9631,9 +9632,13 @@
       // en un rechazo. El resto de modos sigue en la expresión de siempre hasta
       // que se extraigan (ver ROADMAP fase 4).
       const points = GameCore.timeAttack()
-        ? GameCore.core.convergencePoints({
+        ? GameCore.core.timeAttackConvergencePoints({
           removed, combo: State.combo, difficulty: State.diff,
           timeLeftSeconds: State.timeLeft, fever: State.fever,
+        })
+        : GameCore.zen()
+        ? GameCore.core.zenConvergencePoints({
+          removed, combo: State.combo, difficulty: State.diff,
         })
         : Math.floor(base * State.comboMult * d.scoreMult * m.mult * this.feverBoost() * (State.tempMult || 1) * this.sprintMult() * survMult);
       State.score += points;
@@ -10076,10 +10081,12 @@
       const combo = Math.min(State.combo || 1, 12);
       const raw = Config.EMPTY_BOARD_BONUS + chain * 90 + combo * 28 + (State.mode === 'supervivencia' ? wave * 45 : 0);
       const points = GameCore.timeAttack()
-        ? GameCore.core.emptyBoardBonusPoints({
+        ? GameCore.core.timeAttackEmptyBoardBonus({
           chain, combo, difficulty: State.diff,
           timeLeftSeconds: State.timeLeft, fever: State.fever,
         })
+        : GameCore.zen()
+        ? GameCore.core.zenEmptyBoardBonus({ chain, combo, difficulty: State.diff })
         : Math.max(250, Math.round(raw * d.scoreMult * m.mult * this.feverBoost() * (State.tempMult || 1) * this.sprintMult()));
       const coins = clamp(Math.round(points / 220), 3, 16);
       const extra = [];

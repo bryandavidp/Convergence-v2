@@ -1189,3 +1189,51 @@ y ninguna estaba en el plan inicial de extracción:
 Es debug-signed e instalable para probar; no es AAB, beta ni release de tienda.
 Contiene el juego con Contrarreloj puntuando desde el núcleo compartido. El
 carril de nube sigue aislado en `dist-profile-emulator` y **no** va en este APK.
+
+## 2026-08-02 — Fase 4: puntuación genérica y segundo modo extraído (Zen)
+
+### Completado
+
+- Se extrajo `packages/game-core/src/scoring.ts`, la puntuación **compartida por
+  los seis modos**. Los seis usan la misma expresión y solo cambian los factores
+  que le entran, así que tenerla una sola vez evita que extraer cada modo sea
+  reescribirla y que una corrección se aplique a unos modos y a otros no.
+  Incluye tabla de combo, hitos, fiebre, cristales, bono de tablero vacío
+  (con el término de oleada de Supervivencia ya contemplado) y el multiplicador
+  de cada modo.
+- `modes/time-attack.ts` pasa a ser una capa fina sobre ese núcleo: conserva solo
+  lo que Contrarreloj no comparte —reloj, sprint final, penalización en segundos
+  y cápsulas—. Sus 21 tests de paridad siguen verdes sin tocarlos.
+- Se extrajo **Zen** (`modes/zen.ts`), el segundo modo. Ejercita dos factores que
+  Contrarreloj no tenía: `noFever` (el factor de fiebre queda fijo en 1 por
+  construcción) y `penalties: false` (fallar no cuesta nada).
+- El generador de navegador admite ahora varios módulos en orden de dependencia,
+  compartiendo un único espacio de exportación. Zen y Contrarreloj puntúan desde
+  el núcleo en el cliente.
+
+### Renombrado deliberado
+
+`convergencePoints` y `emptyBoardBonusPoints` son ahora los genéricos de
+`scoring.ts`. Los envoltorios de cada modo pasan a llamarse
+`timeAttackConvergencePoints`, `timeAttackEmptyBoardBonus`,
+`zenConvergencePoints` y `zenEmptyBoardBonus`. Sin ese renombrado el barrel
+exportaba dos símbolos con el mismo nombre y el build fallaba; con él, añadir un
+modo no puede tapar accidentalmente al genérico.
+
+### Evidencia
+
+- `packages/game-core`: **29/29** = 21 de Contrarreloj + 8 nuevos de Zen, con
+  paridad contra partidas reales del motor en las tres dificultades.
+- Un test nuevo compara **el multiplicador de los seis modos** contra
+  `Config.MODES`, no solo el del modo extraído: cualquier desvío futuro falla.
+- `apps/client/web/tests/game-core-wiring.test.js`: **9/9**, con Zen cubierto.
+- `npm run validate:full`: **554/554** = 507 del gate normal + 47 de backend.
+- Triple bump a **2.37.4**. La APK que hay publicada es la 2.37.3 y no incluye
+  Zen enrutado por el núcleo.
+
+### Pendiente de la fase 4
+
+Faltan cuatro modos: Tutorial, Clásico, Aventura y Supervivencia. Clásico y
+Aventura estrenan el factor `level` (hoy siempre 1); Aventura añade `tempMult`
+por ruta y Supervivencia es el más complejo —oleadas, bendiciones, frenesí y un
+`feverBoost` que crece con el tier—. El backend solo recalcula Contrarreloj.
