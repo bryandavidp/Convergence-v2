@@ -74,6 +74,16 @@ export const FEVER_BOOST = 1.25;
 /** Puntos planos de una baldosa de cristal convergida. */
 export const CRYSTAL_POINTS = 50;
 
+/**
+ * Puntos planos de la casilla bonus `+30`, que se cobran al tocarla y no pasan
+ * por combo, dificultad ni fiebre.
+ *
+ * Faltaba en el núcleo aunque `game.js` ya la leía de aquí, así que la suma era
+ * `score += undefined` y **el marcador se volvía NaN para el resto de la
+ * partida** en cuanto alguien tocaba una. El valor es el histórico del motor.
+ */
+export const BONUS_TILE_POINTS = 30;
+
 export const EMPTY_BOARD_BONUS = 500;
 export const EMPTY_BOARD_CHAIN_STEP = 90;
 export const EMPTY_BOARD_COMBO_STEP = 28;

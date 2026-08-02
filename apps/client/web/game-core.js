@@ -24,7 +24,7 @@
  * `Config` legacy y fallan si alguno se desvía.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PENALTY_SPAWN_FACTOR = exports.PENALTY_MAX_ICONS = exports.PENALTY_MIN_ICONS = exports.PERFECT_BOARD_BONUS = exports.EMPTY_BOARD_MIN_POINTS = exports.EMPTY_BOARD_COMBO_CAP = exports.EMPTY_BOARD_WAVE_STEP = exports.EMPTY_BOARD_COMBO_STEP = exports.EMPTY_BOARD_CHAIN_STEP = exports.EMPTY_BOARD_BONUS = exports.CRYSTAL_POINTS = exports.FEVER_BOOST = exports.FEVER_COMBO = exports.MILESTONES = exports.COMBO_MULTIPLIERS = exports.MODE_MULTIPLIERS = exports.DIFFICULTY = void 0;
+exports.PENALTY_SPAWN_FACTOR = exports.PENALTY_MAX_ICONS = exports.PENALTY_MIN_ICONS = exports.PERFECT_BOARD_BONUS = exports.EMPTY_BOARD_MIN_POINTS = exports.EMPTY_BOARD_COMBO_CAP = exports.EMPTY_BOARD_WAVE_STEP = exports.EMPTY_BOARD_COMBO_STEP = exports.EMPTY_BOARD_CHAIN_STEP = exports.EMPTY_BOARD_BONUS = exports.BONUS_TILE_POINTS = exports.CRYSTAL_POINTS = exports.FEVER_BOOST = exports.FEVER_COMBO = exports.MILESTONES = exports.COMBO_MULTIPLIERS = exports.MODE_MULTIPLIERS = exports.DIFFICULTY = void 0;
 exports.iconPenaltyCount = iconPenaltyCount;
 exports.penalizedSpawnRate = penalizedSpawnRate;
 exports.areaClearPoints = areaClearPoints;
@@ -67,6 +67,15 @@ exports.FEVER_COMBO = 10;
 exports.FEVER_BOOST = 1.25;
 /** Puntos planos de una baldosa de cristal convergida. */
 exports.CRYSTAL_POINTS = 50;
+/**
+ * Puntos planos de la casilla bonus `+30`, que se cobran al tocarla y no pasan
+ * por combo, dificultad ni fiebre.
+ *
+ * Faltaba en el núcleo aunque `game.js` ya la leía de aquí, así que la suma era
+ * `score += undefined` y **el marcador se volvía NaN para el resto de la
+ * partida** en cuanto alguien tocaba una. El valor es el histórico del motor.
+ */
+exports.BONUS_TILE_POINTS = 30;
 exports.EMPTY_BOARD_BONUS = 500;
 exports.EMPTY_BOARD_CHAIN_STEP = 90;
 exports.EMPTY_BOARD_COMBO_STEP = 28;
