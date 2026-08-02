@@ -990,10 +990,21 @@ ya usaba `test:rules:run`. Verificado con tres pasadas consecutivas en verde.
   Emulator, 19 Functions Emulator, 22 reglas e invariantes).
 - **No se desplegó nada.** Las cuatro callables existen solo en el repositorio.
 
+### Cableado del carril completo
+
+`profile-emulator-bootstrap` monta ahora el `UserProfileSyncCoordinator` sobre el
+transporte real y expone `window.ConvergenceCloudProfile`. Dos decisiones:
+
+- El estado viaja en un evento propio (`convergence:cloud-profile-state`) en vez
+  de reutilizar el de la importación legacy. Mezclarlos ocultaría un conflicto de
+  perfil detrás del estado de una importación que ya terminó.
+- La sincronización arranca **después** de `coordinator.start()`, para que una
+  migración legacy pendiente no compita con el primer CAS del mismo UID.
+
 ### Pendiente inmediato
 
-- Montar coordinador y transporte en un bootstrap real: las dos mitades existen
-  y están probadas, pero nada las conecta en arranque.
+- Validar el carril de perfil en navegador real sobre `dist-profile-emulator`,
+  como ya se hizo con la importación legacy.
 - UI para resolver un conflicto de perfil y recuperación de `identity-mismatch`.
 - Activar App Check en monitor sobre un bootstrap real.
 

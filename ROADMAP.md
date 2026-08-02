@@ -216,8 +216,11 @@ de confirmación pendientes**
 - [x] Añadir callables de lectura `getUserProfile` / `getUserBestRecords` y el
       transporte real del cliente sobre las cuatro. El UID nunca viaja en la
       petición: el servidor lo deriva de Auth.
-- [ ] Montar el coordinador con el transporte real en un bootstrap: hoy las dos
-      mitades existen y están probadas, pero nada las conecta en arranque.
+- [x] Montar el coordinador con el transporte real en `profile-emulator-bootstrap`,
+      publicando su estado en un evento propio y sincronizando tras la
+      importación para no competir con el primer CAS del mismo UID.
+- [ ] Validar el carril de perfil en navegador real sobre `dist-profile-emulator`,
+      como se hizo con la importación legacy.
 - [ ] Diseñar la resolución de conflicto de perfil de cara al jugador: hoy se
       señala el conflicto y se conserva lo local, pero no hay UI para elegir.
 - [x] Implementar repositorio validado y outbox durable por UID con leases,

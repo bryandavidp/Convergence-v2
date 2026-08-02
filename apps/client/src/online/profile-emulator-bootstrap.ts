@@ -5,14 +5,24 @@ import {
   LegacyProgressSyncCoordinator,
   type ProfileSyncPublicState,
 } from './legacy-progress-sync.js';
+import { createFirebaseUserProfileTransport } from './user-profile-transport.js';
+import {
+  UserProfileSyncCoordinator,
+  type ProfileSyncOutcome,
+} from './user-profile-sync.js';
 import { createWebPlatform } from '../platform/web.js';
 import { JsonRepository } from '../storage/json-repository.js';
+import { UserProfileRepository } from '../storage/user-profile-repository.js';
 import { Outbox } from '../storage/outbox.js';
 
 const PROJECT_ID = 'demo-convergence-v2';
 const PROFILE_STATE_EVENT = 'convergence:profile-emulator-state';
 const LEGACY_STORAGE_EVENT = 'convergence:legacy-storage-changed';
 const CONFIRM_EVENT = 'convergence:legacy-import-confirm';
+// Carril distinto del de importación legacy: el perfil multidispositivo tiene
+// su propio ciclo y sus propios estados, y mezclarlos ocultaría un conflicto
+// de perfil detrás del estado de una importación que ya terminó.
+const CLOUD_STATE_EVENT = 'convergence:cloud-profile-state';
 
 declare global {
   interface Window {
@@ -21,7 +31,18 @@ declare global {
       capture(): Promise<void>;
       state(): ProfileSyncPublicState;
     }>;
+    ConvergenceCloudProfile?: Readonly<{
+      syncProfile(): Promise<ProfileSyncOutcome<unknown>>;
+      syncRecords(): Promise<ProfileSyncOutcome<unknown>>;
+      syncAll(): Promise<void>;
+    }>;
   }
+}
+
+function publishCloud(lane: 'profile' | 'records', outcome: ProfileSyncOutcome<unknown>): void {
+  window.dispatchEvent(new CustomEvent(CLOUD_STATE_EVENT, {
+    detail: Object.freeze({ lane, ...outcome }),
+  }));
 }
 
 function publish(detail: ProfileSyncPublicState): void {
@@ -82,10 +103,43 @@ async function start(): Promise<void> {
       if (detail?.key !== 'cv_meta') return;
       void coordinator.captureLegacyMeta().then(() => coordinator.drain());
     });
-    window.addEventListener('online', () => void coordinator.notifyOnline());
+    // Carril de perfil multidispositivo sobre las callables con CAS.
+    const cloudProfile = new UserProfileSyncCoordinator(
+      user.uid,
+      new UserProfileRepository(repository),
+      outbox,
+      createFirebaseUserProfileTransport(services.functions),
+    );
+    const syncProfile = async () => {
+      const outcome = await cloudProfile.syncProfile();
+      publishCloud('profile', outcome);
+      return outcome;
+    };
+    const syncRecords = async () => {
+      const outcome = await cloudProfile.syncBestRecords();
+      publishCloud('records', outcome);
+      return outcome;
+    };
+    const syncAll = async () => {
+      await syncProfile();
+      await syncRecords();
+    };
+    window.ConvergenceCloudProfile = Object.freeze({
+      syncProfile,
+      syncRecords,
+      syncAll,
+    });
+
+    window.addEventListener('online', () => {
+      void coordinator.notifyOnline();
+      void syncAll();
+    });
     window.addEventListener('focus', () => void coordinator.notifyOnline());
     window.addEventListener(CONFIRM_EVENT, () => void coordinator.confirm());
     await coordinator.start();
+    // El perfil se sincroniza después de la importación para que una migración
+    // pendiente no compita con el primer CAS del mismo UID.
+    await syncAll();
   } catch (error) {
     publishFatal(error);
   }
