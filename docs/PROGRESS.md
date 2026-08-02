@@ -1394,3 +1394,47 @@ de tiempo realmente equivocada. Verificado con cuatro pasadas seguidas.
 Semilla, estado y comandos producen el mismo resultado sin DOM, y pueden
 validarse en servidor **con la puntuación que el jugador vio**. Cumplido para los
 seis modos.
+
+## 2026-08-02 — Fase 6 arranca: contratos de tabla y los cuatro periodos
+
+### Decisiones tomadas
+
+Primera tabla para **Contrarreloj**, con **los cuatro periodos** y **replay
+completo siempre**. Se mantiene todo lo demás decidido previamente.
+
+### Completado
+
+- Identidad de tabla `modo:periodo:instancia`, con la instancia derivada
+  **siempre por el servidor** del instante de cierre. Si la enviara el cliente,
+  elegiría en qué día o semana compite.
+- Los cuatro periodos se cortan en **UTC**. Usar la zona del jugador partiría una
+  tabla global en decenas de tablas y permitiría reclamar dos veces el mismo día
+  cambiando el reloj del dispositivo.
+- Semanas **ISO-8601**: empiezan en lunes y la semana 1 es la que contiene el
+  primer jueves. Sin esa regla, los días de fin de año caen en semanas ambiguas
+  y una misma partida contaría en dos tablas. Hay tests para el cruce de año.
+- Temporadas de 90 días desde el lunes 2026-01-05. Una fecha anterior al inicio
+  cae en la S001 en vez de en una temporada negativa.
+- Estado de verificación modelado como `provisional | verified | rejected`.
+
+### Fallo corregido del esqueleto previo
+
+`runResultClaimSchema` llevaba un **`userId` enviado por el cliente**, que
+permitiría reclamar puntuación en nombre de otra persona. La reclamación nueva no
+lo lleva —la identidad sale de Auth— y además es estricta, así que un campo de
+más se rechaza en vez de ignorarse en silencio. Lo mismo con el periodo.
+
+Los esquemas eran `z.object` (no estrictos): descartaban claves desconocidas en
+silencio. Ahora son `z.strictObject`, de modo que colar un correo en una entrada
+pública falla en vez de pasar desapercibido.
+
+### Evidencia
+
+- `packages/contracts`: **36/36**, con 12 nuevos para periodos y reclamación.
+- `npm run validate:full`: **617/617** = 570 del gate normal + 47 de backend.
+
+### Pendiente inmediato
+
+Transacción idempotente de claim que verifique con `recomputeRun` antes de
+publicar, materialización del Top N y consulta paginada con la posición del
+jugador.

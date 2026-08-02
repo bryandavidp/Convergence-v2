@@ -27,7 +27,7 @@ menor riesgo funcional.
 | 3. Capa de plataforma y storage | Hardening automatizado verde; faltan lectura dual y matriz manual | 1–2 semanas | mismo perfil sobre web/Preferences, migración reversible |
 | 4. Núcleo determinista y RunSave v2 | **Completada**: seis modos con paridad, ejecutados en cliente y backend | 2–4 semanas | reglas puras, estado RNG y replays reproducibles |
 | 5. Firebase local, Auth y progreso | Perfil en nube con CAS validado contra emulador; faltan UI de conflicto, App Check y despliegue | 2–3 semanas | emuladores, cuenta y sincronización offline segura |
-| 6. Rankings por modo | **Desbloqueada** para los seis modos | 1–2 semanas | tablas verificadas por modo/periodo |
+| 6. Rankings por modo | Contratos y periodos cerrados; falta claim, materialización y consulta | 1–2 semanas | tablas verificadas por modo/periodo |
 | 7. Salas y lobby en tiempo real | Pendiente | 2–3 semanas | crear/unirse/listo/presencia/reconexión |
 | 8. Partida multijugador | Pendiente | 3–6 semanas | comandos ordenados, snapshots, rejoin y cierre |
 | 9. Servicios nativos y hardening | Pendiente | 2–4 semanas | push, App Check, observabilidad y seguridad |
@@ -39,13 +39,10 @@ un árbitro persistente en Cloud Run; se decidirá con métricas del prototipo.
 
 ## Próximo hito activo
 
-**Fase 6 — rankings.** La fase 4 queda cerrada: los seis modos tienen sus reglas
-en `@convergence/game-core`, con paridad verificada contra partidas reales del
-motor, y tanto el cliente como el backend las ejecutan. Un test recorre
-`game.js` y falla si alguien añade puntuación sin pasar por el núcleo.
-
-Decidido el 2026-08-02: la fase 6 se ataca como **vertical de un solo modo** y con
-**replay completo siempre**. Con el núcleo cerrado, esa política ya es posible.
+**Fase 6 — rankings de Contrarreloj.** Los contratos y los cuatro periodos están
+cerrados. Lo siguiente es la transacción idempotente de claim —que verifica con
+`recomputeRun` antes de publicar—, la materialización del Top N y la consulta
+paginada con la posición del jugador.
 
 **Nada está desplegado en cloud** salvo las Firestore Rules. Antes del primer
 despliegue de Functions hacen falta presupuesto y alertas, TTL verificado y App
@@ -259,7 +256,10 @@ conectividad y conservar un único progreso coherente en dos dispositivos.
 
 ## Fase 6 — Rankings por modo
 
-Estado: **bloqueada por la fase 4**
+Estado: **iniciada** — contratos y periodos cerrados
+
+Decidido el 2026-08-02: primera tabla para **Contrarreloj**, con **los cuatro
+periodos** (histórico, temporada, semana y día) y **replay completo siempre**.
 
 Decisión tomada el 2026-08-02: se ataca como vertical de **un solo modo** y con
 **replay completo siempre** (el backend reejecuta cada run y solo acepta el score
@@ -269,12 +269,20 @@ la fase 4 no entregó. Construir las tablas antes sería publicar puntuaciones
 «verificadas» por un validador que calcula un número distinto al que vio el
 jugador.
 
-- [ ] Definir boards para cada modo: all-time, temporada, semana y diario.
-- [ ] Enviar claims idempotentes con seed, versión y hash final.
+- [x] Definir boards: identidad `modo:periodo:instancia`, con los cuatro
+      periodos cortados en UTC. La instancia la deriva siempre el servidor del
+      instante de cierre; el cliente no elige en qué día o semana compite.
+      Temporadas de 90 días desde el 2026-01-05.
+- [ ] Definir los boards de los otros cinco modos cuando Contrarreloj esté
+      cerrado de punta a punta.
+- [x] Definir el contrato de claim: idempotente, con seed, versión de juego y
+      hash final, **sin `userId`** —la identidad sale de Auth— y sin periodo.
+- [ ] Implementar el envío y la transacción idempotente de claims.
 - [ ] Validar runs deterministas en backend; rechazar versiones desconocidas.
 - [ ] Materializar Top N y posición alrededor del jugador.
 - [ ] Añadir paginación, alias seguro, moderación y borrado de cuenta.
-- [ ] Separar score provisional de score verificado.
+- [x] Modelar la separación provisional/verificado/rechazado en el contrato.
+- [ ] Aplicarla en la materialización: en esta fase solo se publica lo verificado.
 - [ ] Crear alertas de scores imposibles y límites de frecuencia.
 
 Criterio de salida: ninguna puntuación autoritativa puede escribirse directamente
