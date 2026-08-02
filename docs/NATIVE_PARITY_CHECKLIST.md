@@ -133,6 +133,11 @@ Supervivencia, Tutorial ni Contrarreloj/Reto.
 - [ ] Bloqueo de pantalla/interrupción no deja audio activo.
 - [ ] Diez minutos de juego sin crackle ni crecimiento de osciladores.
 - [ ] Vibración/háptica no duplica eventos.
+- [ ] **Se siente vibración al jugar en el tablero** (convergencia, combo, error, récord).
+      El puente manda `impact`/`notification` del plugin, no `vibrate` a pelo: las duraciones
+      sueltas del patrón web no mueven un LRA. Si el plugin falla, el juego cae a
+      `navigator.vibrate` — comprobar en consola remota con `__cv.Platform.hapticsAvailable`
+      y `__cv.Haptics.record()` (cargar con `?dev`).
 - [ ] Compartir tiene fallback.
 - [ ] Offline/online no pierde progreso.
 - [ ] No se pide permiso de notificaciones al primer arranque sin contexto.

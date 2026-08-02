@@ -639,7 +639,7 @@ Estos tiles se **detonan en cadena**: al limpiar celdas adyacentes a un tile tri
 ## 8. Ajustes e internacionalización
 
 ### 8.1 Ajustes disponibles
-`sfx`, `music`, `haptics` (oculto si el dispositivo no soporta vibración), `reducedFx` ("reducir efectos" — desactiva partículas/flash/rank-flash, ver `DESIGN_SYSTEM.md §10`), `largeText` (fuerza `font-size` raíz mayor + clase de texto grande), `lang` (`es`/`en`).
+`sfx`, `music`, `haptics` (oculto solo si NO hay ninguna vía de vibración: ni plugin nativo ni `navigator.vibrate`; mirarlo solo en la API del WebView escondía el ajuste dentro del APK), `reducedFx` ("reducir efectos" — desactiva partículas/flash/rank-flash, ver `DESIGN_SYSTEM.md §10`), `largeText` (fuerza `font-size` raíz mayor + clase de texto grande), `lang` (`es`/`en`).
 
 ### 8.2 Sistema de i18n
 Un único diccionario `DICT` con claves `es`/`en`, cada uno un mapa plano de ~150 claves de mensaje → string (varios con placeholders tipo `{n}`/`{w}`/`{s}`/`{c}`/`{t}`, reemplazados manualmente en cada sitio de uso — no hay motor genérico de pluralización). Un mapa `FIELD = {name:'n', desc:'d', goal:'g'}` traduce campos de un modo (`Config.MODES`) a las claves de inglés equivalentes (`m_{modeId}_{n|d|g}`), porque el español vive directamente embebido en `Config.MODES` mientras el inglés vive en el diccionario.
@@ -668,7 +668,11 @@ Detección de idioma por defecto: `/^en/i.test(navigator.language)` → `en`, si
 
 **Música procedural:** escala `[220,247,294,330,392,440,494,587]` Hz (escala tipo A menor). Secuenciador por pasos (`setInterval(60ms)` con look-ahead de 0.2s), tempo `0.30 - 0.12*intensity` (más rápido con más intensidad), nota de bajo cada 4 pasos, melodía cada paso, armonía extra por encima de intensidad 0.5. `setIntensity(v)` (0-1) también ajusta la ganancia general. La intensidad se pilota desde el nivel de combo, el estado de frenesí/oleada de Supervivencia y el modo Fiebre.
 
-**Háptica:** wrapper sobre `navigator.vibrate`, con patrones nombrados (ms, arrays = pulso/pausa): `tap()`=8, `combo()`=14, `milestone()`=[12,30,14], `error()`=40, `level()`=[18,40,18,40], `record()`=[12,28,12,28,36], `fever()`=[20,30,20], `ice()`=[6,18,8], `quake()`=[28,28,34,28,42], `life()`=[18,36,18,22].
+**Háptica:** dos vías. En nativo (APK) manda el plugin de Capacitor a través de `ConvergencePlatform.haptic(kind, ms)`, que dispara formas de onda con **amplitud** además de duración — `impact` (LIGHT/MEDIUM/HEAVY) y `notification` (SUCCESS/WARNING/ERROR); si el plugin no está o rechaza, el puente devuelve `false` y se cae a `navigator.vibrate`, que es la vía web.
+
+Patrones nombrados (ms para la vía web, arrays = pulso/pausa; `kind` para la nativa): `tap()`=22·light, `combo()`=32·medium, `milestone()`=[24,30,28]·success, `error()`=60·error, `level()`=[28,40,28,40]·success, `record()`=[24,28,24,28,48]·success, `fever()`=[30,30,30]·warning, `ice()`=[20,18,22]·light, `quake()`=[40,28,46,28,58]·heavy, `life()`=[28,36,28,32]·success, `roll()`=[22,20,28,26,34]·medium, `impacts()`=[40,22,40,22,52]·heavy, `clank()`=[52,26,52]·heavy, `reward()`=[24,24,24,30]·success.
+
+⚠️ **Ningún pulso puede bajar de ~20 ms.** Los valores originales (`tap`=8, pulsos de 12-14) venían de la época web y no llegan a mover un motor LRA moderno: el tablero vibraba "sin vibrar" en Android. Lo fija `web/tests/haptics.test.js`.
 
 ---
 

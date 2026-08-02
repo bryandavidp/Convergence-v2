@@ -11,7 +11,7 @@
 const CACHE = 'cv-cache-v2.37.5';
 const ASSET_CACHE = 'cv-assets-v1';
 const ASSETS = [
-  './', './index.html', './styles.css?v=2.37.5', './native-bridge.js?v=0.1.0', './game-core.js?v=2.37.5', './game.js?v=2.37.5', './manifest.webmanifest',
+  './', './index.html', './styles.css?v=2.37.5', './native-bridge.js?v=0.1.1', './game-core.js?v=2.37.5', './game.js?v=2.37.5', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable.png', './apple-touch-icon.png',
   './fonts/NunitoSans-Variable.ttf',
 ];

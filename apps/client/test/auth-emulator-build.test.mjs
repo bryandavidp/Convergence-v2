@@ -59,7 +59,7 @@ test('build:auth-emulator crea un artefacto con hash sin contaminar producción'
   assert.equal(moduleScripts.length, 1);
   assert.ok(
     emulatorHtml.indexOf(moduleScripts[0][0])
-      < emulatorHtml.indexOf('<script src="native-bridge.js?v=0.1.0" defer></script>'),
+      < emulatorHtml.indexOf('<script src="native-bridge.js?v=0.1.1" defer></script>'),
     'Auth debe cargarse en paralelo sin sustituir el bridge legacy.',
   );
 

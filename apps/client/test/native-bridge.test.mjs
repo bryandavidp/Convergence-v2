@@ -14,6 +14,8 @@ function harness({
   localValues = {},
   beforePreferenceSet,
   beforePreferenceRemove,
+  // null = el APK no trae el plugin de háptica; un objeto = plugin a medida.
+  hapticsPlugin,
 } = {}) {
   const preferences = new Map(Object.entries(nativeValues));
   const local = new Map(Object.entries(localValues));
@@ -25,8 +27,8 @@ function harness({
   const deletedCaches = [];
   let unregistered = 0;
   let exited = 0;
-  let haptics = 0;
   let shares = 0;
+  const haptics = [];
 
   function addDomListener(target, name, listener) {
     if (!target.has(name)) target.set(name, []);
@@ -53,7 +55,11 @@ function harness({
     async addListener(name, listener) { appListeners.set(name, listener); return { remove() {} }; },
     async exitApp() { exited++; },
   };
-  const NativeHaptics = { async impact() { haptics++; } };
+  const NativeHaptics = hapticsPlugin === null ? undefined : (hapticsPlugin || {
+    async impact({ style }) { haptics.push(`impact:${style}`); },
+    async notification({ type }) { haptics.push(`notification:${type}`); },
+    async vibrate({ duration }) { haptics.push(`vibrate:${duration}`); },
+  });
   const NativeShare = { async share() { shares++; } };
   const Network = {
     async getStatus() { return { connected: true, connectionType: 'wifi' }; },
@@ -121,7 +127,7 @@ function harness({
     window, preferences, local, appendedScripts, appListeners, events,
     deletedCaches, document,
     get unregistered() { return unregistered; }, get exited() { return exited; },
-    get haptics() { return haptics; }, get shares() { return shares; },
+    haptics, get shares() { return shares; },
   };
 }
 
@@ -192,11 +198,73 @@ test('nativo hidrata Preferences antes del legacy y registra lifecycle/back', as
   assert.equal(state.preferences.get('cv_meta'), '{"_v":10,"level":5}');
   await state.window.ConvergencePlatform.exitApp();
   assert.equal(state.exited, 1);
-  state.window.ConvergencePlatform.haptic();
+  assert.equal(state.window.ConvergencePlatform.haptic('light', 22), true);
   assert.equal(await state.window.ConvergencePlatform.share({ text: 'test' }), true);
   await Promise.resolve();
-  assert.equal(state.haptics, 1);
+  assert.deepEqual(state.haptics, ['impact:LIGHT']);
   assert.equal(state.shares, 1);
+});
+
+test('cada patrón háptico llega al plugin como su forma de onda nativa', async () => {
+  const state = harness({ native: true });
+  await settle(state);
+
+  const platform = state.window.ConvergencePlatform;
+  assert.equal(platform.hapticsAvailable, true);
+  // `impact` y `notification` llevan amplitud además de duración: son las que
+  // se sienten. Mandar siempre `impact LIGHT` dejaba los catorce patrones del
+  // juego indistinguibles.
+  assert.equal(platform.haptic('medium', 32), true);
+  assert.equal(platform.haptic('heavy', 200), true);
+  assert.equal(platform.haptic('success', 82), true);
+  assert.equal(platform.haptic('error', 60), true);
+  assert.equal(platform.haptic('warning', 90), true);
+  await Promise.resolve();
+  assert.deepEqual(state.haptics, [
+    'impact:MEDIUM', 'impact:HEAVY',
+    'notification:SUCCESS', 'notification:ERROR', 'notification:WARNING',
+  ]);
+});
+
+test('sin plugin de háptica el bridge lo dice para que el juego use navigator.vibrate', async () => {
+  const state = harness({ native: true, hapticsPlugin: null });
+  await settle(state);
+
+  // El fallo silencioso era el bug: `haptic()` no vibraba NI avisaba, y game.js
+  // ya había descartado la API del WebView por estar en nativo.
+  assert.equal(state.window.ConvergencePlatform.hapticsAvailable, false);
+  assert.equal(state.window.ConvergencePlatform.haptic('light', 22), false);
+  assert.deepEqual(state.haptics, []);
+});
+
+test('un plugin que solo expone vibrate recibe una duración perceptible', async () => {
+  const calls = [];
+  const state = harness({
+    native: true,
+    hapticsPlugin: { async vibrate({ duration }) { calls.push(duration); } },
+  });
+  await settle(state);
+
+  assert.equal(state.window.ConvergencePlatform.haptic('light', 22), true);
+  // Un pulso de 8 ms no mueve un motor LRA: el bridge sube al mínimo perceptible.
+  assert.equal(state.window.ConvergencePlatform.haptic('light', 8), true);
+  await Promise.resolve();
+  assert.deepEqual(calls, [22, 20]);
+});
+
+test('un rechazo del plugin desarma la vía nativa y devuelve el control al WebView', async () => {
+  const state = harness({
+    native: true,
+    hapticsPlugin: { async impact() { throw new Error('sin motor de vibración'); } },
+  });
+  await settle(state);
+
+  const platform = state.window.ConvergencePlatform;
+  assert.equal(platform.haptic('light', 22), true);
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(platform.hapticsAvailable, false);
+  assert.equal(platform.haptic('light', 22), false);
 });
 
 test('Preferences corrupta se aísla y recupera el último JSON WebView válido', async () => {

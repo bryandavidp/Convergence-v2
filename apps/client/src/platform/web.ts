@@ -15,11 +15,13 @@ export function createWebPlatform(): PlatformServices {
       },
     },
     haptics: {
+      // Un pulso por debajo de ~20 ms no llega a mover un motor LRA moderno: los
+      // 8/18 ms originales no se notaban en ningún Android.
       async selection() {
-        navigator.vibrate?.(8);
+        navigator.vibrate?.(20);
       },
       async impact() {
-        navigator.vibrate?.(18);
+        navigator.vibrate?.(35);
       },
     },
     share: {

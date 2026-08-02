@@ -1460,28 +1460,51 @@
     };
   })();
 
-  /* ===================== Haptics (vibración móvil) ===================== */
+  /* ===================== Haptics (vibración móvil) =====================
+   * Cada patrón declara dos cosas: su forma en milisegundos al estilo
+   * `navigator.vibrate` (pulso/pausa alternados) y la primitiva háptica nativa
+   * equivalente, que es lo que se usa dentro del APK.
+   *
+   * Los valores originales (8 para `tap`, 12-14 para los pulsos de combo) venían
+   * de la época web y no se sienten: un pulso por debajo de ~20 ms no llega a
+   * mover un motor LRA moderno, así que el tablero vibraba "sin vibrar". Los
+   * mínimos de aquí son perceptibles conservando la forma de cada patrón.
+   */
   const Haptics = {
-    ok: typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function',
-    fire(p) {
-      if (!Settings.haptics) return;
-      if (Platform.isNative) { Platform.haptic(); return; }
-      if (this.ok) { try { navigator.vibrate(p); } catch (_) { } }
+    get webOk() { return typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function'; },
+    // El ajuste de vibración se muestra si CUALQUIERA de las dos vías existe: en
+    // el WebView nativo `navigator.vibrate` puede faltar y el ajuste desaparecía.
+    get ok() { return this.webOk || !!Platform.hapticsAvailable; },
+    // Duración total de un patrón, para el plugin nativo cuando solo expone
+    // `vibrate({duration})` y no las formas de onda con amplitud.
+    _ms(p) {
+      if (typeof p === 'number') return p;
+      if (!Array.isArray(p)) return 0;
+      let total = 0;
+      for (let i = 0; i < p.length; i += 2) total += p[i] || 0;
+      return total;
     },
-    tap() { this.fire(8); },
-    combo() { this.fire(14); },
-    milestone() { this.fire([12, 30, 14]); },
-    error() { this.fire(40); },
-    level() { this.fire([18, 40, 18, 40]); },
-    record() { this.fire([12, 28, 12, 28, 36]); },
-    fever() { this.fire([20, 30, 20]); },
-    ice() { this.fire([6, 18, 8]); },
-    quake() { this.fire([28, 28, 34, 28, 42]); },
-    life() { this.fire([18, 36, 18, 22]); },
-    roll() { this.fire([10, 20, 14, 26, 20]); },   // marea (creciente)
-    impacts() { this.fire([30, 22, 30, 22, 40]); }, // meteoro (staccato)
-    clank() { this.fire([42, 26, 42]); },           // cierre (metálico)
-    reward() { this.fire([10, 24, 10, 30]); },      // ventaja concedida
+    fire(p, kind) {
+      if (!Settings.haptics) return;
+      // El puente devuelve false si el plugin no está o ya falló; en ese caso
+      // todavía queda la API del WebView y no debe darse por perdida.
+      if (Platform.isNative && Platform.haptic(kind || 'medium', this._ms(p))) return;
+      if (this.webOk) { try { navigator.vibrate(p); } catch (_) { } }
+    },
+    tap() { this.fire(22, 'light'); },
+    combo() { this.fire(32, 'medium'); },
+    milestone() { this.fire([24, 30, 28], 'success'); },
+    error() { this.fire(60, 'error'); },
+    level() { this.fire([28, 40, 28, 40], 'success'); },
+    record() { this.fire([24, 28, 24, 28, 48], 'success'); },
+    fever() { this.fire([30, 30, 30], 'warning'); },
+    ice() { this.fire([20, 18, 22], 'light'); },
+    quake() { this.fire([40, 28, 46, 28, 58], 'heavy'); },
+    life() { this.fire([28, 36, 28, 32], 'success'); },
+    roll() { this.fire([22, 20, 28, 26, 34], 'medium'); },    // marea (creciente)
+    impacts() { this.fire([40, 22, 40, 22, 52], 'heavy'); },  // meteoro (staccato)
+    clank() { this.fire([52, 26, 52], 'heavy'); },            // cierre (metálico)
+    reward() { this.fire([24, 24, 24, 30], 'success'); },     // ventaja concedida
   };
 
   /* ===================== Sound (WebAudio, sin archivos) ===================== */
@@ -2534,7 +2557,7 @@
       this.danger(dl);
       if (dl === 2 && State.status === 'playing') {
         const t = performance.now();
-        if (t - State.lastDangerAt > 900) { State.lastDangerAt = t; Sound.danger(); Haptics.fire(10); }
+        if (t - State.lastDangerAt > 900) { State.lastDangerAt = t; Sound.danger(); Haptics.fire(24, 'light'); }
       }
       // Pistas
       ['hint-badge', 'hint-badge-tool'].forEach((id) => { const el = $('#' + id); if (el) el.textContent = fmtNum(State.hintsLeft); });
@@ -3030,7 +3053,10 @@
       grant: { kind: 'good', ms: 1700, priority: 60, icon: '✨', snd: 'grant', hap: 'reward', frame: 'fbk-boon' },
       waveUp: { kind: 'warn', ms: 1600, priority: 80, icon: 'fire', snd: 'waveUp', hap: 'combo' },
       waveSoon: { kind: 'warn', ms: 1500, priority: 72, icon: 'fire', snd: 'danger', hap: null, toast: 'surv_wave_soon' },
-      bossWarn: { kind: 'bad', ms: 2400, priority: 98, icon: null, snd: 'bossWarn', hap: 'fire' },
+      // `hap` nombra un PATRÓN de Haptics, no su método de bajo nivel: 'fire'
+      // llamaba a Haptics.fire() sin argumentos, que en web equivale a
+      // navigator.vibrate(0) — cancelaba la vibración en vez de emitirla.
+      bossWarn: { kind: 'bad', ms: 2400, priority: 98, icon: null, snd: 'bossWarn', hap: 'quake' },
       bossPhase: { kind: 'warn', ms: 1600, priority: 95, icon: '⚠️', snd: 'danger', hap: 'combo' },
     },
     event(id, opts) {
@@ -3064,7 +3090,7 @@
       const frame = Object.prototype.hasOwnProperty.call(opts, 'frame') ? opts.frame : s.frame;
       if (frame) Render.boardEvent(frame, 800);
       const snd = opts.snd || s.snd; if (snd && Sound[snd]) Sound[snd]();
-      const hap = opts.hap != null ? opts.hap : s.hap; if (hap && Haptics[hap]) Haptics[hap]();
+      const hap = opts.hap != null ? opts.hap : s.hap; if (hap && typeof Haptics[hap] === 'function') Haptics[hap]();
       // El propio centro de eventos es una región aria-live; anunciarlo de nuevo en
       // #sr-status haría que los lectores de pantalla oyeran cada aviso dos veces.
       return true;
@@ -7554,7 +7580,7 @@
       // corra. Sin este lock la entrada se sentía instantánea (la card pasaba volando).
       // BP-0: el primer ataque llega a ~9.5s; primero se lee jefe + anclas, luego tell.
       Survival._lock(1200, def.frame);
-      Sound.bossWarn(); Haptics.fire(8);
+      Sound.bossWarn(); Haptics.fire(26, 'warning');
       Render.hudSoon();
       return this.enc;
     },
@@ -14602,5 +14628,5 @@
   else init();
 
   // Hook opcional para pruebas/QA (solo con ?dev en la URL). No afecta al juego normal.
-  if (location.search.indexOf('dev') !== -1) window.__cv = { State, Engine, Game, Render, Config, Storage, FX, Meta, IconPacks, PlayerIcons, PlayerBorders, playerAvatarHtml, Storefront, XP_BOOST_MULTIPLIER, CHEST_TYPES, CHEST_TYPE_ORDER, CHEST_SKIP_GEMS_PER_HOUR, chestOdds, chestRollCount, ChestNotices, Econ, ShopFX, Settings, Music, Loop, Sound, Tiles, Boosters, Modifiers, Rules, Themes, Cosmetics, Boards, Worlds, Classic, Coach, BossCoach, Adventure, Survival, Bosses, Share, I18n, Toasts, Feedback, RNG, RunSave, Picker, PreLevel, DailyMut, Modal, HubViews, Perf, ModeSignals, ModeLaunch, HomeModeCarousel, buildHomeModeCarousel, buildMissions, showHome, refreshStart, applyLanguage };
+  if (location.search.indexOf('dev') !== -1) window.__cv = { State, Engine, Game, Render, Config, Storage, FX, Meta, IconPacks, PlayerIcons, PlayerBorders, playerAvatarHtml, Storefront, XP_BOOST_MULTIPLIER, CHEST_TYPES, CHEST_TYPE_ORDER, CHEST_SKIP_GEMS_PER_HOUR, chestOdds, chestRollCount, ChestNotices, Econ, ShopFX, Settings, Music, Loop, Sound, Tiles, Boosters, Modifiers, Rules, Themes, Cosmetics, Boards, Worlds, Classic, Coach, BossCoach, Adventure, Survival, Bosses, Share, I18n, Toasts, Feedback, RNG, RunSave, Picker, PreLevel, DailyMut, Modal, HubViews, Perf, ModeSignals, ModeLaunch, HomeModeCarousel, buildHomeModeCarousel, buildMissions, showHome, refreshStart, applyLanguage, Haptics, Platform };
 })();
