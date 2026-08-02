@@ -129,7 +129,7 @@ test('build:cloud-dev crea Auth cloud aislado sin contaminar produccion', async 
   assert.equal(moduleScripts.length, 1);
   assert.ok(
     cloudHtml.indexOf(moduleScripts[0][0])
-      < cloudHtml.indexOf('<script src="native-bridge.js?v=0.1.1" defer></script>'),
+      < cloudHtml.indexOf('<script src="native-bridge.js?v=0.1.2" defer></script>'),
     'Auth cloud debe inicializarse antes del bridge legacy.',
   );
 

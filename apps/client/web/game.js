@@ -16,7 +16,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.37.6';
+  const VERSION = '2.37.7';
 
   /* Núcleo de reglas compartido con el backend (`packages/game-core`). Llega
    * como script clásico cargado antes que game.js, porque el cliente es vanilla
@@ -1459,6 +1459,89 @@
       },
     };
   })();
+
+  /* ===================== RunLog (bitácora de partida) =====================
+   * Registra lo que el backend necesita para REEJECUTAR la partida y verificar
+   * la puntuación (`submitRunClaim`). El servidor nunca acepta el score como
+   * dato: lo recalcula con el mismo núcleo y solo publica si coincide.
+   *
+   * Por eso hay que registrar TODA fuente de puntos, no solo las convergencias:
+   * una casilla bonus o una bomba sin anotar dejarían el recálculo por debajo y
+   * la marca legítima se rechazaría en silencio.
+   *
+   * Es deliberadamente pasivo: no altera estado de juego, no decide nada y
+   * cualquier fallo suyo se traga sin tocar la partida. Grabar la bitácora nunca
+   * puede ser la causa de que alguien pierda una partida.
+   */
+  const RunLog = {
+    MAX: 4000,          // el tope que impone el contrato del claim
+    events: [],
+    startedAt: 0,
+    active: false,
+    overflow: false,    // se superó el tope: la partida deja de ser publicable
+
+    start() {
+      this.events = []; this.startedAt = Date.now();
+      this.active = true; this.overflow = false;
+    },
+    stop() { this.active = false; },
+
+    // El reloj de la bitácora es el de partida, y solo avanza: el servidor
+    // rechaza una run cuyo elapsed retroceda.
+    _at() {
+      const seconds = Math.max(0, Math.round(State.elapsed || 0));
+      const previous = this.events.length ? this.events[this.events.length - 1].elapsedSeconds : 0;
+      return Math.max(seconds, previous);
+    },
+    _push(event) {
+      if (!this.active) return;
+      if (this.events.length >= this.MAX) { this.overflow = true; return; }
+      event.elapsedSeconds = this._at();
+      this.events.push(event);
+    },
+
+    convergence(data) {
+      this._push({
+        kind: 'convergence',
+        removed: data.removed,
+        combo: data.combo,
+        fever: !!data.fever,
+        level: data.level,
+        crystals: data.crystals || 0,
+        capsules: data.capsules || 0,
+        emptyBoardChain: data.emptyBoardChain || 0,
+        perfectLevel: !!data.perfectLevel,
+        wave: data.wave || 1,
+      });
+    },
+    mistake() { this._push({ kind: 'mistake' }); },
+    bonusTile() { this._push({ kind: 'bonusTile' }); },
+
+    /* La cápsula de tiempo y el bono de tablero vacío se resuelven DESPUÉS de la
+     * convergencia que los provocó, pero el servidor los reejecuta como campos
+     * de esa misma convergencia. Se adjuntan a la última anotada, que es
+     * exactamente la jugada a la que pertenecen. */
+    _lastConvergence() {
+      for (let i = this.events.length - 1; i >= 0; i--) {
+        if (this.events[i].kind === 'convergence') return this.events[i];
+      }
+      return null;
+    },
+    attachCapsule() {
+      const event = this._lastConvergence();
+      if (event) event.capsules += 1;
+    },
+    attachEmptyBoardChain(chain) {
+      const event = this._lastConvergence();
+      if (event) event.emptyBoardChain = chain;
+    },
+    areaClear(cells, level) {
+      this._push({ kind: 'areaClear', cells, level: level || 1, wave: 1 });
+    },
+
+    /** ¿Puede esta partida optar a tabla? Una bitácora desbordada, no. */
+    publishable() { return !this.overflow && this.events.length > 0; },
+  };
 
   /* ===================== Haptics (vibración móvil) =====================
    * Cada patrón declara dos cosas: su forma en milisegundos al estilo
@@ -9350,6 +9433,7 @@
     start(mode, diff, startLevel, seed, opts) {
       Picker.dismiss();
       Toasts.reset();
+      RunLog.start();
       opts = opts || {};
       { const pl = $('#prelevel'); if (pl) pl.hidden = true; }
       document.documentElement.style.removeProperty('--boss-accent'); // acento de jefe residual (JF-ζ)
@@ -9720,11 +9804,15 @@
       FX.scoreToHud(i, color, rewardTier);
 
       // Aplicar al tablero (limpia también la casilla especial; cristal = bonus)
+      // `crystalsHere` alimenta la bitácora: el servidor recalcula el valor del
+      // cristal por su cuenta, así que solo necesita cuántos entraron.
+      let crystalsHere = 0;
       conv.forEach(idx => {
         const t = State.tiles[idx];
         // Cristal: +50 base; la reliquia de Aventura (GM-07) añade +30.
         if (t) {
           if (t.type === 'crystal') {
+            crystalsHere++;
             State.score += GameCore.ready()
               ? (State.mode === 'aventura'
                 ? GameCore.core.adventureCrystalPoints(Adventure.hasRelic('crystal'))
@@ -9737,6 +9825,11 @@
           State.tiles[idx] = null;
         }
         State.board[idx] = null; State.iconCount--;
+      });
+      RunLog.convergence({
+        removed, combo: State.combo, fever: State.fever, level: State.level,
+        crystals: crystalsHere,
+        wave: State.mode === 'supervivencia' ? Survival.wave : 1,
       });
       // Celdas calientes: las recién vaciadas + el punto tocado. Los spawns/rellenos
       // inmediatos las evitarán una ventana corta (ilusión "no desapareció").
@@ -9793,7 +9886,7 @@
     /* Error del jugador: penalización (salvo modos sin penalización) */
     mistake(i) {
       const prevStars = State.mode === 'clasico' ? this.starsForMistakes(State.mistakes) : 0;
-      Render.miss(i); Sound.miss(); Haptics.error(); State.mistakes++;
+      Render.miss(i); Sound.miss(); Haptics.error(); State.mistakes++; RunLog.mistake();
       // Clásico: refresca estrellas en vivo y avisa si se ha perdido una (transparencia).
       if (State.mode === 'clasico') {
         this.updateLiveStars();
@@ -9890,7 +9983,7 @@
       State.tiles[i] = null;
       if (eff === 'bonus') {
         const bonusPoints = GameCore.ready() ? GameCore.core.BONUS_TILE_POINTS : 30;
-        State.score += bonusPoints; Render.popup(i, `+${bonusPoints}`, 'var(--good)'); Render.bump($('#hud-score'));
+        State.score += bonusPoints; RunLog.bonusTile(); Render.popup(i, `+${bonusPoints}`, 'var(--good)'); Render.bump($('#hud-score'));
         Sound.milestone(); Haptics.milestone();
       } else if (eff === 'portal') {
         const filled = [], empties = [];
@@ -9916,6 +10009,7 @@
           ? GameCore.core.areaClearPoints(cells.length, State.level)
           : cells.length * 10 * State.level;
         this._removeCells(cells); State.score += pts; State.removedTotal += cells.length;
+        RunLog.areaClear(cells.length, State.level);
         if (State.mode === 'supervivencia') Survival.addFrenzy(Math.min(28, 8 + cells.length * 2));
         if (cells.length) Render.popup(i, '+' + pts, 'var(--warn)');
         FX.celebrate(i); Sound.booster('bomb'); Haptics.milestone();
@@ -9931,6 +10025,7 @@
         State.timeLeft = Math.min(Config.TIMED_CAP, State.timeLeft + 5);
         const got = Math.round(State.timeLeft - before);
         Render.popup(i, got > 0 ? `+${got}s` : '⏱️', 'var(--time)'); Render.bump($('#hud-time'));
+        RunLog.attachCapsule();
         Sound.milestone(); Haptics.milestone();
       }
       Render.setTile(i); Render.syncCell(i); Render.hud();
@@ -10126,6 +10221,7 @@
       State.perfectEver = true;
 
       const chain = State.emptyBoards;
+      RunLog.attachEmptyBoardChain(chain);
       const wave = State.mode === 'supervivencia' ? Survival.wave : 1;
       const combo = Math.min(State.combo || 1, 12);
       const raw = Config.EMPTY_BOARD_BONUS + chain * 90 + combo * 28 + (State.mode === 'supervivencia' ? wave * 45 : 0);
@@ -10427,6 +10523,9 @@
 
     gameOver(reason) {
       if (this.ended) return;
+      // La bitácora se cierra aquí: lo que venga después (resúmenes, cofres) ya
+      // no es partida y no puede añadir eventos a una run terminada.
+      RunLog.stop();
       // Cierra el relato de la jugada anterior antes de encolar resultados de run.
       Toasts.reset();
       // Supervivencia: registra el récord de tiempo sobrevivido.
@@ -14641,5 +14740,5 @@
   else init();
 
   // Hook opcional para pruebas/QA (solo con ?dev en la URL). No afecta al juego normal.
-  if (location.search.indexOf('dev') !== -1) window.__cv = { State, Engine, Game, Render, Config, Storage, FX, Meta, IconPacks, PlayerIcons, PlayerBorders, playerAvatarHtml, Storefront, XP_BOOST_MULTIPLIER, CHEST_TYPES, CHEST_TYPE_ORDER, CHEST_SKIP_GEMS_PER_HOUR, chestOdds, chestRollCount, ChestNotices, Econ, ShopFX, Settings, Music, Loop, Sound, Tiles, Boosters, Modifiers, Rules, Themes, Cosmetics, Boards, Worlds, Classic, Coach, BossCoach, Adventure, Survival, Bosses, Share, I18n, Toasts, Feedback, RNG, RunSave, Picker, PreLevel, DailyMut, Modal, HubViews, Perf, ModeSignals, ModeLaunch, HomeModeCarousel, buildHomeModeCarousel, buildMissions, showHome, refreshStart, applyLanguage, Haptics, Platform };
+  if (location.search.indexOf('dev') !== -1) window.__cv = { State, Engine, Game, Render, Config, Storage, FX, Meta, IconPacks, PlayerIcons, PlayerBorders, playerAvatarHtml, Storefront, XP_BOOST_MULTIPLIER, CHEST_TYPES, CHEST_TYPE_ORDER, CHEST_SKIP_GEMS_PER_HOUR, chestOdds, chestRollCount, ChestNotices, Econ, ShopFX, Settings, Music, Loop, Sound, Tiles, Boosters, Modifiers, Rules, Themes, Cosmetics, Boards, Worlds, Classic, Coach, BossCoach, Adventure, Survival, Bosses, Share, I18n, Toasts, Feedback, RNG, RunSave, Picker, PreLevel, DailyMut, Modal, HubViews, Perf, ModeSignals, ModeLaunch, HomeModeCarousel, buildHomeModeCarousel, buildMissions, showHome, refreshStart, applyLanguage, Haptics, Platform, RunLog };
 })();

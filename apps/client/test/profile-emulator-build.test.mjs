@@ -125,7 +125,7 @@ test('build:profile-emulator aisla Auth y Functions sin contaminar otros artefac
   assert.equal(moduleScripts.length, 1);
   assert.ok(
     profileHtml.indexOf(moduleScripts[0][0])
-      < profileHtml.indexOf('<script src="native-bridge.js?v=0.1.1" defer></script>'),
+      < profileHtml.indexOf('<script src="native-bridge.js?v=0.1.2" defer></script>'),
     'El perfil emulator debe inicializarse antes del bridge legacy.',
   );
 

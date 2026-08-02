@@ -4,6 +4,8 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { areaClearPoints, BONUS_TILE_POINTS } from '@convergence/game-core';
+
 import {
   MAX_RUN_EVENTS,
   parseRunClaim,
@@ -286,4 +288,75 @@ test('el backend recalcula lo que puntuó el motor en los seis modos', async () 
     );
     assert.equal(verdict.accepted, true, `${mode}: la reclamación honesta debe aceptarse`);
   }
+});
+
+/* ===================== Puntuación fuera de convergencia ===================== */
+
+test('la casilla bonus puntúa sin tocar combo ni reloj', () => {
+  const base = recomputeRun(parseRunClaim({
+    mode: 'contrarreloj', difficulty: 'normal', events: [], endedAtSeconds: 0,
+  }));
+  const withBonus = recomputeRun(parseRunClaim({
+    mode: 'contrarreloj',
+    difficulty: 'normal',
+    events: [{ kind: 'bonusTile', elapsedSeconds: 3 }],
+    endedAtSeconds: 3,
+  }));
+
+  assert.equal(withBonus.score - base.score, BONUS_TILE_POINTS);
+  assert.equal(withBonus.convergences, 0, 'no es una convergencia: no cuenta como tal');
+  assert.equal(withBonus.mistakes, 0);
+});
+
+test('la bomba puntúa por celda despejada con la base desnuda', () => {
+  const outcome = recomputeRun(parseRunClaim({
+    mode: 'contrarreloj',
+    difficulty: 'normal',
+    events: [{ kind: 'areaClear', cells: 6, elapsedSeconds: 2 }],
+    endedAtSeconds: 2,
+  }));
+  // Contrarreloj puntúa siempre a nivel 1: celdas * 10 * 1.
+  assert.equal(outcome.score, areaClearPoints(6, 1));
+  assert.equal(outcome.convergences, 0);
+});
+
+test('una bomba imposible se rechaza en vez de puntuarse', () => {
+  for (const cells of [10, -1, 1.5]) {
+    assert.throws(() => parseRunClaim({
+      mode: 'contrarreloj',
+      difficulty: 'normal',
+      events: [{ kind: 'areaClear', cells, elapsedSeconds: 1 }],
+      endedAtSeconds: 1,
+    }), (error) => {
+      assert.equal(error?.code, 'invalid-argument');
+      return true;
+    });
+  }
+});
+
+test('bonus y bomba respetan el reloj monótono como el resto de eventos', () => {
+  assert.throws(() => parseRunClaim({
+    mode: 'contrarreloj',
+    difficulty: 'normal',
+    events: [
+      { kind: 'bonusTile', elapsedSeconds: 10 },
+      { kind: 'areaClear', cells: 3, elapsedSeconds: 4 },
+    ],
+    endedAtSeconds: 10,
+  }), (error) => {
+    assert.equal(error?.code, 'invalid-argument');
+    return true;
+  });
+});
+
+test('un tipo de evento desconocido se rechaza', () => {
+  assert.throws(() => parseRunClaim({
+    mode: 'contrarreloj',
+    difficulty: 'normal',
+    events: [{ kind: 'teleport', elapsedSeconds: 1 }],
+    endedAtSeconds: 1,
+  }), (error) => {
+    assert.equal(error?.code, 'invalid-argument');
+    return true;
+  });
 });

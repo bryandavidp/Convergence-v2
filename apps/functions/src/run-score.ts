@@ -4,6 +4,8 @@ import {
   applyMistakePenalty,
   applyTimeCapsule,
   applyTimeGain,
+  areaClearPoints,
+  BONUS_TILE_POINTS,
   convergencePoints,
   CRYSTAL_POINTS,
   emptyBoardBonusPoints,
@@ -81,7 +83,41 @@ export interface MistakeEvent {
   readonly elapsedSeconds: number;
 }
 
-export type RunEvent = ConvergenceEvent | MistakeEvent;
+/**
+ * Casilla bonus: suma un tanto fijo al tocarla, sin converger nada.
+ *
+ * Existe como evento propio porque el motor suma esos puntos **fuera** de una
+ * convergencia. Sin modelarlo, cualquier partida que tocara una casilla bonus
+ * recalculaba menos de lo que vio el jugador y se rechazaba en silencio: la
+ * marca legítima simplemente no aparecía en la tabla.
+ *
+ * No lleva importe: lo pone el servidor desde el núcleo. Si viajara en el
+ * evento, el cliente elegiría cuánto vale.
+ */
+export interface BonusTileEvent {
+  readonly kind: 'bonusTile';
+  readonly elapsedSeconds: number;
+}
+
+/**
+ * Bomba: limpia un área y puntúa por celda despejada. Igual que el bonus, es
+ * puntuación fuera de convergencia. El cliente declara **cuántas celdas** cayó,
+ * acotado al área máxima de una detonación (3×3 = 9); el valor por celda lo
+ * calcula el servidor.
+ */
+export interface AreaClearEvent {
+  readonly kind: 'areaClear';
+  readonly cells: number;
+  readonly level: number;
+  /** Solo lo usa Supervivencia, que deriva su nivel de la oleada. */
+  readonly wave: number;
+  readonly elapsedSeconds: number;
+}
+
+export type RunEvent = ConvergenceEvent | MistakeEvent | BonusTileEvent | AreaClearEvent;
+
+/** Celdas máximas que puede despejar una detonación: el área 3×3 que usa el motor. */
+export const MAX_AREA_CLEAR_CELLS = 9;
 
 export interface RunClaim {
   readonly mode: ScoringModeId;
@@ -148,6 +184,16 @@ export function parseRunClaim(data: unknown): RunClaim {
     previousElapsed = elapsed;
 
     if (raw.kind === 'mistake') return { kind: 'mistake', elapsedSeconds: elapsed };
+    if (raw.kind === 'bonusTile') return { kind: 'bonusTile', elapsedSeconds: elapsed };
+    if (raw.kind === 'areaClear') {
+      return {
+        kind: 'areaClear',
+        cells: integer(raw.cells, 'cells', 0, MAX_AREA_CLEAR_CELLS),
+        level: raw.level === undefined ? 1 : integer(raw.level, 'level', 1, MAX_LEVEL),
+        wave: raw.wave === undefined ? 1 : integer(raw.wave, 'wave', 1, MAX_WAVE),
+        elapsedSeconds: elapsed,
+      };
+    }
     if (raw.kind !== 'convergence') throw invalid('Tipo de evento desconocido.');
 
     // Una convergencia elimina entre 2 y 4 iconos: fuera de ahí no es jugada
@@ -203,10 +249,19 @@ export function parseRunClaim(data: unknown): RunClaim {
  * fija la regla del modo, así que un nivel declarado se ignora en vez de
  * creerse.
  */
-function levelFor(mode: ScoringModeId, difficulty: Difficulty, event: ConvergenceEvent): number {
-  if (mode === 'supervivencia') return survivalLevel(event.wave, difficulty);
-  if (mode === 'clasico' || mode === 'aventura') return event.level;
+function levelOf(
+  mode: ScoringModeId,
+  difficulty: Difficulty,
+  level: number,
+  wave: number,
+): number {
+  if (mode === 'supervivencia') return survivalLevel(wave, difficulty);
+  if (mode === 'clasico' || mode === 'aventura') return level;
   return 1;
+}
+
+function levelFor(mode: ScoringModeId, difficulty: Difficulty, event: ConvergenceEvent): number {
+  return levelOf(mode, difficulty, event.level, event.wave);
 }
 
 function feverBoostFactor(mode: ScoringModeId, event: ConvergenceEvent): number {
@@ -244,7 +299,15 @@ function crystalValue(mode: ScoringModeId, event: ConvergenceEvent): number {
  * siempre `false` y rechazaría partidas legítimas sin explicación.
  */
 function normalize(event: RunEvent): RunEvent {
-  if (event.kind === 'mistake') return event;
+  if (event.kind === 'mistake' || event.kind === 'bonusTile') return event;
+  if (event.kind === 'areaClear') {
+    return {
+      ...event,
+      cells: event.cells ?? 0,
+      level: event.level ?? 1,
+      wave: event.wave ?? 1,
+    };
+  }
   return {
     ...event,
     crystals: event.crystals ?? 0,
@@ -282,6 +345,15 @@ export function recomputeRun(claim: RunClaim): RunOutcome {
     if (event.kind === 'mistake') {
       if (timed) timeLeft = applyMistakePenalty(timeLeft);
       mistakes += 1;
+      continue;
+    }
+    // Puntuación fuera de convergencia: no toca combo, ni reloj, ni fiebre.
+    if (event.kind === 'bonusTile') {
+      score += BONUS_TILE_POINTS;
+      continue;
+    }
+    if (event.kind === 'areaClear') {
+      score += areaClearPoints(event.cells, levelOf(mode, difficulty, event.level, event.wave));
       continue;
     }
     convergences += 1;

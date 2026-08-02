@@ -38,7 +38,7 @@ export const LEADERBOARD_SCOPES: readonly LeaderboardScope[] = [
  * partida de una versión con otra fórmula no es comparable. Al publicar una
  * versión nueva hay que añadirla aquí, y un test lo exige.
  */
-export const ACCEPTED_GAME_VERSIONS: readonly string[] = ['2.37.6'];
+export const ACCEPTED_GAME_VERSIONS: readonly string[] = ['2.37.6', '2.37.7'];
 
 /** Ventana y tope de reclamaciones por usuario, para limitar el abuso. */
 export const CLAIM_RATE_WINDOW_MS = 60 * 60 * 1000;
