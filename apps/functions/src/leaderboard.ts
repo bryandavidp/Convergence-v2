@@ -38,7 +38,7 @@ export const LEADERBOARD_SCOPES: readonly LeaderboardScope[] = [
  * partida de una versión con otra fórmula no es comparable. Al publicar una
  * versión nueva hay que añadirla aquí, y un test lo exige.
  */
-export const ACCEPTED_GAME_VERSIONS: readonly string[] = ['2.37.6', '2.37.7', '2.37.8'];
+export const ACCEPTED_GAME_VERSIONS: readonly string[] = ['2.37.6', '2.37.7', '2.37.8', '2.37.9'];
 
 /** Ventana y tope de reclamaciones por usuario, para limitar el abuso. */
 export const CLAIM_RATE_WINDOW_MS = 60 * 60 * 1000;
@@ -130,11 +130,22 @@ export function prepareClaim(uid: string, data: unknown, now: number): PreparedC
     throw invalid('finishedAt está demasiado por delante del reloj del servidor.');
   }
 
+  // El fin de la run se deriva de la BITÁCORA, no de `finishedAt - startedAt`.
+  //
+  // Son dos relojes distintos: el sobre lleva reloj de pared y los eventos, el
+  // reloj de partida, que solo corre mientras se juega. Restar marcas de pared
+  // daba un final incoherente en cuanto ambos divergían —una pausa, la app en
+  // segundo plano, una partida reanudada— y el sobre se rechazaba con
+  // `endedAtSeconds inválido` antes siquiera de recalcular: una marca legítima
+  // desaparecía sin explicación. `parseRunClaim` ya usa por defecto el último
+  // evento cuando no se le pasa nada, que es la única fuente coherente.
+  //
+  // `finishedAt` se sigue usando, pero solo para lo que sí mide: a qué día,
+  // semana y temporada pertenece la partida.
   const outcome = recomputeRun(parseRunClaim({
     mode: claim.mode,
     difficulty: claim.difficulty,
     events: claim.events,
-    endedAtSeconds: Math.max(0, Math.round((claim.finishedAt - claim.startedAt) / 1000)),
   }));
 
   const verification: ScoreVerification = outcome.score === claim.claimedScore

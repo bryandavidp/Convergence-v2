@@ -16,7 +16,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.37.8';
+  const VERSION = '2.37.9';
 
   /* Núcleo de reglas compartido con el backend (`packages/game-core`). Llega
    * como script clásico cargado antes que game.js, porque el cliente es vanilla
@@ -3351,6 +3351,15 @@
     initEvents() {
       const more = $('#ranks-more');
       if (more) more.addEventListener('click', () => { Sound.ui(); void this.load(); });
+
+      // El transporte lo publica el bundle modular DESPUÉS de iniciar sesión, que
+      // es una ida y vuelta de red. Sin esto, abrir la clasificación antes de que
+      // terminara mostraba "sin conexión" para siempre: el estado no se
+      // reintentaba nunca. Ahora, en cuanto el carril de nube está listo, si el
+      // jugador sigue mirando la tabla se recarga sola.
+      window.addEventListener('convergence:leaderboards-ready', () => {
+        if (HubViews.current === 'ranks') void this.load({ reset: true });
+      });
     },
 
     /* ---------- Publicación ---------- */
@@ -3359,10 +3368,20 @@
     async ensureAlias() {
       const stored = Storage.rankAlias;
       if (stored) return stored;
-      const raw = window.prompt(`${I18n.t('ranks_alias_title')}\n${I18n.t('ranks_alias_sub')}`, '');
-      if (raw === null) return null;
-      const alias = String(raw).trim().slice(0, 24);
-      if (!alias) { Toasts.show(I18n.t('ranks_alias_invalid'), 'bad', 2200); return null; }
+      // `window.prompt` no existe o se ignora en algunos WebView (Capacitor entre
+      // ellos, según versión). Si no se puede preguntar NO se cae al nombre del
+      // jugador: se asigna un alias neutro y editable. Publicar bajo el nombre
+      // que dio como privado sería justo lo que se quiso evitar.
+      let raw = null;
+      try {
+        if (typeof window.prompt === 'function') {
+          raw = window.prompt(`${I18n.t('ranks_alias_title')}\n${I18n.t('ranks_alias_sub')}`, '');
+          if (raw === null) return null;   // el jugador declinó: no se publica
+        }
+      } catch (_) { raw = null; }
+
+      const alias = String(raw == null ? '' : raw).trim().slice(0, 24)
+        || `Jugador#${String(1000 + Math.floor(Math.random() * 9000))}`;
       Storage.rankAlias = alias;
       return alias;
     },

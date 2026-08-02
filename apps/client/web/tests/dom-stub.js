@@ -137,8 +137,35 @@ Object.defineProperty(g, 'navigator', {
 });
 g.window = g;                    // el IIFE usa window.* y globals sueltos indistintamente
 g.window.matchMedia = matchMediaStub;
-g.window.addEventListener = () => {};
-g.window.removeEventListener = () => {};
+/* Eventos de `window` de verdad.
+ *
+ * Antes eran no-ops, así que todo el cableado que el juego cuelga de window
+ * —lifecycle nativo, back, estado de nube, rankings listos— era literalmente
+ * intesteable: registrar un listener y emitir el evento no hacía nada y el test
+ * pasaba igual sin comprobar nada. Un listener roto no lo notaba nadie.
+ */
+const windowListeners = new Map();
+g.window.addEventListener = (type, listener) => {
+  if (typeof listener !== 'function') return;
+  if (!windowListeners.has(type)) windowListeners.set(type, []);
+  windowListeners.get(type).push(listener);
+};
+g.window.removeEventListener = (type, listener) => {
+  const list = windowListeners.get(type);
+  if (!list) return;
+  const index = list.indexOf(listener);
+  if (index !== -1) list.splice(index, 1);
+};
+g.window.dispatchEvent = (event) => {
+  // Copia: un listener puede desregistrarse a sí mismo durante el reparto.
+  for (const listener of [...(windowListeners.get(event && event.type) || [])]) {
+    listener(event);
+  }
+  return true;
+};
+g.addEventListener = g.window.addEventListener;
+g.removeEventListener = g.window.removeEventListener;
+g.dispatchEvent = g.window.dispatchEvent;
 g.requestAnimationFrame = () => 0;
 g.cancelAnimationFrame = () => {};
 g.alert = () => {};

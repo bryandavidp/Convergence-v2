@@ -214,3 +214,53 @@ test('un fallo al publicar no propaga: el fin de partida no puede romperse', asy
 test('la fila propia se distingue sin depender solo del color', () => {
   assert.match(css, /\.ranks-row\.is-me\s*\{[^}]*border-color/);
 });
+
+test('si el transporte llega tarde, la tabla se recarga sola', async () => {
+  // Bug real: el bundle modular publica el transporte DESPUES de iniciar sesion.
+  // Abrir la clasificacion antes dejaba "sin conexion" para siempre porque nada
+  // reintentaba.
+  // init() del juego no corre en Node (DOMContentLoaded nunca dispara), asi que
+  // los listeners se registran a mano, igual que hace el arranque real.
+  Ranks.initEvents();
+  clearTransport();
+  await Ranks.load({ reset: true });
+  assert.equal(document.querySelector('#ranks-status').textContent, I18n.t('ranks_offline'));
+
+  cv.HubViews.current = 'ranks';
+  const calls = withTransport({
+    page: async () => ({ boardId: 'b', entries: [entry('Ada', 10)], nextCursor: null, viewerRank: 1 }),
+    submit: async () => ({}),
+  });
+  window.dispatchEvent(new CustomEvent('convergence:leaderboards-ready'));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(calls.pages.length, 1, 'el evento debe disparar una recarga');
+  assert.equal(Ranks.entries.length, 1);
+  clearTransport();
+});
+
+test('sin prompt disponible se publica con alias neutro, nunca con el nombre del jugador', async () => {
+  const previousPrompt = window.prompt;
+  delete window.prompt;
+  Storage.rankAlias = '';
+  try {
+    const alias = await Ranks.ensureAlias();
+    assert.match(alias, /^Jugador#\d{4}$/, 'debe generarse un alias neutro y editable');
+    assert.equal(Storage.rankAlias, alias, 'queda guardado para poder cambiarlo');
+  } finally {
+    if (previousPrompt) window.prompt = previousPrompt;
+    Storage.rankAlias = '';
+  }
+});
+
+test('si el jugador cancela el prompt, no se publica nada', async () => {
+  const previousPrompt = window.prompt;
+  window.prompt = () => null;
+  Storage.rankAlias = '';
+  try {
+    assert.equal(await Ranks.ensureAlias(), null);
+    assert.equal(Storage.rankAlias, '', 'cancelar no puede dejar alias guardado');
+  } finally {
+    if (previousPrompt) window.prompt = previousPrompt; else delete window.prompt;
+  }
+});
