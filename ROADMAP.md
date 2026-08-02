@@ -197,8 +197,19 @@ de confirmación pendientes**
       idempotencia por UID, una sola importación y cuota de preview.
 - [x] Crear `dist-profile-emulator`, aislado de PWA/Capacitor/cloud, y validar en
       navegador real captura, confirmación, persistencia y recarga sin duplicado.
-- [ ] Implementar perfil en nube con revisión, idempotencia y resolución de
-      conflictos; nunca sobrescribir silenciosamente progreso mayor.
+- [x] Definir los contratos del perfil en nube: documento con revisión
+      autoritativa y escritura compare-and-set con `idempotencyKey`.
+- [x] Implementar el lado cliente: espejo local con revisión y marca de sucio,
+      fusión monótona de marcas que no puede perder récords, conflicto explícito
+      de perfil que nunca sobrescribe, y clasificación de errores que solo encola
+      lo transitorio.
+- [ ] Implementar el lado servidor en Functions: aplicar el CAS, incrementar la
+      revisión y deduplicar por `idempotencyKey`.
+- [ ] Conectar el transporte real contra Firestore/Functions y validarlo en
+      Emulator Suite; hoy el coordinador solo se ejercita contra un servidor de
+      pruebas en memoria.
+- [ ] Diseñar la resolución de conflicto de perfil de cara al jugador: hoy se
+      señala el conflicto y se conserva lo local, pero no hay UI para elegir.
 - [x] Implementar repositorio validado y outbox durable por UID con leases,
       backoff, `Retry-After`, recuperación y conflictos explícitos.
 - [x] Añadir UI visible de preview/confirmación conectada al coordinador:

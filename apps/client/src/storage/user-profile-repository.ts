@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type {
   UserBestRecordsV1,
   UserProfileV1,
@@ -47,6 +48,27 @@ export function defaultUserSettings(now = Date.now()): UserSettingsV1 {
   };
 }
 
+/**
+ * Espejo local de un documento de nube. `revision` es la última revisión que el
+ * servidor aceptó para este cuerpo y `dirty` marca que hay ediciones locales que
+ * el servidor todavía no ha visto. Sin `dirty` no se puede distinguir "voy
+ * atrasado" de "he cambiado cosas", que es justo la diferencia entre adelantar
+ * sin pérdida y machacar progreso ajeno.
+ */
+export interface LocalDocumentMirror<TBody> {
+  revision: number;
+  body: TBody;
+  dirty: boolean;
+}
+
+function mirrorSchema<TSchema extends z.ZodTypeAny>(body: TSchema) {
+  return z.strictObject({
+    revision: z.number().int().nonnegative(),
+    body,
+    dirty: z.boolean(),
+  });
+}
+
 export class UserProfileRepository {
   constructor(
     private readonly jsonRepo: JsonRepository,
@@ -59,6 +81,14 @@ export class UserProfileRepository {
 
   private recordsKey(uid: string): string {
     return `user_records_${uid}`;
+  }
+
+  private profileMirrorKey(uid: string): string {
+    return `user_profile_mirror_${uid}`;
+  }
+
+  private recordsMirrorKey(uid: string): string {
+    return `user_records_mirror_${uid}`;
   }
 
   private settingsKey(): string {
@@ -97,6 +127,46 @@ export class UserProfileRepository {
   async saveBestRecords(records: UserBestRecordsV1): Promise<void> {
     const validated = userBestRecordsV1Schema.parse(records);
     await this.jsonRepo.write(this.recordsKey(validated.uid), validated);
+  }
+
+  /**
+   * Lee el espejo con revisión. Si solo existe el cuerpo suelto de una versión
+   * anterior lo adopta como revisión 0 y sucio: nunca se descarta lo local.
+   */
+  async loadProfileMirror(uid: string): Promise<LocalDocumentMirror<UserProfileV1>> {
+    const schema = mirrorSchema(userProfileV1Schema);
+    const loaded = await this.jsonRepo.read(
+      this.profileMirrorKey(uid),
+      (val): val is LocalDocumentMirror<UserProfileV1> => schema.safeParse(val).success,
+    ).catch(() => null);
+    if (loaded !== null) return loaded;
+    return { revision: 0, body: await this.loadProfile(uid), dirty: true };
+  }
+
+  async saveProfileMirror(uid: string, mirror: LocalDocumentMirror<UserProfileV1>): Promise<void> {
+    const validated = mirrorSchema(userProfileV1Schema).parse(mirror);
+    await this.jsonRepo.write(this.profileMirrorKey(uid), validated);
+    // El cuerpo suelto sigue siendo la lectura simple para el resto de la app.
+    await this.saveProfile(validated.body as UserProfileV1);
+  }
+
+  async loadRecordsMirror(uid: string): Promise<LocalDocumentMirror<UserBestRecordsV1>> {
+    const schema = mirrorSchema(userBestRecordsV1Schema);
+    const loaded = await this.jsonRepo.read(
+      this.recordsMirrorKey(uid),
+      (val): val is LocalDocumentMirror<UserBestRecordsV1> => schema.safeParse(val).success,
+    ).catch(() => null);
+    if (loaded !== null) return loaded;
+    return { revision: 0, body: await this.loadBestRecords(uid), dirty: true };
+  }
+
+  async saveRecordsMirror(
+    uid: string,
+    mirror: LocalDocumentMirror<UserBestRecordsV1>,
+  ): Promise<void> {
+    const validated = mirrorSchema(userBestRecordsV1Schema).parse(mirror);
+    await this.jsonRepo.write(this.recordsMirrorKey(uid), validated);
+    await this.saveBestRecords(validated.body as UserBestRecordsV1);
   }
 
   async loadSettings(): Promise<UserSettingsV1> {

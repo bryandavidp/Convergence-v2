@@ -73,30 +73,95 @@ const { Outbox } = loadTypeScriptModule('../src/storage/outbox.ts');
 const {
   UserProfileRepository,
   defaultUserBestRecords,
+  defaultUserProfile,
 } = loadTypeScriptModule('../src/storage/user-profile-repository.ts');
 const {
+  deriveIdempotencyKey,
   mergeUserBestRecords,
   UserProfileSyncCoordinator,
 } = loadTypeScriptModule('../src/online/user-profile-sync.ts');
 const { getAppCheckConfig } = loadTypeScriptModule('../src/online/app-check-config.ts');
 
-test('mergeUserBestRecords combina conservadoramente usando max() por campo', () => {
-  const local = {
-    ...defaultUserBestRecords('uid-1', 1000),
-    survivalBest: 5000,
-    survivalBestWave: 10,
-    adventureMaxLevel: 15,
-    bestCombo: 5,
-  };
-  const remote = {
-    ...defaultUserBestRecords('uid-1', 2000),
-    survivalBest: 8000,
-    survivalBestWave: 8,
-    adventureMaxLevel: 12,
-    bestCombo: 9,
-  };
+const UID = 'uid-777';
 
-  const merged = mergeUserBestRecords(local, remote, 3000);
+function failure(code) {
+  return Object.assign(new Error(`fallo simulado: ${code}`), { code });
+}
+
+/**
+ * Servidor en memoria que se comporta como el real: rechaza si baseRevision ya
+ * no está vigente y deduplica por idempotencyKey. Sin esto los tests sólo
+ * comprobarían que el cliente se habla a sí mismo.
+ */
+function createServer({ profile = null, records = null } = {}) {
+  const applied = new Map();
+  const server = {
+    profile,
+    records,
+    calls: { fetchProfile: 0, pushProfile: 0, fetchRecords: 0, pushRecords: 0 },
+    // Deja que un test simule que otro dispositivo escribió a mitad de ciclo.
+    onFetchRecords: null,
+    transport: {
+      fetchRemoteProfile: async () => {
+        server.calls.fetchProfile += 1;
+        return server.profile;
+      },
+      pushProfile: async (write) => {
+        server.calls.pushProfile += 1;
+        if (applied.has(write.idempotencyKey)) return applied.get(write.idempotencyKey);
+        const current = server.profile === null ? 0 : server.profile.revision;
+        if (write.baseRevision !== current) throw failure('failed-precondition');
+        server.profile = { revision: current + 1, profile: write.profile };
+        applied.set(write.idempotencyKey, server.profile);
+        return server.profile;
+      },
+      fetchRemoteRecords: async () => {
+        server.calls.fetchRecords += 1;
+        if (server.onFetchRecords) server.onFetchRecords(server);
+        return server.records;
+      },
+      pushRecords: async (write) => {
+        server.calls.pushRecords += 1;
+        if (applied.has(write.idempotencyKey)) return applied.get(write.idempotencyKey);
+        const current = server.records === null ? 0 : server.records.revision;
+        if (write.baseRevision !== current) throw failure('failed-precondition');
+        server.records = { revision: current + 1, records: write.records };
+        applied.set(write.idempotencyKey, server.records);
+        return server.records;
+      },
+    },
+  };
+  return server;
+}
+
+function createHarness(server, { now = () => 5000 } = {}) {
+  const jsonRepo = new JsonRepository(new MemoryStorage());
+  const repository = new UserProfileRepository(jsonRepo, () => 1000);
+  const outbox = new Outbox(jsonRepo);
+  const coordinator = new UserProfileSyncCoordinator(
+    UID,
+    repository,
+    outbox,
+    server.transport,
+    now,
+  );
+  return { repository, outbox, coordinator };
+}
+
+function records(overrides = {}) {
+  return { ...defaultUserBestRecords(UID, 1000), ...overrides };
+}
+
+function profile(overrides = {}) {
+  return { ...defaultUserProfile(UID, 1000), ...overrides };
+}
+
+test('mergeUserBestRecords combina conservadoramente usando max() por campo', () => {
+  const merged = mergeUserBestRecords(
+    records({ survivalBest: 5000, survivalBestWave: 10, adventureMaxLevel: 15, bestCombo: 5 }),
+    records({ survivalBest: 8000, survivalBestWave: 8, adventureMaxLevel: 12, bestCombo: 9 }),
+    3000,
+  );
   assert.equal(merged.survivalBest, 8000);
   assert.equal(merged.survivalBestWave, 10);
   assert.equal(merged.adventureMaxLevel, 15);
@@ -104,39 +169,157 @@ test('mergeUserBestRecords combina conservadoramente usando max() por campo', ()
   assert.equal(merged.updatedAt, 3000);
 });
 
-test('UserProfileSyncCoordinator fusiona registros remotos y locales', async () => {
-  const storage = new MemoryStorage();
-  const jsonRepo = new JsonRepository(storage);
-  const repo = new UserProfileRepository(jsonRepo, () => 1000);
-  const outbox = new Outbox(jsonRepo);
-
-  await repo.saveBestRecords({
-    ...defaultUserBestRecords('uid-777', 1000),
-    survivalBest: 12000,
+test('records: fusiona local y remoto y sube el resultado con la revisión vigente', async () => {
+  const server = createServer({
+    records: { revision: 4, records: records({ survivalBest: 9000, adventureMaxLevel: 25 }) },
   });
+  const harness = createHarness(server);
+  await harness.repository.saveBestRecords(records({ survivalBest: 12000 }));
 
-  const mockTransport = {
-    fetchRemoteProfile: async () => null,
-    pushProfile: async () => {},
-    fetchRemoteRecords: async () => ({
-      ...defaultUserBestRecords('uid-777', 2000),
-      survivalBest: 9000,
-      adventureMaxLevel: 25,
-    }),
-    pushRecords: async () => {},
+  const outcome = await harness.coordinator.syncBestRecords();
+  assert.equal(outcome.status, 'synced');
+  assert.equal(outcome.value.survivalBest, 12000);
+  assert.equal(outcome.value.adventureMaxLevel, 25);
+  assert.equal(outcome.revision, 5, 'el servidor incrementa exactamente una revisión');
+  assert.equal(server.records.records.survivalBest, 12000);
+});
+
+test('records: si el servidor ya contiene todo lo local no se escribe nada', async () => {
+  const server = createServer({
+    records: { revision: 7, records: records({ survivalBest: 9000, adventureMaxLevel: 25 }) },
+  });
+  const harness = createHarness(server);
+  await harness.repository.saveBestRecords(records({ survivalBest: 100 }));
+
+  const outcome = await harness.coordinator.syncBestRecords();
+  assert.equal(outcome.status, 'synced');
+  assert.equal(outcome.revision, 7);
+  assert.equal(server.calls.pushRecords, 0, 'una sincronización sin novedad no debe escribir');
+});
+
+test('records: sincronizar dos veces seguidas no genera una segunda escritura', async () => {
+  const server = createServer({ records: { revision: 1, records: records({ survivalBest: 10 }) } });
+  const harness = createHarness(server);
+  await harness.repository.saveBestRecords(records({ survivalBest: 12000 }));
+
+  const first = await harness.coordinator.syncBestRecords();
+  const second = await harness.coordinator.syncBestRecords();
+
+  assert.equal(first.status, 'synced');
+  assert.equal(second.status, 'synced');
+  assert.equal(second.revision, first.revision, 'la revisión no puede crecer sin cambios reales');
+  assert.equal(server.calls.pushRecords, 1, 'la sincronización debe quedar en reposo');
+});
+
+test('records: un conflicto de revisión se resuelve refusionando, sin perder marcas', async () => {
+  const server = createServer({
+    records: { revision: 1, records: records({ survivalBest: 500 }) },
+  });
+  const harness = createHarness(server);
+  await harness.repository.saveBestRecords(records({ survivalBest: 12000 }));
+
+  // Otro dispositivo escribe justo después del primer fetch: el CAS fallará.
+  let raced = false;
+  server.onFetchRecords = (state) => {
+    if (raced) return;
+    raced = true;
+    state.records = { revision: 2, records: records({ survivalBest: 700, bestCombo: 42 }) };
   };
 
-  const coordinator = new UserProfileSyncCoordinator(
-    'uid-777',
-    repo,
-    outbox,
-    mockTransport,
-    () => 5000,
-  );
+  const outcome = await harness.coordinator.syncBestRecords();
+  assert.equal(outcome.status, 'synced');
+  assert.equal(outcome.value.survivalBest, 12000, 'la marca local sobrevive al conflicto');
+  assert.equal(outcome.value.bestCombo, 42, 'la marca ajena también sobrevive');
+});
 
-  const synced = await coordinator.syncBestRecords();
-  assert.equal(synced.survivalBest, 12000);
-  assert.equal(synced.adventureMaxLevel, 25);
+test('perfil: sin ediciones locales se adopta lo remoto sin declarar conflicto', async () => {
+  const server = createServer({
+    profile: { revision: 3, profile: profile({ displayName: 'Remoto', theme: 'theme-neon' }) },
+  });
+  const harness = createHarness(server);
+  await harness.repository.saveProfileMirror(UID, {
+    revision: 1,
+    body: profile({ displayName: 'Local' }),
+    dirty: false,
+  });
+
+  const outcome = await harness.coordinator.syncProfile();
+  assert.equal(outcome.status, 'synced');
+  assert.equal(outcome.value.displayName, 'Remoto');
+  assert.equal(outcome.revision, 3);
+  assert.equal(server.calls.pushProfile, 0);
+});
+
+test('perfil: con ediciones locales y servidor adelantado se declara conflicto sin pisar nada', async () => {
+  const server = createServer({
+    profile: { revision: 9, profile: profile({ displayName: 'Remoto' }) },
+  });
+  const harness = createHarness(server);
+  await harness.repository.saveProfileMirror(UID, {
+    revision: 4,
+    body: profile({ displayName: 'Local' }),
+    dirty: true,
+  });
+
+  const outcome = await harness.coordinator.syncProfile();
+  assert.equal(outcome.status, 'conflict');
+  assert.equal(outcome.value.displayName, 'Local', 'lo local se conserva');
+  assert.equal(outcome.remote.displayName, 'Remoto', 'lo remoto se ofrece para decidir');
+  assert.equal(server.calls.pushProfile, 0, 'un conflicto nunca escribe en el servidor');
+  assert.equal(server.profile.profile.displayName, 'Remoto');
+
+  const mirror = await harness.repository.loadProfileMirror(UID);
+  assert.equal(mirror.body.displayName, 'Local');
+  assert.equal(mirror.dirty, true, 'sigue pendiente de resolver');
+});
+
+test('perfil: la escritura lleva revisión base y clave idempotente derivada del contenido', async () => {
+  const server = createServer();
+  const harness = createHarness(server);
+  const body = profile({ displayName: 'Nuevo' });
+  await harness.repository.saveProfileMirror(UID, { revision: 0, body, dirty: true });
+
+  const outcome = await harness.coordinator.syncProfile();
+  assert.equal(outcome.status, 'synced');
+  assert.equal(outcome.revision, 1);
+
+  const expected = deriveIdempotencyKey('user-profile-update-v1', UID, 0, body);
+  assert.equal(
+    deriveIdempotencyKey('user-profile-update-v1', UID, 0, { ...body }),
+    expected,
+    'la clave no puede depender del orden de las propiedades',
+  );
+  assert.notEqual(
+    deriveIdempotencyKey('user-profile-update-v1', UID, 1, body),
+    expected,
+    'otra revisión base es otra operación',
+  );
+});
+
+test('un fallo transitorio encola en la outbox y no se pierde el progreso', async () => {
+  const server = createServer();
+  server.transport.fetchRemoteRecords = async () => { throw failure('unavailable'); };
+  const harness = createHarness(server);
+  await harness.repository.saveBestRecords(records({ survivalBest: 4242 }));
+
+  const outcome = await harness.coordinator.syncBestRecords();
+  assert.equal(outcome.status, 'offline');
+  assert.equal(outcome.value.survivalBest, 4242);
+
+  const queued = await harness.outbox.list(UID);
+  assert.equal(queued.length, 1);
+  assert.equal(queued[0].kind, 'user-records-update-v1');
+});
+
+test('un fallo de autenticación no se encola: reintentar no lo arregla', async () => {
+  const server = createServer();
+  server.transport.fetchRemoteProfile = async () => { throw failure('unauthenticated'); };
+  const harness = createHarness(server);
+
+  const outcome = await harness.coordinator.syncProfile();
+  assert.equal(outcome.status, 'auth-required');
+  assert.ok(outcome.error, 'el motivo se propaga a la UI');
+  assert.deepEqual(await harness.outbox.list(UID), []);
 });
 
 test('getAppCheckConfig genera la configuracion adecuada para dev y prod', () => {

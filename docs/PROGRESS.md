@@ -782,6 +782,61 @@ gate no podía detectarlo porque la feature no tenía test de cobertura i18n.
   pero la reclamación sigue viva hasta `expiresAt`.
 - Validar la UI en navegador real sobre `dist-profile-emulator`.
 
+## 2026-08-02 — Fase 5: perfil en nube con revisión, CAS e idempotencia (cliente)
+
+### Completado
+
+- Se rehízo el carril de perfil multidispositivo, que ordenaba por `updatedAt`.
+  Un reloj de cliente no puede decidir quién gana: dos dispositivos desfasados
+  se pisaban en silencio, que es justo lo que el criterio de la fase prohíbe.
+- Contratos nuevos en `@convergence/contracts`: `userProfileDocumentV1Schema` y
+  `userBestRecordsDocumentV1Schema` (cuerpo + revisión autoritativa) y
+  `userProfileWriteV1Schema` / `userBestRecordsWriteV1Schema`, que exigen
+  `baseRevision` e `idempotencyKey` en toda escritura.
+- Espejo local con revisión y marca de sucio en `UserProfileRepository`
+  (`loadProfileMirror` / `loadRecordsMirror`). Sin `dirty` no se puede
+  distinguir «voy atrasado» de «he cambiado cosas», que es la diferencia entre
+  adelantar sin pérdida y machacar progreso ajeno. Si solo existe el cuerpo
+  suelto de una versión anterior se adopta como revisión 0 y sucio.
+- Resolución de conflictos por tipo de dato:
+  - **Marcas**: la fusión por `max()` es monótona, así que un rechazo de CAS se
+    resuelve refusionando sobre la revisión nueva, hasta `MAX_CAS_ATTEMPTS`.
+    Ninguna marca puede perderse, venga del dispositivo que venga.
+  - **Perfil** (nombre y cosméticos): no es fusionable —elegir un avatar no es
+    «mayor» que elegir otro—, así que se declara conflicto explícito, se
+    conserva lo local y se adjunta lo remoto para que decida el jugador.
+- Claves de idempotencia derivadas del contenido (JSON canónico + FNV-1a), de
+  modo que un reintento tras un corte de red se deduplica en vez de aplicarse
+  dos veces.
+- Clasificación de errores reutilizando `classifyOutboxError`: solo lo
+  transitorio se encola. Un fallo de autenticación o un rechazo permanente no
+  mejoran reintentando y ya no quedan girando en la outbox.
+
+### Defecto corregido durante la implementación
+
+`mergeUserBestRecords` subía `updatedAt` a `now` en cada fusión, así que el
+cuerpo fusionado nunca era igual al remoto y **cada ciclo de sincronización
+forzaba una escritura**: revisiones y coste creciendo sin que el jugador jugara
+nada. Ahora `updatedAt` solo avanza si alguna marca cambió de verdad, y hay un
+test que fija la propiedad: sincronizar dos veces seguidas no escribe otra vez.
+
+### Evidencia
+
+- `apps/client/test/user-profile-sync.test.mjs`: **11/11**, contra un servidor
+  en memoria que aplica CAS de verdad y deduplica por `idempotencyKey`, no
+  contra un doble que siempre dice que sí.
+- `packages/contracts`: **24/24** (+1 para documento y escritura CAS).
+- `npm run validate`: **460/460** verde = 350 legacy + 63 plataforma + 24
+  contratos + 14 game-core + 9 handlers Functions, más typecheck, builds y smoke.
+
+### Pendiente inmediato
+
+- El lado servidor no existe: falta el callable de Functions que aplique el CAS,
+  incremente la revisión y deduplique por `idempotencyKey`.
+- Falta el transporte real contra Firestore/Functions y su validación en
+  Emulator Suite, hoy bloqueada por el JDK 21 ausente.
+- Falta UI para resolver un conflicto de perfil: se señala, pero no se elige.
+
 
 
 

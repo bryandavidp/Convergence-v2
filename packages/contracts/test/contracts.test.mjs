@@ -6,7 +6,9 @@ import {
   roomSchema,
   runSaveV2Schema,
   userBestRecordsV1Schema,
+  userProfileDocumentV1Schema,
   userProfileV1Schema,
+  userProfileWriteV1Schema,
   userSettingsV1Schema,
 } from '../dist/index.js';
 
@@ -136,3 +138,44 @@ test('userBestRecordsV1Schema y userSettingsV1Schema validan esquemas strict', (
   assert.equal(settings.success, true);
 });
 
+
+test('el documento de perfil en nube exige revisión y la escritura exige CAS idempotente', () => {
+  const profile = {
+    schemaVersion: 1,
+    uid: 'user-xyz',
+    displayName: 'Jugador',
+    avatarIcon: 'icon-default',
+    avatarBorder: 'border-default',
+    theme: 'theme-classic',
+    iconPack: 'pack-classic',
+    updatedAt: 1770000000000,
+  };
+
+  assert.equal(userProfileDocumentV1Schema.safeParse({ revision: 0, profile }).success, true);
+  assert.equal(
+    userProfileDocumentV1Schema.safeParse({ profile }).success,
+    false,
+    'un documento sin revisión no puede ordenarse',
+  );
+  assert.equal(
+    userProfileDocumentV1Schema.safeParse({ revision: -1, profile }).success,
+    false,
+  );
+
+  const write = {
+    idempotencyKey: 'user-profile-update-v1:user-xyz:0:9f1c2ab3',
+    baseRevision: 0,
+    profile,
+  };
+  assert.equal(userProfileWriteV1Schema.safeParse(write).success, true);
+  assert.equal(
+    userProfileWriteV1Schema.safeParse({ ...write, idempotencyKey: 'corta' }).success,
+    false,
+    'una clave demasiado corta no protege contra reintentos',
+  );
+  assert.equal(
+    userProfileWriteV1Schema.safeParse({ baseRevision: 0, profile }).success,
+    false,
+    'toda operación repetible lleva idempotency key',
+  );
+});
