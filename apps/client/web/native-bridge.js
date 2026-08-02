@@ -7,7 +7,12 @@
 (() => {
   'use strict';
 
-  const LEGACY_SCRIPT = 'game.js?v=2.37.1';
+  // Respaldos: la versión real la manda el <meta> de index.html, que es el sitio
+  // que documenta el bump. Antes se leía solo esta constante, así que quedó en
+  // 2.37.1 mientras el resto del proyecto ya iba por 2.37.2 y los usuarios
+  // seguían cargando el game.js viejo desde caché.
+  const LEGACY_SCRIPT = 'game.js?v=2.37.3';
+  const CORE_SCRIPT = 'game-core.js?v=2.37.3';
   const PERSISTED_KEYS = ['cv_meta', 'cv_run'];
   const LEGACY_STORAGE_EVENT = 'convergence:legacy-storage-changed';
   const capacitor = window.Capacitor;
@@ -226,13 +231,27 @@
       .catch((error) => report('bootstrap', error));
   }
 
+  function scriptSrcFromMeta(name, fallback) {
+    const meta = document.querySelector(`meta[name="${name}"]`);
+    const content = meta && meta.getAttribute('content');
+    return content && content.trim() ? content.trim() : fallback;
+  }
+
+  function appendScript(src, marker) {
+    const script = document.createElement('script');
+    script.src = src;
+    script.dataset[marker] = 'true';
+    // async=false conserva el orden de ejecución entre scripts insertados
+    // dinámicamente: el núcleo de reglas debe evaluarse antes que game.js.
+    script.async = false;
+    script.onerror = () => dispatch('convergence:bootstrap-error', { source: src });
+    document.body.appendChild(script);
+  }
+
   function loadLegacyRuntime() {
     if (document.querySelector('script[data-convergence-legacy]')) return;
-    const script = document.createElement('script');
-    script.src = LEGACY_SCRIPT;
-    script.dataset.convergenceLegacy = 'true';
-    script.onerror = () => dispatch('convergence:bootstrap-error', { source: LEGACY_SCRIPT });
-    document.body.appendChild(script);
+    appendScript(scriptSrcFromMeta('convergence-core-script', CORE_SCRIPT), 'convergenceCore');
+    appendScript(scriptSrcFromMeta('convergence-legacy-script', LEGACY_SCRIPT), 'convergenceLegacy');
   }
 
   platform.ready.finally(loadLegacyRuntime);

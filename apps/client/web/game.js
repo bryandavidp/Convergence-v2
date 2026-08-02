@@ -16,7 +16,17 @@
 (() => {
   'use strict';
 
-  const VERSION = '2.37.2';
+  const VERSION = '2.37.3';
+
+  /* Núcleo de reglas compartido con el backend (`packages/game-core`). Llega
+   * como script clásico cargado antes que game.js, porque el cliente es vanilla
+   * y sin bundler. Si faltara, cada modo cae a su expresión histórica y el juego
+   * sigue jugándose: la paridad entre ambos caminos la fija
+   * `time-attack-parity.test.mjs`. */
+  const GameCore = {
+    get core() { return window.ConvergenceGameCore || null; },
+    timeAttack() { return State.mode === 'contrarreloj' && !!window.ConvergenceGameCore; },
+  };
   const Platform = window.ConvergencePlatform || {
     runtime: 'web', isNative: false,
     mirrorStorage() { }, removeStorage() { }, haptic() { },
@@ -9615,7 +9625,17 @@
       const d = Config.DIFFICULTY[State.diff], m = Config.MODES[State.mode];
       const base = removed * 10 * State.level;
       const survMult = (State.mode === 'supervivencia') ? Survival.scoreMult() : 1;
-      const points = Math.floor(base * State.comboMult * d.scoreMult * m.mult * this.feverBoost() * (State.tempMult || 1) * this.sprintMult() * survMult);
+      // Contrarreloj puntúa con @convergence/game-core, el mismo módulo que
+      // reejecuta el backend al verificar una partida. Si cliente y servidor
+      // calcularan por separado, cualquier deriva convertiría un score legítimo
+      // en un rechazo. El resto de modos sigue en la expresión de siempre hasta
+      // que se extraigan (ver ROADMAP fase 4).
+      const points = GameCore.timeAttack()
+        ? GameCore.core.convergencePoints({
+          removed, combo: State.combo, difficulty: State.diff,
+          timeLeftSeconds: State.timeLeft, fever: State.fever,
+        })
+        : Math.floor(base * State.comboMult * d.scoreMult * m.mult * this.feverBoost() * (State.tempMult || 1) * this.sprintMult() * survMult);
       State.score += points;
       State.warmupConvs++; // el warm-up (GM-26) termina antes si el jugador ya fluye
       // Jugada pico de la partida (GM-28): se muestra en el resumen de fin (regla pico-final).
@@ -9634,10 +9654,17 @@
         // combos ya recompensan con puntos; el tiempo no se acumula sin límite ni
         // hace la partida infinita. (Antes: hasta +20s por convergencia, sin tope.)
         const tg = Config.TIMED_GAIN;
-        const decay = clamp(1 - State.elapsed / tg.decaySec, tg.minDecay, 1);
-        const raw = (tg.base + Math.min(removed, 4) * tg.perIcon + Math.min(State.combo, tg.comboCap) * tg.combo) * decay;
         const before = State.timeLeft;
-        State.timeLeft = Math.min(Config.TIMED_CAP, State.timeLeft + raw);
+        if (GameCore.timeAttack()) {
+          State.timeLeft = GameCore.core.applyTimeGain(
+            State.timeLeft,
+            GameCore.core.timeGainFor(removed, State.combo, State.elapsed),
+          );
+        } else {
+          const decay = clamp(1 - State.elapsed / tg.decaySec, tg.minDecay, 1);
+          const raw = (tg.base + Math.min(removed, 4) * tg.perIcon + Math.min(State.combo, tg.comboCap) * tg.combo) * decay;
+          State.timeLeft = Math.min(Config.TIMED_CAP, State.timeLeft + raw);
+        }
         const got = Math.round(State.timeLeft - before);
         if (got > 0) Render.bump($('#hud-time'));
         Render.scoreFeedback(got > 0 ? `+${got}s` : '⏱️ tope', 'var(--time)', 'time');
@@ -9736,7 +9763,9 @@
       // real del modo. Añadir iconos ahí era un castigo-regalo: los iconos son la
       // materia prima de puntuar. Sin iconos extra y sin acelerar el spawn.
       if (m.scoreAttack) {
-        State.timeLeft = Math.max(0, State.timeLeft - Config.TIMED_MISTAKE_S);
+        State.timeLeft = GameCore.timeAttack()
+          ? GameCore.core.applyMistakePenalty(State.timeLeft)
+          : Math.max(0, State.timeLeft - Config.TIMED_MISTAKE_S);
         Render.bump($('#hud-time'));
         Toasts.show(I18n.t('mistake_time').replace('{n}', Config.TIMED_MISTAKE_S), 'bad', 1500);
         Render.hud();
@@ -10046,7 +10075,12 @@
       const wave = State.mode === 'supervivencia' ? Survival.wave : 1;
       const combo = Math.min(State.combo || 1, 12);
       const raw = Config.EMPTY_BOARD_BONUS + chain * 90 + combo * 28 + (State.mode === 'supervivencia' ? wave * 45 : 0);
-      const points = Math.max(250, Math.round(raw * d.scoreMult * m.mult * this.feverBoost() * (State.tempMult || 1) * this.sprintMult()));
+      const points = GameCore.timeAttack()
+        ? GameCore.core.emptyBoardBonusPoints({
+          chain, combo, difficulty: State.diff,
+          timeLeftSeconds: State.timeLeft, fever: State.fever,
+        })
+        : Math.max(250, Math.round(raw * d.scoreMult * m.mult * this.feverBoost() * (State.tempMult || 1) * this.sprintMult()));
       const coins = clamp(Math.round(points / 220), 3, 16);
       const extra = [];
       const center = State.lastActionCell != null

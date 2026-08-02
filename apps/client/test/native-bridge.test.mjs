@@ -64,8 +64,18 @@ function harness({
     hidden: false,
     addEventListener(name, listener) { addDomListener(documentListeners, name, listener); },
     dispatchEvent(event) { return dispatchDomEvent(documentListeners, event); },
-    querySelector() { return null; },
-    createElement() { return { dataset: {}, src: '', onerror: null }; },
+    // La versión de los scripts la manda index.html por <meta>: el bridge debe
+    // leerla de ahí y no de sus constantes, que es lo que se quedó atrás.
+    querySelector(selector) {
+      const meta = /^meta\[name="([^"]+)"\]$/.exec(String(selector));
+      if (!meta) return null;
+      const content = {
+        'convergence-core-script': 'game-core.js?v=test',
+        'convergence-legacy-script': 'game.js?v=test',
+      }[meta[1]];
+      return content ? { getAttribute: () => content } : null;
+    },
+    createElement() { return { dataset: {}, src: '', onerror: null, async: true }; },
     body: { appendChild(script) { appendedScripts.push(script); } },
   };
   const window = {
@@ -126,8 +136,13 @@ test('web conserva localStorage y carga el mismo runtime legacy sin plugins', as
 
   assert.equal(state.window.ConvergencePlatform.runtime, 'web');
   assert.equal(state.local.get('cv_meta'), '{"_v":10}');
-  assert.equal(state.appendedScripts.length, 1);
-  assert.equal(state.appendedScripts[0].src, 'game.js?v=2.37.1');
+  // Dos scripts y en este orden: game.js consulta el núcleo de reglas al puntuar,
+  // así que debe evaluarse antes. async=false es lo que garantiza el orden.
+  assert.equal(state.appendedScripts.length, 2);
+  assert.equal(state.appendedScripts[0].src, 'game-core.js?v=test');
+  assert.equal(state.appendedScripts[1].src, 'game.js?v=test');
+  assert.equal(state.appendedScripts[0].async, false);
+  assert.equal(state.appendedScripts[1].async, false);
   assert.equal(state.unregistered, 0);
 });
 
@@ -158,7 +173,7 @@ test('nativo hidrata Preferences antes del legacy y registra lifecycle/back', as
 
   assert.equal(state.local.get('cv_meta'), '{"_v":10,"level":4}');
   assert.equal(state.local.get('cv_run'), '{"v":1}');
-  assert.equal(state.appendedScripts.length, 1);
+  assert.equal(state.appendedScripts.length, 2);
   assert.equal(state.unregistered, 1);
   assert.deepEqual(state.deletedCaches, ['cv-cache-v1']);
   assert.ok(state.appListeners.has('appStateChange'));
@@ -226,7 +241,7 @@ test('background captura cv_run y cv_meta antes de un kill y los hidrata al rela
   await settle(relaunched);
   assert.equal(relaunched.local.get('cv_meta'), '{"_v":10,"level":8}');
   assert.equal(relaunched.local.get('cv_run'), '{"v":1,"mode":"clasico","score":4200}');
-  assert.equal(relaunched.appendedScripts.length, 1);
+  assert.equal(relaunched.appendedScripts.length, 2);
 });
 
 test('pagehide crea el checkpoint después del guardado legacy', async () => {

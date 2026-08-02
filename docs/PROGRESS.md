@@ -1108,3 +1108,55 @@ y ninguna estaba en el plan inicial de extracción:
   simplificada y el `if` sin cuerpo de la línea 75.
 - Nadie ejecuta todavía el núcleo en producción: el cliente sigue con `game.js` y
   Functions no lo importa. Hasta cerrar eso, la fase 6 sigue bloqueada.
+
+## 2026-08-02 — Contrarreloj puntúa desde el núcleo en cliente y backend
+
+### Completado
+
+- **Cliente.** `scripts/build-game-core-browser.mjs` transpila el módulo de
+  reglas a `apps/client/web/game-core.js`, un script clásico que publica
+  `window.ConvergenceGameCore`. El cliente sigue siendo vanilla y sin bundler,
+  así que esta es la única vía para compartir código real con el backend. El
+  generador se niega a emitir si el módulo deja de ser autocontenido.
+- `game.js` enruta por el núcleo la puntuación de convergencia, el tiempo
+  ganado, la penalización por fallo y el bono de tablero vacío **solo en
+  Contrarreloj**. Los otros seis modos siguen en su expresión histórica hasta
+  que se extraigan, y si el núcleo no cargara el juego cae a esa expresión.
+- **Backend.** `apps/functions/src/time-attack-score.ts` importa
+  `@convergence/game-core` y recalcula la partida con las mismas funciones. El
+  score que envía el cliente nunca se guarda: se compara con el recalculado y
+  `accepted` solo es cierto si coinciden exactamente. Callable
+  `verifyTimeAttackRun`.
+
+### Defectos encontrados por el camino
+
+1. **`native-bridge.js` cargaba `game.js?v=2.37.1`** con el resto del proyecto ya
+   en 2.37.2. El triple bump documentado se dejaba un cuarto sitio, y era
+   precisamente el que carga el juego: los usuarios habrían seguido con el
+   runtime viejo desde caché. Ahora el bridge lee la versión del `<meta>` de
+   `index.html`, que es el sitio que documenta el bump, y un test exige que el
+   respaldo no se quede atrás.
+2. **El backend no modelaba la cuenta atrás del reloj** entre jugadas. Como el
+   sprint final (×1.5 con ≤10 s) depende del reloj, una partida que entrara en
+   esa ventana se habría recalculado con menos puntos y se habría rechazado
+   siendo legítima. Se descubrió solo al comparar contra una partida real.
+
+### Evidencia
+
+- `apps/functions/test/time-attack-score.handler.test.mjs` juega una partida
+  real con el motor del cliente **sin** el núcleo cargado —es decir, con su
+  expresión histórica— y la recalcula en el backend: cuadran el score y el reloj
+  al punto. Es la prueba de que cliente y servidor puntúan igual de verdad.
+- `apps/client/web/tests/game-core-wiring.test.js`: 8 tests que verifican el
+  cableado con un núcleo espía, que los demás modos no pasan por él y que sin
+  núcleo el juego sigue siendo jugable.
+- `npm run validate:full`: **545/545** = 498 del gate normal + 47 de backend.
+- Triple bump a **2.37.3** en `game.js`, `sw.js` e `index.html`, más el bridge y
+  el nuevo `game-core.js`.
+
+### Pendiente
+
+- Quedan los otros seis modos por extraer. La fase 6 sigue bloqueada para ellos.
+- La verificación actual recalcula a partir de los eventos que envía el cliente:
+  todavía no reproduce tablero ni spawn, así que un cliente podría mentir sobre
+  cuántos iconos convergió. El replay completo es trabajo de la fase 6.

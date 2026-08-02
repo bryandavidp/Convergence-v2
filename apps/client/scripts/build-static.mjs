@@ -14,6 +14,7 @@ const entries = [
   'index.html',
   'styles.css',
   'native-bridge.js',
+  'game-core.js',
   'game.js',
   'sw.js',
   'manifest.webmanifest',
